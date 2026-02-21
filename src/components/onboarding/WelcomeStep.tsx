@@ -6,7 +6,7 @@ export function WelcomeStep() {
   return (
     <div className="text-center space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome to Virtual PPO</h2>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome to Azmyra</h2>
         <p className="text-slate-500 dark:text-slate-400 mt-2">
           Your AI-powered Product Owner assistant. Let&apos;s get you set up in just a few steps.
         </p>

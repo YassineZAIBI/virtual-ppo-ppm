@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Bot, ArrowLeft, ArrowRight, SkipForward } from 'lucide-react';
+import { ArrowLeft, ArrowRight, SkipForward } from 'lucide-react';
 import { toast } from 'sonner';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
 import { IntegrationStep } from '@/components/onboarding/IntegrationStep';
@@ -14,7 +14,7 @@ import { CompletionStep } from '@/components/onboarding/CompletionStep';
 import { KnowledgeUploader } from '@/components/knowledge/KnowledgeUploader';
 
 const STEPS = [
-  { id: 0, title: 'Welcome', description: 'Get started with Virtual PPO' },
+  { id: 0, title: 'Welcome', description: 'Get started with Azmyra' },
   { id: 1, title: 'Jira', description: 'Connect your Jira instance' },
   { id: 2, title: 'Confluence', description: 'Connect your Confluence wiki' },
   { id: 3, title: 'Slack', description: 'Connect your Slack workspace' },
@@ -98,7 +98,7 @@ export function OnboardingWizard() {
   const handleComplete = async () => {
     try {
       await fetch('/api/onboarding/complete', { method: 'POST' });
-      toast.success('Setup complete! Welcome to Virtual PPO.');
+      toast.success('Setup complete! Welcome to Azmyra.');
       router.push('/');
     } catch {
       toast.error('Failed to complete setup');
@@ -125,8 +125,10 @@ export function OnboardingWizard() {
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <Bot className="h-10 w-10 text-blue-600" />
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Virtual PPO</h1>
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">A</span>
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Azmyra</h1>
         </div>
 
         {/* Progress bar */}

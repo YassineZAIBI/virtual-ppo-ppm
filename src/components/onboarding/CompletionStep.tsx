@@ -26,7 +26,7 @@ export function CompletionStep({ connected, syncResults, onComplete }: Completio
       <div>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">You&apos;re All Set!</h2>
         <p className="text-slate-500 dark:text-slate-400 mt-2">
-          Your Virtual PPO workspace is ready to go.
+          Your Azmyra workspace is ready to go.
         </p>
       </div>
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Bot, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,11 +61,11 @@ export default function SignInPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <Bot className="h-8 w-8 text-white" />
+            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+              <span className="text-white font-bold text-2xl">A</span>
             </div>
           </div>
-          <CardTitle className="text-2xl">Virtual PPO/PPM</CardTitle>
+          <CardTitle className="text-2xl">Azmyra</CardTitle>
           <CardDescription>
             {isRegistering ? 'Create your account' : 'Sign in to your account'}
           </CardDescription>

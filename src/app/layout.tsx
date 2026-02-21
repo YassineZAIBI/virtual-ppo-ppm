@@ -15,12 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Virtual PPO/PPM - AI-Powered Product Management Assistant",
-  description: "An autonomous AI-powered Proxy Product Owner/Manager for Data & AI products.",
-  keywords: ["Product Management", "AI", "PPO", "PPM", "Product Owner", "Automation"],
-  authors: [{ name: "Virtual PPO Team" }],
+  title: "Azmyra - AI-Powered Product Management",
+  description: "An autonomous AI-powered product management assistant for Data & AI products.",
+  keywords: ["Product Management", "AI", "Azmyra", "Product Owner", "Automation"],
+  authors: [{ name: "Azmyra" }],
   icons: {
-    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>",
+    icon: "/logo.svg",
   },
 };
 

@@ -1,4 +1,4 @@
-// Virtual PPO/PPM Types
+// Azmyra Types
 
 export type LLMProvider = 'openai' | 'anthropic' | 'azure' | 'ollama' | 'z-ai' | 'gemini';
 

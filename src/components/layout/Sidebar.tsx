@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard, MessageSquare, Calendar, Map, Lightbulb, Search,
-  Settings, ChevronLeft, ChevronRight, Zap, Bot, FileCode, UserCircle, Gauge, LogOut,
+  Settings, ChevronLeft, ChevronRight, Zap, FileCode, UserCircle, Gauge, LogOut,
 } from 'lucide-react';
 import { useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
@@ -38,8 +38,10 @@ export function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-slate-700">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <Bot className="h-8 w-8 text-blue-400" />
-            <span className="font-bold text-lg">Virtual PPO</span>
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm">A</span>
+            </div>
+            <span className="font-bold text-lg">Azmyra</span>
           </div>
         )}
         <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="text-slate-400 hover:text-white hover:bg-slate-800">
