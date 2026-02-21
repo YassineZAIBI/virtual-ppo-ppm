@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -31,6 +32,7 @@ interface Credentials {
 
 export function OnboardingWizard() {
   const router = useRouter();
+  const { update } = useSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [credentials, setCredentials] = useState<Credentials>({
     jira: { url: '', email: '', apiToken: '' },
@@ -98,8 +100,10 @@ export function OnboardingWizard() {
   const handleComplete = async () => {
     try {
       await fetch('/api/onboarding/complete', { method: 'POST' });
+      // Refresh the JWT token so middleware sees onboardingCompleted=true
+      await update();
       toast.success('Setup complete! Welcome to Azmyra.');
-      router.push('/');
+      window.location.href = '/';
     } catch {
       toast.error('Failed to complete setup');
     }
