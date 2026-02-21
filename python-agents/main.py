@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import AGENT_SERVICE_PORT, NEXTJS_BASE_URL
@@ -270,9 +271,14 @@ async def upload_file(file: UploadFile = File(...)):
     }
 
 
+class ScrapeRequest(BaseModel):
+    url: str
+
+
 @app.post("/knowledge/scrape")
-async def scrape_url_endpoint(url: str = ""):
+async def scrape_url_endpoint(body: ScrapeRequest):
     """Scrape a public URL and extract its content."""
+    url = body.url
     if not url:
         raise HTTPException(status_code=400, detail="URL is required")
 

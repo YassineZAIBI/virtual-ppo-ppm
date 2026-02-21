@@ -52,17 +52,20 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as any).role ?? 'user'
+      }
 
-        // Check onboarding status
+      // Always re-check onboarding status from DB (token.id is set after first login)
+      if (token.id) {
         try {
           const onboarding = await db.onboardingProgress.findUnique({
-            where: { userId: user.id },
+            where: { userId: token.id as string },
           })
           token.onboardingCompleted = onboarding?.completed ?? false
         } catch {
           token.onboardingCompleted = false
         }
       }
+
       return token
     },
     async session({ session, token }) {

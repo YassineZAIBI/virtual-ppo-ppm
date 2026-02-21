@@ -3,15 +3,22 @@ import { NextRequest, NextResponse } from 'next/server';
 const AGENT_SERVICE_URL = process.env.AGENT_SERVICE_URL || 'http://localhost:8100';
 
 export async function POST(request: NextRequest) {
+  let body: any;
+
   try {
-    const body = await request.json();
-    const { message, history, settings, storeData, agentId, pendingActionId, pendingActionDecision } = body;
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
 
-    if (!message) {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
-    }
+  const { message, history, settings, storeData, agentId, pendingActionId, pendingActionDecision } = body;
 
-    // Forward to Python agent service
+  if (!message) {
+    return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+  }
+
+  // Try Python agent service first
+  try {
     const agentResponse = await fetch(`${AGENT_SERVICE_URL}/agent/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,31 +34,30 @@ export async function POST(request: NextRequest) {
         pending_action_id: pendingActionId || null,
         pending_action_decision: pendingActionDecision || null,
       }),
+      signal: AbortSignal.timeout(30000),
     });
 
-    if (!agentResponse.ok) {
-      const errorData = await agentResponse.json().catch(() => ({}));
-      console.error('Agent service error:', agentResponse.status, errorData);
-
-      // Fallback to direct LLM call if agent service is down
-      return await fallbackDirectLLM(message, history, settings);
+    if (agentResponse.ok) {
+      const data = await agentResponse.json();
+      return NextResponse.json(data);
     }
 
-    const data = await agentResponse.json();
-    return NextResponse.json(data);
+    // Agent service returned an error — fall through to fallback
+    const errorData = await agentResponse.json().catch(() => ({}));
+    console.error('Agent service error:', agentResponse.status, errorData);
+  } catch (err: any) {
+    console.error('Agent service unreachable:', err.message);
+  }
+
+  // Fallback: direct LLM call when Python agent service is unavailable
+  try {
+    return await fallbackDirectLLM(message, history, settings);
   } catch (error: any) {
-    console.error('Chat API error:', error);
-
-    // Fallback to direct LLM call
-    try {
-      const body = await request.clone().json();
-      return await fallbackDirectLLM(body.message, body.history, body.settings);
-    } catch {
-      return NextResponse.json(
-        { error: 'Failed to process message', details: error.message },
-        { status: 500 }
-      );
-    }
+    console.error('Fallback LLM error:', error);
+    return NextResponse.json(
+      { error: `LLM request failed: ${error.message}` },
+      { status: 500 }
+    );
   }
 }
 
@@ -77,7 +83,15 @@ async function fallbackDirectLLM(
   const messages: Array<{ role: string; content: string }> = [
     {
       role: 'system',
-      content: `You are an intelligent Virtual Product Owner/Manager (PPO/PPM) assistant. Help product managers with strategy, planning, meetings, initiatives, documentation, and communication. Be concise and actionable. Use markdown formatting.
+      content: `You are an intelligent Virtual Product Owner/Manager (PPO/PPM) assistant. Help product managers with strategy, planning, meetings, initiatives, documentation, and communication. Be concise and actionable.
+
+STRICT MARKDOWN FORMATTING RULES (follow these exactly):
+- Use ## for main section headers, ### for subsections — NOT "1. Title" as plain numbered text
+- Tables MUST use GitHub-Flavored Markdown: header row, then separator row (| --- | --- |), then data rows. NO blank lines between table rows.
+- Bold text: use **double asterisks** only (NOT triple ***)
+- Do NOT use LaTeX notation ($...$) — write formulas in plain text
+- Leave a blank line between sections for readability
+- Use bullet lists (- item) for unordered items, numbered lists (1. item) only for sequential steps
 
 Note: The multi-agent system is currently offline. Responding in single-agent fallback mode.`
     }

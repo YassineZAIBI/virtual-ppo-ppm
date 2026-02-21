@@ -349,15 +349,14 @@ export class JiraService {
    */
   async searchIssues(jql: string): Promise<JiraIssue[]> {
     try {
-      const params = new URLSearchParams({
-        jql,
-        maxResults: '50',
-        fields: 'summary,description,status,assignee,priority,issuetype,labels,created,updated,customfield_10016',
-      });
-
-      const response = await fetch(`${this.baseUrl}/rest/api/3/search?${params.toString()}`, {
-        method: 'GET',
+      const response = await fetch(`${this.baseUrl}/rest/api/3/search/jql`, {
+        method: 'POST',
         headers: this.headers(),
+        body: JSON.stringify({
+          jql,
+          maxResults: 50,
+          fields: ['summary', 'description', 'status', 'assignee', 'priority', 'issuetype', 'labels', 'created', 'updated', 'customfield_10016'],
+        }),
       });
 
       if (!response.ok) {

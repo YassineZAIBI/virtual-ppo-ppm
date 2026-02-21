@@ -14,6 +14,26 @@ from knowledge.rag import format_rag_context, RAGDocument
 
 
 # ---------------------------------------------------------------------------
+# Shared formatting rules appended to every agent prompt
+# ---------------------------------------------------------------------------
+
+MARKDOWN_RULES = """
+
+STRICT MARKDOWN FORMATTING RULES (follow these exactly):
+1. Use ## for main section headers, ### for subsections — NOT "1. Title" as plain numbered text
+2. Tables MUST use GitHub-Flavored Markdown:
+   - Header row: | Column 1 | Column 2 |
+   - Separator row: | --- | --- |
+   - Data rows: | Data 1 | Data 2 |
+   - NO blank lines between table rows (tables must be contiguous)
+   - Leave a blank line BEFORE and AFTER the entire table
+3. Bold: use **double asterisks** only (NOT triple ***)
+4. Do NOT use LaTeX notation ($...$) — write formulas and variables in plain text
+5. Leave a blank line between major sections for readability
+6. Use - for bullet lists, 1. 2. 3. only for sequential numbered steps"""
+
+
+# ---------------------------------------------------------------------------
 # Base prompts (static)
 # ---------------------------------------------------------------------------
 
@@ -50,7 +70,7 @@ When you need broader context across all sources, include [HANDOFF: thinker] in 
 OUTPUT STYLE:
 - Be decisive — rank options, don't just list them
 - Use tables for comparisons (RICE scores, priority matrices)
-- Always end with a clear recommendation and next steps"""
+- Always end with a clear recommendation and next steps""" + MARKDOWN_RULES
 
 
 DISCOVERY_PROMPT = """You are the Discovery Agent — the research analyst of the team.
@@ -86,7 +106,7 @@ OUTPUT STYLE:
 - Structure findings as: Evidence → Insight → Hypothesis → Recommended Action
 - Use quotes from research sources when available
 - Clearly separate what we KNOW from what we ASSUME
-- Include confidence levels for key findings"""
+- Include confidence levels for key findings""" + MARKDOWN_RULES
 
 
 RISK_PROMPT = """You are the Risk Agent — the guardian of the team.
@@ -122,7 +142,7 @@ OUTPUT STYLE:
 - Use a risk register format: | Risk | P | I | Score | Owner | Mitigation |
 - Color-code severity: CRITICAL, HIGH, MEDIUM, LOW
 - Always include "early warning signals" — what to watch for
-- End with prioritized mitigation actions (do this first, then this)"""
+- End with prioritized mitigation actions (do this first, then this)""" + MARKDOWN_RULES
 
 
 COMMUNICATIONS_PROMPT = """You are the Communications Agent — the voice of the team.
@@ -161,7 +181,7 @@ OUTPUT STYLE:
 - Format emails with Subject, To, Body sections
 - Use markdown for structure
 - Include a "Preview" before sending anything
-- Always confirm before executing write actions"""
+- Always confirm before executing write actions""" + MARKDOWN_RULES
 
 
 ADVISOR_PROMPT = """You are the Expert Advisor — the wise man of the team.
@@ -194,7 +214,7 @@ OUTPUT STYLE:
 - Speak with authority but humility
 - Use analogies and examples to illustrate points
 - Structure as: Context → Analysis → Recommendation → Caveats
-- When asked "what should I do?", give a direct answer first, then explain why"""
+- When asked "what should I do?", give a direct answer first, then explain why""" + MARKDOWN_RULES
 
 
 THINKER_PROMPT = """You are the Thinker — the intelligence analyst of the product team.
@@ -250,7 +270,7 @@ OUTPUT FORMAT (always use this structure):
 SOURCE ATTRIBUTION RULES:
 - Every fact must have a source tag: [Jira: KEY], [Confluence: Title], [Meeting: Title], [Risk: #ID], [File: name], [URL: domain/path]
 - If a fact appears in multiple sources, list all of them
-- If a fact has NO source, mark it as [Unverified] and flag it in Gaps"""
+- If a fact has NO source, mark it as [Unverified] and flag it in Gaps""" + MARKDOWN_RULES
 
 
 # ---------------------------------------------------------------------------

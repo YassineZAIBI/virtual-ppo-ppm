@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import ReactMarkdown from 'react-markdown';
+import { StyledMarkdown } from '@/components/ui/styled-markdown';
 import {
   Search, Sparkles, FileText, Users, TrendingUp, Target,
   Plus, Trash2, Loader2, ChevronLeft, ArrowLeft,
@@ -138,17 +138,41 @@ export function DiscoveryView() {
 **Tags:** ${activeInitiative.tags.join(', ') || 'None'}
 **Risks:** ${activeInitiative.risks.join(', ') || 'None identified'}
 
-Provide:
-1. **Discovery Goals** - What we need to learn
-2. **Key Hypotheses** - Assumptions to validate
-3. **Research Plan** - Interviews, surveys, data analysis needed
-4. **Documentation Needed** - PRDs, specs, competitive analysis
-5. **Market Research Areas** - Competitive landscape, market sizing, trends
-6. **Impact Assessment Framework** - How to measure potential impact
-7. **Recommended Timeline** - Discovery phases and milestones
-8. **Risk Mitigation** - How to de-risk before investing
+STRICT FORMATTING RULES:
+- Use ## for each section header below (e.g. ## 1. Discovery Goals)
+- Use ### for subsections
+- Tables: header row, then | --- | separator row, then data rows. NO blank lines between rows.
+- Bold: **double asterisks only** (NOT triple ***)
+- No LaTeX ($...$) — use plain text for formulas
+- Leave blank lines between sections
 
-Use markdown formatting with headers and bullet points.`;
+Structure your response with these sections:
+
+## 1. Discovery Goals
+What we need to learn
+
+## 2. Key Hypotheses
+Assumptions to validate
+
+## 3. Research Plan
+Interviews, surveys, data analysis needed — use a table:
+| Activity | Target Group | Focus Area | Output |
+| --- | --- | --- | --- |
+
+## 4. Documentation Needed
+PRDs, specs, competitive analysis
+
+## 5. Market Research Areas
+Competitive landscape, market sizing, trends
+
+## 6. Impact Assessment Framework
+How to measure potential impact
+
+## 7. Recommended Timeline
+Discovery phases and milestones
+
+## 8. Risk Mitigation
+How to de-risk before investing`;
 
     const result = await runAiAnalysis(prompt, 'discovery-prep');
     if (result) {
@@ -167,11 +191,72 @@ Use markdown formatting with headers and bullet points.`;
 
   const handleAiSectionGenerate = async (section: string) => {
     if (!activeInitiative) return;
+    const mdRules = `\n\nSTRICT FORMATTING: Use ## for sections, ### for subsections. Tables: header row | separator (| --- |) | data rows — NO blank lines between rows. Bold: **double asterisks only** (NOT triple). No LaTeX. Blank lines between sections.`;
     const sectionPrompts: Record<string, string> = {
-      documentation: `Generate a documentation outline and initial draft for the initiative "${activeInitiative.title}". Include: PRD skeleton, technical requirements, user stories, acceptance criteria, and architecture considerations. Description: ${activeInitiative.description}. Use markdown.`,
-      interviews: `Create an interview guide for discovering needs related to "${activeInitiative.title}". Include: interview objectives, target personas (5+), sample questions per persona (5-8 each), what to listen for, and synthesis framework. Description: ${activeInitiative.description}. Use markdown.`,
-      'market-research': `Conduct a market research analysis framework for "${activeInitiative.title}". Include: competitive landscape analysis template, market sizing approach, trend analysis, TAM/SAM/SOM estimation guide, key competitors to watch, and differentiation opportunities. Description: ${activeInitiative.description}. Use markdown.`,
-      impact: `Create an impact analysis for "${activeInitiative.title}". Include: impact dimensions (revenue, cost, user satisfaction, operational efficiency, strategic value), measurement metrics, baseline vs. expected outcomes, ROI calculation framework, risk-adjusted value, and sensitivity analysis approach. Expected value: ${activeInitiative.expectedValue || 'Not specified'}. Use markdown.`,
+      documentation: `Generate a documentation outline and initial draft for the initiative "${activeInitiative.title}".
+
+Description: ${activeInitiative.description}
+
+Structure with these sections:
+## PRD Skeleton
+### Problem Statement
+### User Stories
+### Acceptance Criteria
+
+## Technical Requirements
+### Architecture Considerations
+### Integration Points
+
+## Non-Functional Requirements${mdRules}`,
+      interviews: `Create an interview guide for discovering needs related to "${activeInitiative.title}".
+
+Description: ${activeInitiative.description}
+
+Structure with these sections:
+## Interview Objectives
+
+## Target Personas
+| Persona | Role | Priority | Key Focus |
+| --- | --- | --- | --- |
+
+## Sample Questions per Persona
+### Persona 1
+- Question 1
+- Question 2
+
+## What to Listen For
+
+## Synthesis Framework${mdRules}`,
+      'market-research': `Conduct a market research analysis framework for "${activeInitiative.title}".
+
+Description: ${activeInitiative.description}
+
+Structure with these sections:
+## Competitive Landscape
+| Competitor | Strengths | Weaknesses | Differentiation |
+| --- | --- | --- | --- |
+
+## Market Sizing (TAM/SAM/SOM)
+
+## Trend Analysis
+
+## Key Competitors to Watch
+
+## Differentiation Opportunities${mdRules}`,
+      impact: `Create an impact analysis for "${activeInitiative.title}".
+
+Expected value: ${activeInitiative.expectedValue || 'Not specified'}
+
+Structure with these sections:
+## Impact Dimensions
+| Dimension | Baseline | Expected | Metric |
+| --- | --- | --- | --- |
+
+## ROI Calculation Framework
+
+## Risk-Adjusted Value
+
+## Sensitivity Analysis${mdRules}`,
     };
 
     const prompt = sectionPrompts[section];
@@ -182,7 +267,7 @@ Use markdown formatting with headers and bullet points.`;
       const data = getDiscoveryData(activeInitiative);
       const note: DiscoveryNote = {
         id: crypto.randomUUID(),
-        type: section === 'market-research' ? 'market_research' : section as DiscoveryNote['type'],
+        type: tabTypeMap[section] || section as DiscoveryNote['type'],
         title: `AI Generated: ${DISCOVERY_TABS.find((t) => t.id === section)?.label || section}`,
         content: result,
         createdAt: new Date(),
@@ -357,8 +442,8 @@ Use markdown formatting with headers and bullet points.`;
                     </Button>
 
                     {getDiscoveryData(activeInitiative).aiAnalysis && (
-                      <div className="prose prose-sm dark:prose-invert max-w-none p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border">
-                        <ReactMarkdown>{getDiscoveryData(activeInitiative).aiAnalysis!}</ReactMarkdown>
+                      <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <StyledMarkdown>{getDiscoveryData(activeInitiative).aiAnalysis!}</StyledMarkdown>
                       </div>
                     )}
                   </CardContent>
@@ -462,9 +547,7 @@ Use markdown formatting with headers and bullet points.`;
                               </div>
                             </CardHeader>
                             <CardContent>
-                              <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown>{note.content}</ReactMarkdown>
-                              </div>
+                              <StyledMarkdown>{note.content}</StyledMarkdown>
                             </CardContent>
                           </Card>
                         ))}

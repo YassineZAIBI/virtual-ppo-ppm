@@ -14,7 +14,7 @@ import {
   Check, X, Paperclip, Wrench,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import ReactMarkdown from 'react-markdown';
+import { StyledMarkdown } from '@/components/ui/styled-markdown';
 import { KnowledgeUploader } from '@/components/knowledge/KnowledgeUploader';
 import type { AgentId, AgentChatMessage } from '@/lib/types';
 
@@ -333,9 +333,7 @@ export function ChatInterface() {
 
                   {/* Message content */}
                   {message.role === 'assistant' ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
-                    </div>
+                    <StyledMarkdown>{message.content}</StyledMarkdown>
                   ) : (
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   )}
