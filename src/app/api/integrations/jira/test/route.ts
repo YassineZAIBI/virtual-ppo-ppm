@@ -1,0 +1,30 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { JiraService } from '@/lib/services/jira';
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const url = body.url || process.env.JIRA_BASE_URL || '';
+    const email = body.email || process.env.JIRA_EMAIL || '';
+    const apiToken = body.apiToken || process.env.JIRA_API_TOKEN || '';
+
+    if (!url) {
+      return NextResponse.json(
+        { error: 'Jira URL is required. Please enter your Jira instance URL (e.g., https://your-domain.atlassian.net).' },
+        { status: 400 }
+      );
+    }
+    if (!email || !apiToken) {
+      return NextResponse.json(
+        { error: 'Jira email and API token are required.' },
+        { status: 400 }
+      );
+    }
+
+    const jira = new JiraService(url, email, apiToken);
+    const projects = await jira.getProjects();
+    return NextResponse.json({ success: true, projectCount: projects.length, projects: projects.slice(0, 5) });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============ Authentication ============
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  role          String    @default("member") // admin, member, viewer
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  initiatives Initiative[]
+  meetings    Meeting[]
+  risks       Risk[]
+  chatMessages ChatMessage[]
+  settings    UserSettingsRecord?
+  onboarding     OnboardingProgress?
+  shareLinks     ShareLink[]
+  pendingActions PendingAction[]
+  knowledgeDocs  KnowledgeDocument[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============ Settings (encrypted credentials) ============
+model UserSettingsRecord {
+  id                String @id @default(cuid())
+  userId            String @unique
+  llmProvider       String @default("openai")
+  llmModel          String @default("")
+  llmApiKey         String @default("") // encrypted
+  llmApiEndpoint    String @default("")
+  autonomyLevel     String @default("oversight")
+  notificationsEnabled Boolean @default(true)
+  autoSendEmails    Boolean @default(false)
+  autoCreateJira    Boolean @default(true)
+  theme             String @default("system")
+
+  // Integration credentials (encrypted)
+  jiraEnabled       Boolean @default(false)
+  jiraUrl           String  @default("")
+  jiraEmail         String  @default("")
+  jiraApiToken      String  @default("") // encrypted
+  slackEnabled      Boolean @default(false)
+  slackBotToken     String  @default("") // encrypted
+  slackChannelId    String  @default("")
+  confluenceEnabled Boolean @default(false)
+  confluenceUrl     String  @default("")
+  confluenceEmail   String  @default("")
+  confluenceApiToken String @default("") // encrypted
+  emailEnabled      Boolean @default(false)
+  smtpHost          String  @default("")
+  smtpPort          Int     @default(587)
+  smtpUsername      String  @default("")
+  smtpPassword      String  @default("") // encrypted
+  smtpFromEmail     String  @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ Initiatives ============
+model Initiative {
+  id            String   @id @default(cuid())
+  title         String
+  description   String   @default("")
+  status        String   @default("idea") // idea, discovery, validation, definition, approved
+  businessValue String   @default("medium") // high, medium, low
+  effort        String   @default("medium") // high, medium, low
+  stakeholders  String   @default("[]") // JSON array
+  tags          String   @default("[]") // JSON array
+  risks         String   @default("[]") // JSON array
+  dependencies  String   @default("[]") // JSON array
+  jiraKey       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ Meetings ============
+model Meeting {
+  id           String   @id @default(cuid())
+  title        String
+  date         DateTime @default(now())
+  duration     Int      @default(30) // minutes
+  participants String   @default("[]") // JSON array
+  status       String   @default("scheduled") // scheduled, completed, processing, summarized
+  transcript   String?
+  summary      String?
+  actionItems  String   @default("[]") // JSON array of ActionItem
+  decisions    String   @default("[]") // JSON array
+  challenges   String   @default("[]") // JSON array
+  followUpEmail String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ Risks ============
+model Risk {
+  id             String   @id @default(cuid())
+  title          String
+  description    String   @default("")
+  severity       String   @default("medium") // critical, high, medium, low
+  probability    String   @default("medium") // high, medium, low
+  impact         String   @default("medium") // high, medium, low
+  status         String   @default("identified") // identified, mitigating, resolved, accepted
+  relatedItems   String   @default("[]") // JSON array
+  mitigationPlan String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ Chat ============
+model ChatMessage {
+  id              String   @id @default(cuid())
+  role            String   // user, assistant
+  content         String
+  metadata        String   @default("{}") // JSON
+  agentId         String?  // which agent responded
+  agentName       String?
+  toolsExecuted   String   @default("[]") // JSON array of ToolExecution
+  pendingActions  String   @default("[]") // JSON array of PendingAction refs
+  sources         String   @default("[]") // JSON array of SourceAttribution
+  createdAt       DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ Documents ============
+model Document {
+  id        String   @id @default(cuid())
+  title     String
+  type      String   @default("other") // prd, specification, decision_log, meeting_notes, other
+  content   String
+  tags      String   @default("[]") // JSON array
+  source    String   @default("uploaded") // uploaded, generated, synced
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============ Onboarding ============
+model OnboardingProgress {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  currentStep         Int      @default(0)
+  completed           Boolean  @default(false)
+  jiraConnected       Boolean  @default(false)
+  confluenceConnected Boolean  @default(false)
+  slackConnected      Boolean  @default(false)
+  syncStarted         Boolean  @default(false)
+  syncCompleted       Boolean  @default(false)
+  syncLog             String   @default("[]")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SyncRecord {
+  id         String   @id @default(cuid())
+  userId     String
+  source     String
+  itemType   String
+  externalId String
+  localId    String?
+  status     String   @default("pending")
+  metadata   String   @default("{}")
+  createdAt  DateTime @default(now())
+}
+
+// ============ Share Links ============
+model ShareLink {
+  id           String   @id @default(cuid())
+  token        String   @unique
+  createdBy    String
+  resourceType String
+  resourceId   String?
+  accessLevel  String   @default("view_comment")
+  guestName    String?
+  expiresAt    DateTime
+  isActive     Boolean  @default(true)
+  viewCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  creator  User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  comments ShareComment[]
+}
+
+model ShareComment {
+  id            String   @id @default(cuid())
+  shareLinkId   String
+  guestName     String
+  content       String
+  targetSection String?
+  createdAt     DateTime @default(now())
+
+  shareLink ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+}
+
+// ============ Pending Actions (Agent Autonomy) ============
+model PendingAction {
+  id             String   @id @default(cuid())
+  userId         String
+  agentId        String   // which agent proposed this action
+  toolName       String   // MCP tool name
+  toolArguments  String   @default("{}") // JSON
+  description    String   // human-readable description of what the tool will do
+  status         String   @default("pending") // pending, approved, rejected, executed
+  result         String?  // execution result if approved & executed
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ Knowledge Base ============
+model KnowledgeDocument {
+  id            String   @id @default(cuid())
+  userId        String
+  sourceType    String   // 'file' | 'url'
+  sourceName    String   // filename or page title
+  sourceUrl     String?  // URL if scraped, null if uploaded
+  content       String   // full extracted text
+  contentChunks String   @default("[]") // JSON array of text chunks
+  fileType      String?  // pdf, docx, txt, md, csv, xlsx
+  fileSize      Int?     // bytes
+  metadata      String?  // JSON: fetchedAt, domain, pageCount, etc.
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
