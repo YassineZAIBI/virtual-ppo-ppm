@@ -1,0 +1,16 @@
+# .gcloudignore — files to exclude from Cloud Build uploads
+.git
+.gitignore
+node_modules/
+.next/
+.env
+.env.local
+.env.development
+*.db
+*.db-journal
+prisma/dev.db
+prisma/dev.db-journal
+README.md
+.vscode/
+.idea/
+*.log

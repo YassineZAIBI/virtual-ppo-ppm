@@ -1,5 +1,5 @@
 # ============================================
-# Virtual PPO/PPM — Python Agent Service
+# Azmyra — Python Agent Service
 # ============================================
 
 FROM python:3.12-slim
