@@ -20,6 +20,8 @@ import {
 import { toast } from 'sonner';
 import { Initiative } from '@/lib/types';
 import { ShareButton } from '@/components/share/ShareButton';
+import { isSampleData } from '@/lib/sample-data';
+import { ExampleBadge } from '@/components/ui/example-badge';
 
 const stages = [
   { id: 'idea', label: 'Ideas', color: 'bg-slate-100 dark:bg-slate-800', headerColor: 'bg-slate-200 dark:bg-slate-700' },
@@ -322,7 +324,10 @@ export function InitiativesPipeline() {
                 {stageInitiatives.map((initiative) => (
                   <Card key={initiative.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setEditingInitiative({ ...initiative })}>
                     <CardContent className="pt-4 pb-3">
-                      <h4 className="font-medium text-slate-900 dark:text-white text-sm mb-1">{initiative.title}</h4>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <h4 className="font-medium text-slate-900 dark:text-white text-sm">{initiative.title}</h4>
+                        {isSampleData(initiative.id) && <ExampleBadge />}
+                      </div>
                       <p className="text-xs text-slate-500 line-clamp-2 mb-2">{initiative.description}</p>
 
                       {/* Business case indicators */}

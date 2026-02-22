@@ -17,6 +17,8 @@ import {
 import { toast } from 'sonner';
 import { Meeting } from '@/lib/types';
 import { ShareButton } from '@/components/share/ShareButton';
+import { isSampleData } from '@/lib/sample-data';
+import { ExampleBadge } from '@/components/ui/example-badge';
 
 export function MeetingsView() {
   const { meetings, addMeeting } = useAppStore();
@@ -236,7 +238,10 @@ export function MeetingsView() {
                        <Clock className="h-5 w-5 text-slate-600" />}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white">{meeting.title}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-900 dark:text-white">{meeting.title}</h3>
+                        {isSampleData(meeting.id) && <ExampleBadge />}
+                      </div>
                       <p className="text-sm text-slate-500">
                         {new Date(meeting.date).toLocaleDateString()} &bull; {meeting.duration} min
                       </p>

@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard, MessageSquare, Calendar, Map, Lightbulb, Search,
-  Settings, ChevronLeft, ChevronRight, Zap, FileCode, UserCircle, Gauge, LogOut,
+  Settings, ChevronLeft, ChevronRight, Zap, FileCode, UserCircle, Gauge, LogOut, BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/guide', label: 'Getting Started', icon: BookOpen },
   { path: '/chat', label: 'AI Assistant', icon: MessageSquare },
   { path: '/meetings', label: 'Meetings', icon: Calendar },
   { path: '/roadmap', label: 'Roadmap', icon: Map },
@@ -30,8 +31,13 @@ export function Sidebar() {
   const router = useRouter();
   const { data: session } = useSession();
 
-  // Hide sidebar on auth pages
-  if (pathname.startsWith('/auth') || pathname.startsWith('/onboarding') || pathname.startsWith('/share')) return null;
+  // Hide sidebar on auth/onboarding/share pages and when not authenticated
+  if (
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/onboarding') ||
+    pathname.startsWith('/share') ||
+    !session
+  ) return null;
 
   return (
     <div className={cn('flex flex-col bg-slate-900 text-white transition-all duration-300 h-screen sticky top-0', collapsed ? 'w-16' : 'w-64')}>
@@ -99,7 +105,7 @@ export function Sidebar() {
                 variant="ghost"
                 size="icon"
                 className="text-slate-500 hover:text-red-400 hover:bg-slate-800 flex-shrink-0 h-8 w-8"
-                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                onClick={() => signOut({ callbackUrl: '/' })}
                 title="Sign out"
               >
                 <LogOut className="h-4 w-4" />

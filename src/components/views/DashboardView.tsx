@@ -15,16 +15,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Briefcase, Clock, AlertTriangle, Calendar, Plus, FileText, Users,
-  Target, Workflow, Loader2, ArrowRight, Bot, Sparkles,
+  Target, Workflow, Loader2, ArrowRight, Bot, Sparkles, BookOpen, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShareButton } from '@/components/share/ShareButton';
+import { isSampleData } from '@/lib/sample-data';
+import { ExampleBadge } from '@/components/ui/example-badge';
 
 export function DashboardView() {
   const router = useRouter();
   const { initiatives, meetings, risks, addInitiative, settings } = useAppStore();
   const [showNewInitiative, setShowNewInitiative] = useState(false);
   const [showQuickAction, setShowQuickAction] = useState<string | null>(null);
+  const [guideDismissed, setGuideDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('azmyra-guide-dismissed') === 'true';
+    }
+    return false;
+  });
   const [newInitiative, setNewInitiative] = useState({ title: '', description: '', businessValue: 'medium' as const, effort: 'medium' as const });
 
   useEffect(() => { loadSampleData(); }, []);
@@ -101,6 +109,33 @@ export function DashboardView() {
         </div>
       </div>
 
+      {/* Getting Started Banner */}
+      {!guideDismissed && (
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <BookOpen className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-blue-800 dark:text-blue-200">New to Azmyra?</p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400">Check out our getting started guide to learn how to use each feature.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100" onClick={() => router.push('/guide')}>
+                  <BookOpen className="h-3 w-3 mr-1" />View Guide
+                </Button>
+                <Button size="sm" variant="ghost" className="text-blue-400 hover:text-blue-600 h-8 w-8 p-0" onClick={() => { setGuideDismissed(true); localStorage.setItem('azmyra-guide-dismissed', 'true'); }}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/initiatives')}>
@@ -158,6 +193,7 @@ export function DashboardView() {
                       {type}
                     </Badge>
                     <span className="font-medium">{item.title}</span>
+                    {isSampleData(item.id) && <ExampleBadge />}
                   </div>
                   <Button size="sm" variant="outline" onClick={() => router.push(type === 'meeting' ? '/meetings' : '/initiatives')}>
                     View <ArrowRight className="h-3 w-3 ml-1" />
@@ -200,7 +236,10 @@ export function DashboardView() {
                     <div className="flex items-center gap-3">
                       <div className={cn('h-2 w-2 rounded-full', initiative.businessValue === 'high' ? 'bg-green-500' : initiative.businessValue === 'medium' ? 'bg-amber-500' : 'bg-slate-400')} />
                       <div>
-                        <p className="font-medium text-slate-900 dark:text-white">{initiative.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-900 dark:text-white">{initiative.title}</p>
+                          {isSampleData(initiative.id) && <ExampleBadge />}
+                        </div>
                         <p className="text-sm text-slate-500">{initiative.stakeholders.join(', ') || 'No stakeholders'}</p>
                       </div>
                     </div>
@@ -232,7 +271,10 @@ export function DashboardView() {
                     {risk.severity.toUpperCase()}
                   </Badge>
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900 dark:text-white">{risk.title}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-slate-900 dark:text-white">{risk.title}</p>
+                      {isSampleData(risk.id) && <ExampleBadge />}
+                    </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">{risk.description}</p>
                     {risk.mitigationPlan && <p className="text-sm text-green-700 dark:text-green-400 mt-1">Mitigation: {risk.mitigationPlan}</p>}
                   </div>
