@@ -6,21 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard, MessageSquare, Calendar, Map, Lightbulb, Search,
-  Settings, ChevronLeft, ChevronRight, Zap, FileCode, UserCircle, Gauge, LogOut, BookOpen,
+  Settings, ChevronLeft, ChevronRight, Zap, UserCircle, Gauge, LogOut,
 } from 'lucide-react';
 import { useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/guide', label: 'Getting Started', icon: BookOpen },
   { path: '/chat', label: 'AI Assistant', icon: MessageSquare },
   { path: '/meetings', label: 'Meetings', icon: Calendar },
   { path: '/roadmap', label: 'Roadmap', icon: Map },
   { path: '/initiatives', label: 'Initiatives', icon: Lightbulb },
   { path: '/discovery', label: 'Discovery', icon: Search },
   { path: '/value-meter', label: 'Value Meter', icon: Gauge },
-  { path: '/swagger', label: 'Swagger/API', icon: FileCode },
   { path: '/user-journey', label: 'User Journey', icon: UserCircle },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
