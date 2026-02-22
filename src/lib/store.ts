@@ -8,6 +8,7 @@ import {
   RoadmapItem,
   ChatMessage,
   Risk,
+  Persona,
 } from './types';
 import type { AgentId, AgentChatMessage, AgentPendingAction } from './types';
 
@@ -64,6 +65,12 @@ interface AppState {
   addRisk: (risk: Risk) => void;
   updateRisk: (id: string, updates: Partial<Risk>) => void;
   deleteRisk: (id: string) => void;
+
+  // Personas
+  personas: Persona[];
+  addPersona: (persona: Persona) => void;
+  updatePersona: (id: string, updates: Partial<Persona>) => void;
+  deletePersona: (id: string) => void;
 
   // UI State
   isLoading: boolean;
@@ -200,6 +207,21 @@ export const useAppStore = create<AppState>()(
           risks: state.risks.filter((r) => r.id !== id),
         })),
 
+      // Personas
+      personas: [],
+      addPersona: (persona) =>
+        set((state) => ({ personas: [...state.personas, persona] })),
+      updatePersona: (id, updates) =>
+        set((state) => ({
+          personas: state.personas.map((p) =>
+            p.id === id ? { ...p, ...updates } : p
+          ),
+        })),
+      deletePersona: (id) =>
+        set((state) => ({
+          personas: state.personas.filter((p) => p.id !== id),
+        })),
+
       // UI State
       isLoading: false,
       setIsLoading: (loading) => set({ isLoading: loading }),
@@ -215,6 +237,7 @@ export const useAppStore = create<AppState>()(
         roadmapItems: state.roadmapItems,
         chatMessages: state.chatMessages,
         risks: state.risks,
+        personas: state.personas,
         pendingActions: state.pendingActions,
       }),
     }
@@ -362,5 +385,30 @@ export const loadSampleData = () => {
     ];
 
     sampleRisks.forEach((r) => state.addRisk(r));
+  }
+
+  if (state.personas.length === 0) {
+    const samplePersonas: Persona[] = [
+      {
+        id: 'p1',
+        name: 'Data Analyst',
+        role: 'Analytics User',
+        goals: ['Access real-time dashboards', 'Export reports easily'],
+        painPoints: ['Complex query building', 'Slow load times'],
+      },
+      {
+        id: 'p2',
+        name: 'Product Manager',
+        role: 'Decision Maker',
+        goals: ['View KPIs at a glance', 'Track roadmap progress'],
+        painPoints: ['Too many clicks to find info', 'Lack of mobile access'],
+      },
+    ];
+
+    samplePersonas.forEach((p) => state.addPersona(p));
+
+    // Link sample personas to sample initiatives
+    state.updateInitiative('1', { personaIds: ['p1', 'p2'] });
+    state.updateInitiative('2', { personaIds: ['p2'] });
   }
 };

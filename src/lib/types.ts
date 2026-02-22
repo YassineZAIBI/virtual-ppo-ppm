@@ -70,6 +70,16 @@ export interface Initiative {
   expectedTimeToMarket?: string;
   // Discovery data
   discovery?: DiscoveryData;
+  // Linked personas
+  personaIds?: string[];
+}
+
+export interface Persona {
+  id: string;
+  name: string;
+  role: string;
+  goals: string[];
+  painPoints: string[];
 }
 
 export interface DiscoveryNote {

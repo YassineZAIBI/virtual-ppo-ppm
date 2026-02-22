@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Initiative } from '@/lib/types';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ShareButton } from '@/components/share/ShareButton';
 import { isSampleData } from '@/lib/sample-data';
 import { ExampleBadge } from '@/components/ui/example-badge';
@@ -32,7 +33,7 @@ const stages = [
 ];
 
 export function InitiativesPipeline() {
-  const { initiatives, moveInitiative, addInitiative, updateInitiative, deleteInitiative } = useAppStore();
+  const { initiatives, moveInitiative, addInitiative, updateInitiative, deleteInitiative, personas } = useAppStore();
   const router = useRouter();
   const [showNewIdea, setShowNewIdea] = useState(false);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
@@ -243,6 +244,53 @@ export function InitiativesPipeline() {
                   <Input value={editingInitiative.stakeholders.join(', ')} onChange={(e) => setEditingInitiative({ ...editingInitiative, stakeholders: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} />
                 </div>
 
+                {/* Personas */}
+                {personas.length > 0 && (
+                  <div>
+                    <Label>Personas</Label>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {(editingInitiative.personaIds || []).map((pid) => {
+                        const p = personas.find((x) => x.id === pid);
+                        if (!p) return null;
+                        return (
+                          <Badge
+                            key={pid}
+                            variant="secondary"
+                            className="text-xs cursor-pointer hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900 dark:hover:text-red-300 group pr-1"
+                            onClick={() => setEditingInitiative({
+                              ...editingInitiative,
+                              personaIds: (editingInitiative.personaIds || []).filter((id) => id !== pid),
+                            })}
+                          >
+                            {p.name}
+                            <span className="ml-1 opacity-50 group-hover:opacity-100">&times;</span>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                    <Select
+                      value=""
+                      onValueChange={(pid) => {
+                        const current = editingInitiative.personaIds || [];
+                        if (!current.includes(pid)) {
+                          setEditingInitiative({ ...editingInitiative, personaIds: [...current, pid] });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder="Add a persona..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {personas
+                          .filter((p) => !(editingInitiative.personaIds || []).includes(p.id))
+                          .map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name} — {p.role}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {/* Business Case Questions */}
                 <div className="border-t pt-4 mt-2">
                   <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
@@ -328,6 +376,27 @@ export function InitiativesPipeline() {
                         <h4 className="font-medium text-slate-900 dark:text-white text-sm">{initiative.title}</h4>
                         {isSampleData(initiative.id) && <ExampleBadge />}
                       </div>
+                      {/* Persona avatars */}
+                      {initiative.personaIds && initiative.personaIds.length > 0 && (
+                        <div className="flex items-center gap-0.5 mb-1.5">
+                          {initiative.personaIds.map((pid) => {
+                            const p = personas.find((x) => x.id === pid);
+                            if (!p) return null;
+                            return (
+                              <Tooltip key={pid}>
+                                <TooltipTrigger asChild>
+                                  <div className="h-5 w-5 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[10px] font-semibold text-blue-600 dark:text-blue-300 border border-white dark:border-slate-800">
+                                    {p.name.charAt(0)}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  {p.name} — {p.role}
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })}
+                        </div>
+                      )}
                       <p className="text-xs text-slate-500 line-clamp-2 mb-2">{initiative.description}</p>
 
                       {/* Business case indicators */}
