@@ -61,27 +61,28 @@ export function ChatInterface() {
     }
   }, [chatMessages, isLoading]);
 
-  // Consume pending chat prompt from quick actions
+  // Consume pending chat prompt from quick actions — auto-send immediately
   useEffect(() => {
     if (pendingChatPrompt && !pendingPromptConsumed.current) {
       pendingPromptConsumed.current = true;
       const prompt = pendingChatPrompt;
       setPendingChatPrompt(null);
-      setInput(prompt);
+      handleSend(prompt);
     }
-  }, [pendingChatPrompt, setPendingChatPrompt]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingChatPrompt]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleSend = async (overrideMessage?: string) => {
+    const messageToSend = overrideMessage || input;
+    if (!messageToSend.trim() || isLoading) return;
 
     const userMessage: AgentChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: input,
+      content: messageToSend,
       timestamp: new Date(),
     };
     addChatMessage(userMessage);
-    const currentInput = input;
     setInput('');
     setIsLoading(true);
 
@@ -90,7 +91,7 @@ export function ChatInterface() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: currentInput,
+          message: messageToSend,
           history: chatMessages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
           settings,
           storeData: { initiatives, risks, roadmapItems, meetings },

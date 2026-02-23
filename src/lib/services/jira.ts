@@ -29,11 +29,34 @@ export class JiraService {
   }
 
   /**
+   * Verifies authentication by calling the /myself endpoint.
+   * Throws if the credentials are invalid.
+   */
+  async verifyAuth(): Promise<{ displayName: string; email: string }> {
+    const response = await fetch(`${this.baseUrl}/rest/api/3/myself`, {
+      method: 'GET',
+      headers: this.headers(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Jira authentication failed. Please check your email and API token.');
+      }
+      const errorBody = await response.text();
+      throw new Error(`Jira auth check failed: ${response.status} ${response.statusText} - ${errorBody}`);
+    }
+
+    const data = await response.json();
+    return { displayName: data.displayName, email: data.emailAddress };
+  }
+
+  /**
    * Fetches all projects visible to the authenticated user.
+   * Uses the paginated /project/search endpoint for better reliability.
    */
   async getProjects(): Promise<JiraProject[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/rest/api/3/project`, {
+      const response = await fetch(`${this.baseUrl}/rest/api/3/project/search?maxResults=50`, {
         method: 'GET',
         headers: this.headers(),
       });
@@ -46,8 +69,9 @@ export class JiraService {
       }
 
       const data = await response.json();
+      const projects = data.values || data || [];
 
-      return data.map((project: any) => ({
+      return projects.map((project: any) => ({
         key: project.key,
         name: project.name,
         id: project.id,
@@ -349,7 +373,7 @@ export class JiraService {
    */
   async searchIssues(jql: string): Promise<JiraIssue[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/rest/api/3/search/jql`, {
+      const response = await fetch(`${this.baseUrl}/rest/api/3/search`, {
         method: 'POST',
         headers: this.headers(),
         body: JSON.stringify({

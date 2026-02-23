@@ -16,7 +16,14 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action');
     const projectKey = searchParams.get('projectKey') || process.env.JIRA_PROJECT_KEY || '';
 
-    const jira = createJiraService();
+    // Read credentials from query params (sent by Settings UI) or fall back to env vars
+    const credentials = {
+      url: searchParams.get('url') || undefined,
+      email: searchParams.get('email') || undefined,
+      apiToken: searchParams.get('apiToken') || undefined,
+    };
+
+    const jira = createJiraService(credentials);
 
     switch (action) {
       case 'projects':

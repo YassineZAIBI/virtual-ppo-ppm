@@ -22,8 +22,17 @@ export async function POST(request: NextRequest) {
     }
 
     const jira = new JiraService(url, email, apiToken);
+
+    // Verify authentication first — getProjects can return 200 with 0 results even with bad creds
+    const user = await jira.verifyAuth();
+
     const projects = await jira.getProjects();
-    return NextResponse.json({ success: true, projectCount: projects.length, projects: projects.slice(0, 5) });
+    return NextResponse.json({
+      success: true,
+      user: user.displayName,
+      projectCount: projects.length,
+      projects: projects.slice(0, 10),
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
