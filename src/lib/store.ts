@@ -72,6 +72,10 @@ interface AppState {
   updatePersona: (id: string, updates: Partial<Persona>) => void;
   deletePersona: (id: string) => void;
 
+  // Pending chat prompt (for quick actions navigation)
+  pendingChatPrompt: string | null;
+  setPendingChatPrompt: (prompt: string | null) => void;
+
   // UI State
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
@@ -221,6 +225,10 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           personas: state.personas.filter((p) => p.id !== id),
         })),
+
+      // Pending chat prompt
+      pendingChatPrompt: null,
+      setPendingChatPrompt: (prompt) => set({ pendingChatPrompt: prompt }),
 
       // UI State
       isLoading: false,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -81,6 +82,17 @@ export function ShareDialog({ open, onOpenChange, defaultResourceType, resourceI
   const handleCreate = async () => {
     setIsCreating(true);
     try {
+      // Capture current store data as snapshot for the guest
+      const state = useAppStore.getState();
+      const dataSnapshot = {
+        initiatives: state.initiatives,
+        meetings: state.meetings,
+        roadmapItems: state.roadmapItems,
+        risks: state.risks,
+        personas: state.personas,
+        productName: state.settings?.preferences ? 'Azmyra' : 'Azmyra',
+      };
+
       const res = await fetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,6 +101,7 @@ export function ShareDialog({ open, onOpenChange, defaultResourceType, resourceI
           resourceId,
           accessLevel: 'view_comment',
           expiryHours: parseInt(expiryHours),
+          dataSnapshot,
         }),
       });
 

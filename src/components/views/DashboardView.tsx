@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Briefcase, Clock, AlertTriangle, Calendar, Plus, FileText, Users,
-  Target, Workflow, Loader2, ArrowRight, Bot, Sparkles, BookOpen, X,
+  Target, Workflow, ArrowRight, BookOpen, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShareButton } from '@/components/share/ShareButton';
@@ -24,9 +24,8 @@ import { ExampleBadge } from '@/components/ui/example-badge';
 
 export function DashboardView() {
   const router = useRouter();
-  const { initiatives, meetings, risks, addInitiative, settings } = useAppStore();
+  const { initiatives, meetings, risks, addInitiative, settings, setPendingChatPrompt } = useAppStore();
   const [showNewInitiative, setShowNewInitiative] = useState(false);
-  const [showQuickAction, setShowQuickAction] = useState<string | null>(null);
   const [guideDismissed, setGuideDismissed] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('azmyra-guide-dismissed') === 'true';
@@ -63,28 +62,29 @@ export function DashboardView() {
     toast.success('Initiative created successfully!');
   };
 
-  const handleQuickAction = async (action: string) => {
-    setShowQuickAction(action);
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: `Generate a ${action} based on current product context. Initiatives: ${initiatives.map(i => i.title).join(', ')}. Risks: ${risks.map(r => r.title).join(', ')}.`,
-          history: [],
-          settings: { llm: settings.llm },
-        }),
-      });
-      if (response.ok) {
-        toast.success(`${action} generated successfully! Check the AI Assistant for details.`);
+  const handleQuickAction = (action: string) => {
+    const context = `Current initiatives: ${initiatives.map(i => i.title).join(', ')}. Current risks: ${risks.map(r => r.title).join(', ')}.`;
+
+    if (action === 'Jira Sync') {
+      if (settings.integrations.jira.enabled && settings.integrations.jira.projectKey) {
+        toast.info('Navigating to Settings to sync Jira...');
       } else {
-        toast.error(`Failed to generate ${action}`);
+        toast.info('Configure your Jira integration first');
       }
-    } catch {
-      toast.error(`Failed to generate ${action}`);
-    } finally {
-      setShowQuickAction(null);
+      router.push('/settings');
+      return;
     }
+
+    const prompts: Record<string, string> = {
+      'PRD': `Generate a Product Requirements Document (PRD) for the highest-priority initiative. ${context}`,
+      'Interview': `Help me prepare a user interview script for our product. Include questions about user needs, pain points, and feature expectations. ${context}`,
+      'OKRs': `Draft OKRs (Objectives and Key Results) for the current quarter based on our product initiatives and risks. ${context}`,
+    };
+
+    const prompt = prompts[action] || `Help me with: ${action}. ${context}`;
+    setPendingChatPrompt(prompt);
+    toast.success(`Opening AI Assistant for "${action}"...`);
+    router.push('/chat');
   };
 
   const attentionItems = [
@@ -217,7 +217,7 @@ export function DashboardView() {
               { key: 'Jira Sync', icon: Workflow, label: 'Sync with Jira' },
             ].map(({ key, icon: Icon, label }) => (
               <Button key={key} variant="outline" className="w-full justify-start" onClick={() => handleQuickAction(key)}>
-                {showQuickAction === key ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Icon className="h-4 w-4 mr-2" />}
+                <Icon className="h-4 w-4 mr-2" />
                 {label}
               </Button>
             ))}

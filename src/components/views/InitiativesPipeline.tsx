@@ -375,6 +375,11 @@ export function InitiativesPipeline() {
                       <div className="flex items-center gap-1.5 mb-1">
                         <h4 className="font-medium text-slate-900 dark:text-white text-sm">{initiative.title}</h4>
                         {isSampleData(initiative.id) && <ExampleBadge />}
+                        {initiative.jiraKey && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 font-mono">
+                            {initiative.jiraKey}
+                          </Badge>
+                        )}
                       </div>
                       {/* Persona avatars */}
                       {initiative.personaIds && initiative.personaIds.length > 0 && (

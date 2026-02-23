@@ -15,6 +15,7 @@ export interface IntegrationCredentials {
     url: string;
     email: string;
     apiToken: string;
+    projectKey: string;
   };
   slack: {
     enabled: boolean;
@@ -330,7 +331,7 @@ export const defaultSettings: UserSettings = {
     model: '',
   },
   integrations: {
-    jira: { enabled: false, url: '', email: '', apiToken: '' },
+    jira: { enabled: false, url: '', email: '', apiToken: '', projectKey: '' },
     slack: { enabled: false, botToken: '', channelId: '' },
     confluence: { enabled: false, url: '', email: '', apiToken: '' },
     email: { enabled: false, smtpHost: '', smtpPort: 587, username: '', password: '', fromEmail: '' },

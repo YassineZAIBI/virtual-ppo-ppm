@@ -36,6 +36,7 @@ export async function GET(
       accessLevel: shareLink.accessLevel,
       expiresAt: shareLink.expiresAt,
       viewCount: shareLink.viewCount + 1,
+      dataSnapshot: (shareLink as any).dataSnapshot || null,
     });
   } catch (error: any) {
     console.error('Share link validation error:', error);

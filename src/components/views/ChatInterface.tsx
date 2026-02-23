@@ -44,6 +44,7 @@ export function ChatInterface() {
     selectedAgent, setSelectedAgent,
     pendingActions, addPendingAction, updatePendingAction, removePendingAction,
     initiatives, risks, roadmapItems, meetings,
+    pendingChatPrompt, setPendingChatPrompt,
   } = useAppStore();
 
   const [input, setInput] = useState('');
@@ -52,12 +53,23 @@ export function ChatInterface() {
   const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>({});
   const [knowledgeCount, setKnowledgeCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pendingPromptConsumed = useRef(false);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatMessages, isLoading]);
+
+  // Consume pending chat prompt from quick actions
+  useEffect(() => {
+    if (pendingChatPrompt && !pendingPromptConsumed.current) {
+      pendingPromptConsumed.current = true;
+      const prompt = pendingChatPrompt;
+      setPendingChatPrompt(null);
+      setInput(prompt);
+    }
+  }, [pendingChatPrompt, setPendingChatPrompt]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;

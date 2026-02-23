@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = (session.user as any).id;
-    const { resourceType, resourceId, accessLevel, expiryHours } = await request.json();
+    const { resourceType, resourceId, accessLevel, expiryHours, dataSnapshot } = await request.json();
 
     if (!resourceType) {
       return NextResponse.json({ error: 'resourceType is required' }, { status: 400 });
@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
         resourceId: resourceId || null,
         accessLevel: accessLevel || 'view_comment',
         expiresAt,
+        dataSnapshot: dataSnapshot || undefined,
       },
     });
 

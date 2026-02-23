@@ -324,6 +324,11 @@ export function RoadmapView() {
                                 <h4 className="font-medium text-sm text-slate-900 dark:text-white truncate">
                                   {item.title}
                                 </h4>
+                                {item.jiraKey && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 font-mono shrink-0">
+                                    {item.jiraKey}
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-xs text-slate-500 line-clamp-2">{item.description || 'No description'}</p>
                             </div>

@@ -12,8 +12,9 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bot, Shield, Activity, MessageSquare, FileText, Send, Loader2, CheckCircle2, Zap } from 'lucide-react';
+import { Bot, Shield, Activity, MessageSquare, FileText, Send, Loader2, CheckCircle2, Zap, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import type { JiraProject } from '@/lib/types';
 
 const modelPlaceholders: Record<string, string> = {
   openai: 'gpt-4',
@@ -25,10 +26,16 @@ const modelPlaceholders: Record<string, string> = {
 };
 
 export function SettingsView() {
-  const { settings, updateLLMConfig, updateIntegrations, updatePreferences } = useAppStore();
+  const { settings, updateLLMConfig, updateIntegrations, updatePreferences, initiatives, addInitiative } = useAppStore();
   const [activeTab, setActiveTab] = useState('llm');
   const [isTesting, setIsTesting] = useState<string | null>(null);
   const [isTestingLLM, setIsTestingLLM] = useState(false);
+  const [jiraProjects, setJiraProjects] = useState<JiraProject[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('azmyra-jira-last-sync');
+    return null;
+  });
 
   const testLLMConnection = async () => {
     setIsTestingLLM(true);
@@ -83,6 +90,91 @@ export function SettingsView() {
     }
   };
 
+  const testJiraAndFetchProjects = async () => {
+    setIsTesting('jira');
+    try {
+      const creds = settings.integrations.jira;
+      const res = await fetch('/api/integrations/jira/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: creds.url, email: creds.email, apiToken: creds.apiToken }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Jira connected! ${data.projectCount} projects found`);
+        if (data.projects) setJiraProjects(data.projects);
+        // Fetch full project list
+        const projRes = await fetch(`/api/integrations/jira?action=projects&url=${encodeURIComponent(creds.url)}&email=${encodeURIComponent(creds.email)}&apiToken=${encodeURIComponent(creds.apiToken)}`);
+        if (projRes.ok) {
+          const projData = await projRes.json();
+          if (projData.projects) setJiraProjects(projData.projects);
+        }
+      } else {
+        const data = await res.json();
+        toast.error(`Jira connection failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch {
+      toast.error('Failed to test Jira connection');
+    } finally {
+      setIsTesting(null);
+    }
+  };
+
+  const handleJiraSync = async () => {
+    const creds = settings.integrations.jira;
+    if (!creds.projectKey) {
+      toast.error('Please select a Jira project first');
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const res = await fetch(
+        `/api/integrations/jira?action=issues&projectKey=${encodeURIComponent(creds.projectKey)}&url=${encodeURIComponent(creds.url)}&email=${encodeURIComponent(creds.email)}&apiToken=${encodeURIComponent(creds.apiToken)}`
+      );
+      if (!res.ok) throw new Error('Failed to fetch issues');
+      const data = await res.json();
+      const issues = data.issues || [];
+
+      // Map Jira status to initiative status
+      const statusMap: Record<string, 'idea' | 'discovery' | 'validation' | 'definition' | 'approved'> = {
+        'to do': 'idea', 'open': 'idea', 'backlog': 'idea',
+        'in progress': 'discovery', 'in review': 'validation',
+        'done': 'approved', 'closed': 'approved', 'resolved': 'approved',
+      };
+
+      let synced = 0;
+      for (const issue of issues) {
+        // Skip if already synced (matching jiraKey)
+        if (initiatives.some((i) => i.jiraKey === issue.key)) continue;
+        const jiraStatus = (issue.status || '').toLowerCase();
+        addInitiative({
+          id: crypto.randomUUID(),
+          title: issue.summary || issue.key,
+          description: issue.description || '',
+          status: statusMap[jiraStatus] || 'idea',
+          businessValue: 'medium',
+          effort: 'medium',
+          stakeholders: issue.assignee ? [issue.assignee] : [],
+          createdAt: new Date(issue.created || Date.now()),
+          updatedAt: new Date(issue.updated || Date.now()),
+          tags: issue.labels || [],
+          risks: [],
+          dependencies: [],
+          jiraKey: issue.key,
+        });
+        synced++;
+      }
+      const now = new Date().toLocaleString();
+      setLastSyncTime(now);
+      localStorage.setItem('azmyra-jira-last-sync', now);
+      toast.success(`Synced ${synced} new issues from ${creds.projectKey} (${issues.length - synced} already existed)`);
+    } catch {
+      toast.error('Failed to sync Jira issues');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const needsEndpoint = ['azure', 'ollama', 'z-ai'].includes(settings.llm.provider);
 
   const endpointConfig: Record<string, { label: string; placeholder: string }> = {
@@ -92,14 +184,6 @@ export function SettingsView() {
   };
 
   const integrationConfigs = [
-    {
-      key: 'jira', title: 'Jira', icon: Activity,
-      fields: [
-        { label: 'Jira URL', key: 'url', placeholder: 'https://your-domain.atlassian.net' },
-        { label: 'Email', key: 'email', placeholder: 'you@company.com' },
-        { label: 'API Token', key: 'apiToken', type: 'password', placeholder: 'Your Jira API token' },
-      ],
-    },
     {
       key: 'slack', title: 'Slack', icon: MessageSquare,
       fields: [
@@ -220,6 +304,120 @@ export function SettingsView() {
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4 mt-4">
+          {/* Dedicated Jira Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Activity className="h-5 w-5" />Jira
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {settings.integrations.jira.enabled && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={testJiraAndFetchProjects}
+                      disabled={isTesting === 'jira'}
+                    >
+                      {isTesting === 'jira' ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      )}
+                      Test
+                    </Button>
+                  )}
+                  <Switch
+                    checked={settings.integrations.jira.enabled}
+                    onCheckedChange={(checked) => updateIntegrations({
+                      jira: { ...settings.integrations.jira, enabled: checked }
+                    })}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            {settings.integrations.jira.enabled && (
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-xs">Jira URL</Label>
+                  <Input
+                    value={settings.integrations.jira.url}
+                    onChange={(e) => updateIntegrations({ jira: { ...settings.integrations.jira, url: e.target.value } })}
+                    placeholder="https://your-domain.atlassian.net"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Email</Label>
+                  <Input
+                    value={settings.integrations.jira.email}
+                    onChange={(e) => updateIntegrations({ jira: { ...settings.integrations.jira, email: e.target.value } })}
+                    placeholder="you@company.com"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">API Token</Label>
+                  <Input
+                    type="password"
+                    value={settings.integrations.jira.apiToken}
+                    onChange={(e) => updateIntegrations({ jira: { ...settings.integrations.jira, apiToken: e.target.value } })}
+                    placeholder="Your Jira API token"
+                  />
+                </div>
+
+                {/* Project Picker */}
+                {jiraProjects.length > 0 && (
+                  <div>
+                    <Label className="text-xs">Project</Label>
+                    <Select
+                      value={settings.integrations.jira.projectKey || ''}
+                      onValueChange={(val) => updateIntegrations({ jira: { ...settings.integrations.jira, projectKey: val } })}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select a project to sync" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {jiraProjects.map((p) => (
+                          <SelectItem key={p.key} value={p.key}>
+                            {p.key} — {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Sync Button */}
+                {settings.integrations.jira.projectKey && (
+                  <div className="pt-2 border-t space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">Sync Issues</p>
+                        {lastSyncTime && (
+                          <p className="text-xs text-slate-500">Last synced: {lastSyncTime}</p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={handleJiraSync}
+                        disabled={isSyncing}
+                      >
+                        {isSyncing ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                        )}
+                        Sync Now
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Imports issues from <strong>{settings.integrations.jira.projectKey}</strong> as initiatives. Duplicates are skipped.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+
           {integrationConfigs.map((integration) => (
             <Card key={integration.key}>
               <CardHeader className="pb-2">

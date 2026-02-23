@@ -237,6 +237,7 @@ model ShareLink {
   expiresAt    DateTime
   isActive     Boolean  @default(true)
   viewCount    Int      @default(0)
+  dataSnapshot Json?
   createdAt    DateTime @default(now())
 
   creator  User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
