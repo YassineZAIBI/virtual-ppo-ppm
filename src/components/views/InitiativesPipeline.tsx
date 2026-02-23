@@ -375,8 +375,17 @@ export function InitiativesPipeline() {
                       <div className="flex items-center gap-1.5 mb-1">
                         <h4 className="font-medium text-slate-900 dark:text-white text-sm">{initiative.title}</h4>
                         {isSampleData(initiative.id) && <ExampleBadge />}
+                        {initiative.jiraIssueType && (
+                          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 font-medium shrink-0",
+                            initiative.jiraIssueType === 'Epic' ? 'text-purple-600 border-purple-300 dark:text-purple-400 dark:border-purple-700' :
+                            initiative.jiraIssueType === 'Feature' ? 'text-green-600 border-green-300 dark:text-green-400 dark:border-green-700' :
+                            'text-indigo-600 border-indigo-300 dark:text-indigo-400 dark:border-indigo-700'
+                          )}>
+                            {initiative.jiraIssueType}
+                          </Badge>
+                        )}
                         {initiative.jiraKey && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 font-mono">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 font-mono shrink-0">
                             {initiative.jiraKey}
                           </Badge>
                         )}

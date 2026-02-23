@@ -324,6 +324,15 @@ export function RoadmapView() {
                                 <h4 className="font-medium text-sm text-slate-900 dark:text-white truncate">
                                   {item.title}
                                 </h4>
+                                {item.jiraIssueType && (
+                                  <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 font-medium shrink-0",
+                                    item.jiraIssueType === 'Epic' ? 'text-purple-600 border-purple-300 dark:text-purple-400 dark:border-purple-700' :
+                                    item.jiraIssueType === 'Feature' ? 'text-green-600 border-green-300 dark:text-green-400 dark:border-green-700' :
+                                    'text-indigo-600 border-indigo-300 dark:text-indigo-400 dark:border-indigo-700'
+                                  )}>
+                                    {item.jiraIssueType}
+                                  </Badge>
+                                )}
                                 {item.jiraKey && (
                                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 font-mono shrink-0">
                                     {item.jiraKey}

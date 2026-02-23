@@ -128,8 +128,14 @@ export function SettingsView() {
     }
     setIsSyncing(true);
     try {
+      // Fetch only strategic issue types: Initiative, Epic, Portfolio EPIC, Feature(s)
+      // Exclude stories, tasks, bugs, tests, subtasks
+      const strategicTypes = ['Initiative', 'Epic', 'Portfolio EPIC', 'Features', 'Feature'];
+      const typeFilter = strategicTypes.map(t => `"${t}"`).join(', ');
+      const jql = `project = "${creds.projectKey}" AND issuetype in (${typeFilter}) ORDER BY created DESC`;
+
       const res = await fetch(
-        `/api/integrations/jira?action=issues&projectKey=${encodeURIComponent(creds.projectKey)}&url=${encodeURIComponent(creds.url)}&email=${encodeURIComponent(creds.email)}&apiToken=${encodeURIComponent(creds.apiToken)}`
+        `/api/integrations/jira?action=issues&projectKey=${encodeURIComponent(creds.projectKey)}&url=${encodeURIComponent(creds.url)}&email=${encodeURIComponent(creds.email)}&apiToken=${encodeURIComponent(creds.apiToken)}&jql=${encodeURIComponent(jql)}`
       );
       if (!res.ok) throw new Error('Failed to fetch issues');
       const data = await res.json();
@@ -137,9 +143,21 @@ export function SettingsView() {
 
       // Map Jira status to initiative status
       const statusMap: Record<string, 'idea' | 'discovery' | 'validation' | 'definition' | 'approved'> = {
-        'to do': 'idea', 'open': 'idea', 'backlog': 'idea',
-        'in progress': 'discovery', 'in review': 'validation',
+        'to do': 'idea', 'open': 'idea', 'backlog': 'idea', 'new': 'idea',
+        'parking lot': 'idea', 'selected for development': 'definition',
+        'in progress': 'discovery', 'in review': 'validation', 'waiting': 'validation',
+        'business case review': 'definition', 'ready for development': 'definition',
         'done': 'approved', 'closed': 'approved', 'resolved': 'approved',
+        'cancelled': 'approved',
+      };
+
+      // Map Jira issue type to a display label
+      const typeLabel = (t: string) => {
+        const lower = t.toLowerCase();
+        if (lower.includes('initiative')) return 'Initiative';
+        if (lower.includes('epic')) return 'Epic';
+        if (lower.includes('feature')) return 'Feature';
+        return t;
       };
 
       let synced = 0;
@@ -161,13 +179,14 @@ export function SettingsView() {
           risks: [],
           dependencies: [],
           jiraKey: issue.key,
+          jiraIssueType: typeLabel(issue.issueType || ''),
         });
         synced++;
       }
       const now = new Date().toLocaleString();
       setLastSyncTime(now);
       localStorage.setItem('azmyra-jira-last-sync', now);
-      toast.success(`Synced ${synced} new issues from ${creds.projectKey} (${issues.length - synced} already existed)`);
+      toast.success(`Synced ${synced} Epics/Features from ${creds.projectKey} (${issues.length - synced} already existed)`);
     } catch {
       toast.error('Failed to sync Jira issues');
     } finally {
@@ -410,7 +429,7 @@ export function SettingsView() {
                       </Button>
                     </div>
                     <p className="text-xs text-slate-500">
-                      Imports issues from <strong>{settings.integrations.jira.projectKey}</strong> as initiatives. Duplicates are skipped.
+                      Imports Initiatives, Epics &amp; Features from <strong>{settings.integrations.jira.projectKey}</strong>. Stories, bugs and tasks are excluded.
                     </p>
                   </div>
                 )}

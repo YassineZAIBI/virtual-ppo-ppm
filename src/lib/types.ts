@@ -64,6 +64,7 @@ export interface Initiative {
   risks: string[];
   dependencies: string[];
   jiraKey?: string;
+  jiraIssueType?: string;
   // Business case fields
   whyNeeded?: string;
   whatIfNot?: string;
