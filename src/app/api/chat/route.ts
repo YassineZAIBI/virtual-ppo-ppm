@@ -40,11 +40,12 @@ export async function POST(request: NextRequest) {
     if (agentResponse.ok) {
       const data = await agentResponse.json();
 
-      // Check if ALL tool executions failed — if so, the agent's integrations
+      // Check if agent tried tools but NONE succeeded — if so, its integrations
       // are broken and our data-enriched fallback will give better results
       const tools = data.tools_executed || [];
-      const allToolsFailed = tools.length > 0 && tools.every((t: any) => t.status === 'failed');
-      if (!allToolsFailed) {
+      const hasSuccessfulTool = tools.some((t: any) => t.status === 'executed');
+      const hasFailedTools = tools.some((t: any) => t.status === 'failed');
+      if (!hasFailedTools || hasSuccessfulTool) {
         return NextResponse.json(data);
       }
       console.log('Agent tools all failed, falling through to data-enriched fallback');
