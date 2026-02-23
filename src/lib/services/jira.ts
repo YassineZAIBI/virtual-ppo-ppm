@@ -373,7 +373,7 @@ export class JiraService {
    */
   async searchIssues(jql: string): Promise<JiraIssue[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/rest/api/3/search`, {
+      const response = await fetch(`${this.baseUrl}/rest/api/3/search/jql`, {
         method: 'POST',
         headers: this.headers(),
         body: JSON.stringify({
