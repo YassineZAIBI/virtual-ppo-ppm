@@ -124,6 +124,59 @@ export class JiraService {
   }
 
   /**
+   * Resolves an issue type name to its ID by fuzzy-matching against the project's available types.
+   */
+  private async resolveIssueType(
+    projectKey: string,
+    requestedType: string
+  ): Promise<{ id: string; name: string }> {
+    const resp = await fetch(
+      `${this.baseUrl}/rest/api/3/issue/createmeta/${projectKey}/issuetypes`,
+      { method: 'GET', headers: this.headers() }
+    );
+
+    if (!resp.ok) {
+      // Fallback: return the name as-is and let Jira validate
+      return { id: '', name: requestedType };
+    }
+
+    const data = await resp.json();
+    const types: Array<{ id: string; name: string }> = (data.issueTypes || data.values || data || []).map(
+      (it: any) => ({ id: String(it.id), name: it.name })
+    );
+
+    if (types.length === 0) {
+      return { id: '', name: requestedType };
+    }
+
+    const lower = requestedType.toLowerCase();
+
+    // 1. Exact match (case-insensitive)
+    const exact = types.find((t) => t.name.toLowerCase() === lower);
+    if (exact) return exact;
+
+    // 2. Plural/singular match (e.g. "Feature" vs "Features", "Story" vs "Stories")
+    const singular = lower.replace(/ies$/, 'y').replace(/s$/, '');
+    const plural1 = lower + 's';
+    const plural2 = lower.replace(/y$/, 'ies');
+    const fuzzy = types.find((t) => {
+      const tl = t.name.toLowerCase();
+      return tl === singular || tl === plural1 || tl === plural2 ||
+        tl.replace(/ies$/, 'y').replace(/s$/, '') === singular;
+    });
+    if (fuzzy) return fuzzy;
+
+    // 3. Contains match (e.g. "Portfolio EPIC" matches "Epic")
+    const contains = types.find((t) => t.name.toLowerCase().includes(lower) || lower.includes(t.name.toLowerCase()));
+    if (contains) return contains;
+
+    // 4. No match — throw helpful error with available types
+    throw new Error(
+      `Issue type "${requestedType}" not found in project ${projectKey}. Available types: ${types.map((t) => t.name).join(', ')}`
+    );
+  }
+
+  /**
    * Creates a new issue in the specified project.
    */
   async createIssue(
@@ -138,6 +191,9 @@ export class JiraService {
     }
   ): Promise<JiraIssue> {
     try {
+      // Resolve issue type by fetching valid types for the project and fuzzy-matching
+      const resolvedIssueType = await this.resolveIssueType(projectKey, data.issueType);
+
       // Build the request body using Atlassian Document Format (ADF) for description
       const body: any = {
         fields: {
@@ -158,7 +214,7 @@ export class JiraService {
               },
             ],
           },
-          issuetype: { name: data.issueType },
+          issuetype: resolvedIssueType.id ? { id: resolvedIssueType.id } : { name: resolvedIssueType.name },
         },
       };
 
