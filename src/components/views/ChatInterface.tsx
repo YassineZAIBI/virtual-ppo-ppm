@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import {
   Bot, Send, Sparkles, Trash2, ChevronDown, ChevronRight,
   Target, Search, ShieldAlert, MessageSquare, GraduationCap, Brain,
-  Check, X, Paperclip, Wrench,
+  Check, X, Paperclip, Wrench, Pencil, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { StyledMarkdown } from '@/components/ui/styled-markdown';
@@ -38,9 +38,17 @@ const AGENT_OPTIONS: Array<{ value: AgentId | null; label: string }> = [
   { value: 'thinker', label: 'Thinker' },
 ];
 
+// Processing status steps
+const PROCESSING_STEPS = [
+  { text: 'Analyzing your question...', duration: 2000 },
+  { text: 'Checking connected integrations...', duration: 3000 },
+  { text: 'Querying Jira for live data...', duration: 4000 },
+  { text: 'Generating response...', duration: 6000 },
+];
+
 export function ChatInterface() {
   const {
-    chatMessages, addChatMessage, clearChat, settings,
+    chatMessages, addChatMessage, setChatMessages, clearChat, settings,
     selectedAgent, setSelectedAgent,
     pendingActions, addPendingAction, updatePendingAction, removePendingAction,
     initiatives, risks, roadmapItems, meetings,
@@ -49,17 +57,47 @@ export function ChatInterface() {
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [processingStep, setProcessingStep] = useState(0);
   const [showAgentSelector, setShowAgentSelector] = useState(false);
   const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>({});
   const [knowledgeCount, setKnowledgeCount] = useState(0);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editInput, setEditInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const pendingPromptConsumed = useRef(false);
+  const processingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatMessages, isLoading]);
+
+  // Animate processing steps
+  useEffect(() => {
+    if (isLoading) {
+      setProcessingStep(0);
+      let step = 0;
+      const advance = () => {
+        step++;
+        if (step < PROCESSING_STEPS.length) {
+          setProcessingStep(step);
+          processingTimerRef.current = setTimeout(advance, PROCESSING_STEPS[step].duration);
+        }
+      };
+      processingTimerRef.current = setTimeout(advance, PROCESSING_STEPS[0].duration);
+    } else {
+      if (processingTimerRef.current) {
+        clearTimeout(processingTimerRef.current);
+        processingTimerRef.current = null;
+      }
+      setProcessingStep(0);
+    }
+    return () => {
+      if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
+    };
+  }, [isLoading]);
 
   // Consume pending chat prompt from quick actions — auto-send immediately
   useEffect(() => {
@@ -72,7 +110,7 @@ export function ChatInterface() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingChatPrompt]);
 
-  const handleSend = async (overrideMessage?: string) => {
+  const handleSend = useCallback(async (overrideMessage?: string) => {
     const messageToSend = overrideMessage || input;
     if (!messageToSend.trim() || isLoading) return;
 
@@ -102,7 +140,6 @@ export function ChatInterface() {
       if (!response.ok) throw new Error('Failed to get response');
       const data = await response.json();
 
-      // Add assistant message with agent metadata
       const assistantMessage: AgentChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -116,7 +153,6 @@ export function ChatInterface() {
       };
       addChatMessage(assistantMessage);
 
-      // Add pending actions to store
       if (data.pending_actions?.length) {
         for (const action of data.pending_actions) {
           addPendingAction({
@@ -140,7 +176,72 @@ export function ChatInterface() {
     } finally {
       setIsLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, isLoading, chatMessages, settings, initiatives, risks, roadmapItems, meetings, selectedAgent]);
+
+  // Edit and resubmit: truncate history from the edited message and resend
+  const handleEditSubmit = useCallback(async (messageId: string) => {
+    if (!editInput.trim() || isLoading) return;
+
+    const idx = chatMessages.findIndex((m) => m.id === messageId);
+    if (idx === -1) return;
+
+    // Truncate: keep messages before the edited one
+    const kept = chatMessages.slice(0, idx);
+    setChatMessages(kept);
+    setEditingMessageId(null);
+
+    const messageToSend = editInput.trim();
+    setEditInput('');
+    setIsLoading(true);
+
+    const userMessage: AgentChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: messageToSend,
+      timestamp: new Date(),
+    };
+    setChatMessages([...kept, userMessage]);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: messageToSend,
+          history: kept.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+          settings,
+          storeData: { initiatives, risks, roadmapItems, meetings },
+          agentId: selectedAgent,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to get response');
+      const data = await response.json();
+
+      addChatMessage({
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: data.response || 'I apologize, I encountered an issue processing your request.',
+        timestamp: new Date(),
+        agentId: data.agent_id,
+        agentName: data.agent_name,
+        toolsExecuted: data.tools_executed || [],
+        pendingActions: data.pending_actions || [],
+        sources: data.sources || [],
+      });
+    } catch (error) {
+      addChatMessage({
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Error connecting to AI service. Please check your LLM settings in Settings > LLM Provider.',
+        timestamp: new Date(),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editInput, isLoading, chatMessages, settings, initiatives, risks, roadmapItems, meetings, selectedAgent]);
 
   const handleApproveAction = async (actionId: string) => {
     const action = pendingActions.find((a) => a.id === actionId);
@@ -189,6 +290,16 @@ export function ChatInterface() {
     setExpandedTools((prev) => ({ ...prev, [messageId]: !prev[messageId] }));
   };
 
+  const startEditing = (message: AgentChatMessage) => {
+    setEditingMessageId(message.id);
+    setEditInput(message.content);
+  };
+
+  const cancelEditing = () => {
+    setEditingMessageId(null);
+    setEditInput('');
+  };
+
   const suggestions = [
     'What are the current risks?',
     'Summarize recent meetings',
@@ -214,7 +325,6 @@ export function ChatInterface() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Agent selector */}
             <div className="relative">
               <Button
                 variant="outline"
@@ -300,7 +410,6 @@ export function ChatInterface() {
             <p className="text-slate-500 mb-4 max-w-md">
               I have 6 specialized agents ready to help with strategy, discovery, risk, communications, expert advice, and deep analysis.
             </p>
-            {/* Agent chips */}
             <div className="flex flex-wrap gap-2 justify-center mb-6">
               {Object.entries(AGENT_INFO).map(([id, info]) => {
                 const Icon = info.icon;
@@ -323,7 +432,7 @@ export function ChatInterface() {
         ) : (
           <div className="space-y-4 max-w-3xl mx-auto">
             {chatMessages.map((message) => (
-              <div key={message.id} className={cn('flex gap-3', message.role === 'user' ? 'justify-end' : 'justify-start')}>
+              <div key={message.id} className={cn('flex gap-3 group', message.role === 'user' ? 'justify-end' : 'justify-start')}>
                 {message.role === 'assistant' && (
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarFallback className={cn(
@@ -334,7 +443,18 @@ export function ChatInterface() {
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <div className={cn('max-w-[80%] rounded-lg', message.role === 'user' ? 'bg-blue-600 text-white p-3' : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white p-3')}>
+                <div className={cn('max-w-[80%] rounded-lg relative', message.role === 'user' ? 'bg-blue-600 text-white p-3' : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white p-3')}>
+                  {/* Edit button for user messages */}
+                  {message.role === 'user' && !isLoading && editingMessageId !== message.id && (
+                    <button
+                      onClick={() => startEditing(message)}
+                      className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+                      title="Edit and resend"
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-slate-400" />
+                    </button>
+                  )}
+
                   {/* Agent badge */}
                   {message.role === 'assistant' && message.agentName && (
                     <div className="flex items-center gap-2 mb-2">
@@ -344,8 +464,29 @@ export function ChatInterface() {
                     </div>
                   )}
 
-                  {/* Message content */}
-                  {message.role === 'assistant' ? (
+                  {/* Message content — editable or static */}
+                  {editingMessageId === message.id ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={editInput}
+                        onChange={(e) => setEditInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) handleEditSubmit(message.id);
+                          if (e.key === 'Escape') cancelEditing();
+                        }}
+                        className="bg-white text-slate-900 dark:bg-slate-700 dark:text-white"
+                        autoFocus
+                      />
+                      <div className="flex gap-1 justify-end">
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-blue-200 hover:text-white hover:bg-blue-700" onClick={cancelEditing}>
+                          Cancel
+                        </Button>
+                        <Button size="sm" className="h-6 px-2 text-xs bg-white text-blue-600 hover:bg-blue-50" onClick={() => handleEditSubmit(message.id)}>
+                          <Send className="h-3 w-3 mr-1" /> Resend
+                        </Button>
+                      </div>
+                    </div>
+                  ) : message.role === 'assistant' ? (
                     <StyledMarkdown>{message.content}</StyledMarkdown>
                   ) : (
                     <p className="whitespace-pre-wrap">{message.content}</p>
@@ -383,7 +524,7 @@ export function ChatInterface() {
                     </div>
                   )}
 
-                  {/* Sources (for Thinker) */}
+                  {/* Sources */}
                   {message.sources && message.sources.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {message.sources.map((src, i) => (
@@ -394,9 +535,11 @@ export function ChatInterface() {
                     </div>
                   )}
 
-                  <p className={cn('text-xs mt-1', message.role === 'user' ? 'text-blue-200' : 'text-slate-400')}>
-                    {new Date(message.timestamp).toLocaleTimeString()}
-                  </p>
+                  {editingMessageId !== message.id && (
+                    <p className={cn('text-xs mt-1', message.role === 'user' ? 'text-blue-200' : 'text-slate-400')}>
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                    </p>
+                  )}
                 </div>
                 {message.role === 'user' && (
                   <Avatar className="h-8 w-8 shrink-0">
@@ -405,6 +548,7 @@ export function ChatInterface() {
                 )}
               </div>
             ))}
+            {/* Processing indicator with step-by-step status */}
             {isLoading && (
               <div className="flex gap-3">
                 <Avatar className="h-8 w-8">
@@ -415,16 +559,30 @@ export function ChatInterface() {
                     {selectedAgent ? (() => { const Icon = AGENT_INFO[selectedAgent]?.icon || Bot; return <Icon className="h-4 w-4" />; })() : <Bot className="h-4 w-4" />}
                   </AvatarFallback>
                 </Avatar>
-                <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
+                <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3 min-w-[240px]">
+                  <div className="flex items-center gap-2 mb-2">
                     <Badge variant="outline" className="text-xs">
-                      {selectedAgent ? AGENT_INFO[selectedAgent]?.name : 'Routing...'}
+                      {selectedAgent ? AGENT_INFO[selectedAgent]?.name : 'Processing'}
                     </Badge>
                   </div>
-                  <div className="flex gap-1">
-                    <div className="h-2 w-2 bg-slate-400 rounded-full animate-bounce" />
-                    <div className="h-2 w-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.1s]" />
-                    <div className="h-2 w-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="space-y-1.5">
+                    {PROCESSING_STEPS.map((step, i) => (
+                      <div key={i} className={cn(
+                        'flex items-center gap-2 text-xs transition-all duration-300',
+                        i < processingStep ? 'text-green-600 dark:text-green-400' :
+                        i === processingStep ? 'text-blue-600 dark:text-blue-400' :
+                        'text-slate-300 dark:text-slate-600'
+                      )}>
+                        {i < processingStep ? (
+                          <Check className="h-3 w-3 shrink-0" />
+                        ) : i === processingStep ? (
+                          <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                        ) : (
+                          <div className="h-3 w-3 shrink-0" />
+                        )}
+                        <span>{step.text}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -455,6 +613,7 @@ export function ChatInterface() {
             </PopoverContent>
           </Popover>
           <Input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
@@ -462,7 +621,7 @@ export function ChatInterface() {
             className="flex-1"
             disabled={isLoading}
           />
-          <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
+          <Button onClick={() => handleSend()} disabled={isLoading || !input.trim()}>
             <Send className="h-4 w-4" />
           </Button>
         </div>

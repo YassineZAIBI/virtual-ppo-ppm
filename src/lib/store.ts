@@ -46,6 +46,7 @@ interface AppState {
   // Chat (agent-aware)
   chatMessages: AgentChatMessage[];
   addChatMessage: (message: AgentChatMessage) => void;
+  setChatMessages: (messages: AgentChatMessage[]) => void;
   clearChat: () => void;
 
   // Agent state
@@ -173,6 +174,7 @@ export const useAppStore = create<AppState>()(
       chatMessages: [],
       addChatMessage: (message) =>
         set((state) => ({ chatMessages: [...state.chatMessages, message] })),
+      setChatMessages: (messages) => set({ chatMessages: messages }),
       clearChat: () => set({ chatMessages: [] }),
 
       // Agent state
