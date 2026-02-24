@@ -1,6 +1,6 @@
 // Azmyra Types
 
-export type LLMProvider = 'openai' | 'anthropic' | 'azure' | 'ollama' | 'z-ai' | 'gemini';
+export type LLMProvider = 'openai' | 'anthropic' | 'azure' | 'ollama' | 'z-ai' | 'gemini' | 'groq';
 
 export interface LLMConfig {
   provider: LLMProvider;

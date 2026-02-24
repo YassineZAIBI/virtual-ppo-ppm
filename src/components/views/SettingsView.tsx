@@ -21,6 +21,7 @@ const modelPlaceholders: Record<string, string> = {
   anthropic: 'claude-sonnet-4-20250514',
   azure: 'gpt-4',
   gemini: 'gemini-2.0-flash',
+  groq: 'llama-3.3-70b-versatile',
   'z-ai': 'gpt-4',
   ollama: 'llama3',
 };
@@ -274,6 +275,7 @@ export function SettingsView() {
                     <SelectItem value="openai">OpenAI (GPT-4, GPT-4o)</SelectItem>
                     <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
                     <SelectItem value="gemini">Google Gemini</SelectItem>
+                    <SelectItem value="groq">Groq</SelectItem>
                     <SelectItem value="azure">Azure OpenAI</SelectItem>
                     <SelectItem value="z-ai">Z-AI</SelectItem>
                     <SelectItem value="ollama">Ollama (Local)</SelectItem>

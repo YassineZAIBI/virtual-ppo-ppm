@@ -36,7 +36,7 @@ export class LLMService {
     }
 
     // Validate that an API key is provided for cloud providers
-    if (['openai', 'anthropic', 'azure', 'z-ai', 'gemini'].includes(config.provider) && !config.apiKey) {
+    if (['openai', 'anthropic', 'azure', 'z-ai', 'gemini', 'groq'].includes(config.provider) && !config.apiKey) {
       throw new Error(`API key is required for the ${config.provider} provider. Please configure it in Settings > LLM Provider.`);
     }
 
@@ -66,6 +66,8 @@ export class LLMService {
         return 'gpt-4';
       case 'gemini':
         return 'gemini-2.0-flash';
+      case 'groq':
+        return 'llama-3.3-70b-versatile';
       case 'z-ai':
         return 'gpt-4';
       case 'ollama':
@@ -92,6 +94,8 @@ export class LLMService {
         return this.chatWithAzure(messages, options);
       case 'gemini':
         return this.chatWithGemini(messages, options);
+      case 'groq':
+        return this.chatWithGroq(messages, options);
       case 'z-ai':
         return this.chatWithZAI(messages, options);
       case 'ollama':
@@ -113,6 +117,13 @@ export class LLMService {
       case 'openai':
         yield* this.streamOpenAICompatible(
           'https://api.openai.com/v1/chat/completions',
+          messages,
+          options
+        );
+        break;
+      case 'groq':
+        yield* this.streamOpenAICompatible(
+          'https://api.groq.com/openai/v1/chat/completions',
           messages,
           options
         );
@@ -194,6 +205,57 @@ export class LLMService {
       }
       throw new Error(
         `OpenAI chat request failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  /**
+   * Chat using the Groq API (OpenAI-compatible).
+   */
+  private async chatWithGroq(
+    messages: ChatMessage[],
+    options?: ChatOptions
+  ): Promise<string> {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          temperature: options?.temperature ?? 0.7,
+          max_tokens: options?.maxTokens ?? 4096,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(
+          `Groq API error: ${response.status} ${response.statusText} - ${errorBody}`
+        );
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('Groq returned an empty response');
+      }
+
+      return content;
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message.startsWith('Groq API error') ||
+          error.message === 'Groq returned an empty response')
+      ) {
+        throw error;
+      }
+      throw new Error(
+        `Groq chat request failed: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
