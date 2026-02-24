@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
 /**
  * Fallback: direct LLM call when Python agent service is unavailable.
- * Injects store data + live Jira context so the LLM can answer data questions.
+ * Injects store data, live Jira context, tool definitions, and stage guidance.
  */
 async function fallbackDirectLLM(
   message: string,
@@ -81,6 +81,11 @@ async function fallbackDirectLLM(
   storeData: any
 ): Promise<NextResponse> {
   const { LLMService } = await import('@/lib/services/llm');
+  const { TOOL_REGISTRY } = await import('@/lib/tools/registry');
+  const { buildToolSystemPrompt } = await import('@/lib/tools/prompt-builder');
+  const { parseToolCalls } = await import('@/lib/tools/parser');
+  const { detectFocusedInitiative, getStageGuidance } = await import('@/lib/tools/stage-advisor');
+
   const llmConfig = {
     provider: settings?.llm?.provider || 'openai',
     apiKey: settings?.llm?.apiKey || '',
@@ -97,7 +102,7 @@ async function fallbackDirectLLM(
 
     if (storeData.initiatives?.length) {
       const items = storeData.initiatives.map((i: any) =>
-        `- ${i.jiraKey ? `[${i.jiraKey}] ` : ''}${i.title} | Type: ${i.jiraIssueType || 'N/A'} | Status: ${i.status} | Value: ${i.businessValue} | Effort: ${i.effort}${i.stakeholders?.length ? ` | Owner: ${i.stakeholders[0]}` : ''}`
+        `- [ID:${i.id}] ${i.jiraKey ? `[${i.jiraKey}] ` : ''}${i.title} | Type: ${i.jiraIssueType || 'N/A'} | Status: ${i.status} | Value: ${i.businessValue} | Effort: ${i.effort}${i.stakeholders?.length ? ` | Owner: ${i.stakeholders[0]}` : ''}`
       );
       sections.push(`## Initiatives/Features (${storeData.initiatives.length} total)\n${items.join('\n')}`);
     }
@@ -128,18 +133,18 @@ async function fallbackDirectLLM(
     }
   }
 
-  // Live Jira query: if message mentions Jira and credentials exist, fetch live data
+  // Live Jira query: if message mentions Jira keywords and credentials exist, fetch live data
   let liveJiraContext = '';
   const lowerMsg = message.toLowerCase();
   const jiraCreds = settings?.integrations?.jira;
+  const jiraConnected = !!(jiraCreds?.url && jiraCreds?.email && jiraCreds?.apiToken);
   const mentionsJira = lowerMsg.includes('jira') || lowerMsg.includes('epic') || lowerMsg.includes('sprint') || lowerMsg.includes('backlog');
 
-  if (mentionsJira && jiraCreds?.url && jiraCreds?.email && jiraCreds?.apiToken) {
+  if (mentionsJira && jiraConnected) {
     try {
       const { JiraService } = await import('@/lib/services/jira');
       const jira = new JiraService(jiraCreds.url, jiraCreds.email, jiraCreds.apiToken);
 
-      // Determine what to query
       let jql = '';
       if (jiraCreds.projectKey) {
         if (lowerMsg.includes('epic')) {
@@ -170,7 +175,6 @@ async function fallbackDirectLLM(
         }
       }
 
-      // Also fetch projects list if they ask about projects
       if (lowerMsg.includes('project')) {
         const projects = await jira.getProjects();
         if (projects.length > 0) {
@@ -187,7 +191,7 @@ async function fallbackDirectLLM(
   let integrationStatus = '';
   if (settings?.integrations) {
     const connected: string[] = [];
-    if (jiraCreds?.url && jiraCreds?.apiToken) connected.push(`Jira (${jiraCreds.projectKey || 'no project selected'})`);
+    if (jiraConnected) connected.push(`Jira (${jiraCreds.projectKey || 'no project selected'})`);
     if (settings.integrations.confluence?.url && settings.integrations.confluence?.apiToken) connected.push('Confluence');
     if (settings.integrations.slack?.botToken) connected.push('Slack');
     if (connected.length) {
@@ -195,15 +199,33 @@ async function fallbackDirectLLM(
     }
   }
 
+  // Tool system prompt (available tools + Jira project schema)
+  const jiraSchema = storeData?.jiraProjectSchema || null;
+  const toolPrompt = buildToolSystemPrompt(jiraSchema, TOOL_REGISTRY, jiraConnected);
+
+  // Stage-based guidance if the message is about a specific initiative
+  let stageGuidancePrompt = '';
+  let suggestedNextSteps: any[] = [];
+  const focusedInitiative = detectFocusedInitiative(message, storeData?.initiatives || []);
+  if (focusedInitiative) {
+    const guidance = getStageGuidance(focusedInitiative.status, focusedInitiative.title, focusedInitiative.id);
+    stageGuidancePrompt = `\n\n--- INITIATIVE FOCUS ---\nYou are advising on initiative: "${focusedInitiative.title}" (ID: ${focusedInitiative.id}, Jira: ${focusedInitiative.jiraKey || 'none'})\nCurrent pipeline stage: ${focusedInitiative.status}\n${guidance.systemPromptAddition}`;
+    suggestedNextSteps = guidance.suggestions;
+  }
+
   const messages: Array<{ role: string; content: string }> = [
     {
       role: 'system',
-      content: `You are Azmyra, an intelligent AI-powered product management assistant. You have full access to the user's product data, synced Jira issues, and connected integrations. Use this data to give specific, data-driven answers.
+      content: `You are Azmyra, an intelligent AI-powered autonomous product management assistant. You have full access to the user's product data, synced Jira issues, and connected integrations. You can also TAKE ACTIONS like creating Jira issues, updating initiatives, and more.
 
 When the user asks about their initiatives, features, epics, roadmap, risks, or meetings — answer using the ACTUAL DATA provided below. Do NOT say you lack access. The data is right here.
+
+When the user asks you to DO something (create, update, move, break down, etc.) — propose concrete tool calls using the available tools. Be proactive: if the conversation naturally leads to an action, suggest it.
 ${integrationStatus}
 ${dataContext}
 ${liveJiraContext}
+${toolPrompt}
+${stageGuidancePrompt}
 
 STRICT MARKDOWN FORMATTING RULES (follow these exactly):
 - Use ## for main section headers, ### for subsections
@@ -227,14 +249,54 @@ STRICT MARKDOWN FORMATTING RULES (follow these exactly):
     toolsExecuted.push({ toolName: 'jira_search', status: 'executed' });
   }
 
-  const response = await llm.chat(messages, { temperature: 0.7, maxTokens: 4000 });
+  const rawResponse = await llm.chat(messages, { temperature: 0.7, maxTokens: 4000 });
+
+  // Parse tool calls from the LLM response
+  const { cleanText, toolCalls } = parseToolCalls(rawResponse);
+
+  // Auto-execute read-only tool calls (e.g. search_jira)
+  for (const tc of toolCalls) {
+    const def = TOOL_REGISTRY.find((t) => t.name === tc.tool);
+    if (def && !def.requiresApproval && jiraConnected) {
+      try {
+        const { executeToolCall } = await import('@/lib/tools/executor');
+        const result = await executeToolCall(tc.tool, tc.args, {
+          url: jiraCreds.url,
+          email: jiraCreds.email,
+          apiToken: jiraCreds.apiToken,
+          projectKey: jiraCreds.projectKey,
+        });
+        if (result.success) {
+          toolsExecuted.push({ toolName: tc.tool, status: 'executed', result: JSON.stringify(result.result).substring(0, 500) });
+        }
+      } catch (err: any) {
+        toolsExecuted.push({ toolName: tc.tool, status: 'failed', result: err.message });
+      }
+    }
+  }
+
+  // Convert write-operation tool calls to pending actions
+  const pendingActions = toolCalls
+    .filter((tc) => {
+      const def = TOOL_REGISTRY.find((t) => t.name === tc.tool);
+      return def?.requiresApproval;
+    })
+    .map((tc) => ({
+      id: crypto.randomUUID(),
+      agent_id: 'strategy',
+      tool_name: tc.tool,
+      tool_arguments: tc.args,
+      description: tc.reason || `${tc.tool}: ${Object.values(tc.args).filter((v) => typeof v === 'string').slice(0, 2).join(' — ')}`,
+      status: 'pending',
+    }));
 
   return NextResponse.json({
-    response,
+    response: cleanText,
     agent_id: 'strategy',
-    agent_name: liveJiraContext ? 'Strategy + Jira' : 'Strategy',
+    agent_name: liveJiraContext ? 'Strategy + Jira' : (pendingActions.length > 0 ? 'Strategy + Actions' : 'Strategy'),
     tools_executed: toolsExecuted,
-    pending_actions: [],
+    pending_actions: pendingActions,
+    suggested_next_steps: suggestedNextSteps,
     rag_context: [],
     sources: [],
   });

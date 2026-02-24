@@ -1,86 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { db } from '@/lib/db';
-
-const AGENT_SERVICE_URL = process.env.AGENT_SERVICE_URL || 'http://localhost:8100';
-
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = (session.user as any).id;
-    const actions = await db.pendingAction.findMany({
-      where: { userId, status: 'pending' },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return NextResponse.json(actions);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
+import { executeToolCall } from '@/lib/tools/executor';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { actionId, decision, settings } = await request.json();
+    const body = await request.json();
+    const { actionId, decision, toolName, toolArguments, settings } = body;
 
     if (!actionId || !decision) {
       return NextResponse.json({ error: 'actionId and decision are required' }, { status: 400 });
     }
 
-    const userId = (session.user as any).id;
-    const action = await db.pendingAction.findFirst({
-      where: { id: actionId, userId },
-    });
-
-    if (!action) {
-      return NextResponse.json({ error: 'Action not found' }, { status: 404 });
+    if (decision === 'reject') {
+      return NextResponse.json({ status: 'rejected', actionId });
     }
 
     if (decision === 'approve') {
-      // Forward to Python service for execution
-      const resp = await fetch(`${AGENT_SERVICE_URL}/agent/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action_id: actionId,
-          decision: 'approve',
-          settings: {
-            tool_name: action.toolName,
-            tool_arguments: JSON.parse(action.toolArguments),
+      // Get tool info from the request body (client sends it along)
+      const tool = toolName || settings?.tool_name;
+      const args = toolArguments || settings?.tool_arguments || {};
+
+      if (!tool) {
+        return NextResponse.json({ error: 'toolName is required for approval' }, { status: 400 });
+      }
+
+      // Get Jira credentials from settings
+      const jiraCreds = {
+        url: settings?.integrations?.jira?.url || '',
+        email: settings?.integrations?.jira?.email || '',
+        apiToken: settings?.integrations?.jira?.apiToken || '',
+        projectKey: settings?.integrations?.jira?.projectKey || '',
+      };
+
+      const result = await executeToolCall(tool, args, jiraCreds);
+
+      // Try to update DB record if it exists (gracefully skip if not)
+      try {
+        const { db } = await import('@/lib/db');
+        await db.pendingAction.update({
+          where: { id: actionId },
+          data: {
+            status: result.success ? 'executed' : 'pending',
+            result: JSON.stringify(result.result || result.error),
           },
-        }),
+        });
+      } catch {
+        // Action only exists in client-side Zustand store — that's fine
+      }
+
+      return NextResponse.json({
+        success: result.success,
+        result: result.result,
+        error: result.error,
+        storeAction: result.storeAction,
       });
-
-      const result = await resp.json();
-
-      await db.pendingAction.update({
-        where: { id: actionId },
-        data: {
-          status: result.is_error ? 'pending' : 'executed',
-          result: result.result || result.content,
-        },
-      });
-
-      return NextResponse.json(result);
-    } else {
-      await db.pendingAction.update({
-        where: { id: actionId },
-        data: { status: 'rejected' },
-      });
-
-      return NextResponse.json({ status: 'rejected', action_id: actionId });
     }
+
+    return NextResponse.json({ error: 'Invalid decision. Use: approve, reject' }, { status: 400 });
   } catch (error: any) {
+    console.error('Action execution error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

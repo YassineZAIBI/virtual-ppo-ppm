@@ -9,6 +9,7 @@ import {
   ChatMessage,
   Risk,
   Persona,
+  JiraProjectSchema,
 } from './types';
 import type { AgentId, AgentChatMessage, AgentPendingAction } from './types';
 
@@ -72,6 +73,10 @@ interface AppState {
   addPersona: (persona: Persona) => void;
   updatePersona: (id: string, updates: Partial<Persona>) => void;
   deletePersona: (id: string) => void;
+
+  // Jira Project Schema (discovered on connection)
+  jiraProjectSchema: JiraProjectSchema | null;
+  setJiraProjectSchema: (schema: JiraProjectSchema | null) => void;
 
   // Pending chat prompt (for quick actions navigation)
   pendingChatPrompt: string | null;
@@ -228,6 +233,10 @@ export const useAppStore = create<AppState>()(
           personas: state.personas.filter((p) => p.id !== id),
         })),
 
+      // Jira Project Schema
+      jiraProjectSchema: null,
+      setJiraProjectSchema: (schema) => set({ jiraProjectSchema: schema }),
+
       // Pending chat prompt
       pendingChatPrompt: null,
       setPendingChatPrompt: (prompt) => set({ pendingChatPrompt: prompt }),
@@ -249,6 +258,7 @@ export const useAppStore = create<AppState>()(
         risks: state.risks,
         personas: state.personas,
         pendingActions: state.pendingActions,
+        jiraProjectSchema: state.jiraProjectSchema,
       }),
     }
   )

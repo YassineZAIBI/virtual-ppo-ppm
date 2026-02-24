@@ -52,6 +52,8 @@ export function ChatInterface() {
     selectedAgent, setSelectedAgent,
     pendingActions, addPendingAction, updatePendingAction, removePendingAction,
     initiatives, risks, roadmapItems, meetings,
+    addInitiative, updateInitiative, moveInitiative,
+    jiraProjectSchema,
     pendingChatPrompt, setPendingChatPrompt,
   } = useAppStore();
 
@@ -132,13 +134,23 @@ export function ChatInterface() {
           message: messageToSend,
           history: chatMessages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
           settings,
-          storeData: { initiatives, risks, roadmapItems, meetings },
+          storeData: { initiatives, risks, roadmapItems, meetings, jiraProjectSchema },
           agentId: selectedAgent,
         }),
       });
 
       if (!response.ok) throw new Error('Failed to get response');
       const data = await response.json();
+
+      const pendingActionsList = (data.pending_actions || []).map((a: any) => ({
+        id: a.id,
+        agentId: a.agent_id || 'strategy',
+        toolName: a.tool_name,
+        toolArguments: a.tool_arguments,
+        description: a.description,
+        status: 'pending' as const,
+        createdAt: new Date(),
+      }));
 
       const assistantMessage: AgentChatMessage = {
         id: crypto.randomUUID(),
@@ -148,23 +160,14 @@ export function ChatInterface() {
         agentId: data.agent_id,
         agentName: data.agent_name,
         toolsExecuted: data.tools_executed || [],
-        pendingActions: data.pending_actions || [],
+        pendingActions: pendingActionsList,
+        suggestedNextSteps: data.suggested_next_steps || [],
         sources: data.sources || [],
       };
       addChatMessage(assistantMessage);
 
-      if (data.pending_actions?.length) {
-        for (const action of data.pending_actions) {
-          addPendingAction({
-            id: action.id,
-            agentId: action.agent_id,
-            toolName: action.tool_name,
-            toolArguments: action.tool_arguments,
-            description: action.description,
-            status: 'pending',
-            createdAt: new Date(),
-          });
-        }
+      for (const action of pendingActionsList) {
+        addPendingAction(action);
       }
     } catch (error) {
       addChatMessage({
@@ -211,7 +214,7 @@ export function ChatInterface() {
           message: messageToSend,
           history: kept.slice(-10).map((m) => ({ role: m.role, content: m.content })),
           settings,
-          storeData: { initiatives, risks, roadmapItems, meetings },
+          storeData: { initiatives, risks, roadmapItems, meetings, jiraProjectSchema },
           agentId: selectedAgent,
         }),
       });
@@ -254,16 +257,38 @@ export function ChatInterface() {
         body: JSON.stringify({
           actionId,
           decision: 'approve',
-          settings: {
-            tool_name: action.toolName,
-            tool_arguments: action.toolArguments,
-          },
+          toolName: action.toolName,
+          toolArguments: action.toolArguments,
+          settings: { integrations: settings.integrations },
         }),
       });
 
       if (resp.ok) {
-        updatePendingAction(actionId, { status: 'executed' });
-        toast.success(`Action executed: ${action.description}`);
+        const data = await resp.json();
+        if (data.success) {
+          updatePendingAction(actionId, { status: 'executed', result: JSON.stringify(data.result) });
+
+          // Apply store mutations if returned
+          if (data.storeAction) {
+            switch (data.storeAction.type) {
+              case 'addInitiative':
+                addInitiative(data.storeAction.payload);
+                break;
+              case 'updateInitiative':
+                updateInitiative(data.storeAction.payload.id, data.storeAction.payload.updates);
+                break;
+              case 'moveInitiative':
+                moveInitiative(data.storeAction.payload.id, data.storeAction.payload.newStatus);
+                break;
+            }
+          }
+
+          // Build descriptive success message
+          const resultInfo = data.result?.key ? ` (${data.result.key})` : '';
+          toast.success(`Action executed${resultInfo}: ${action.description}`);
+        } else {
+          toast.error(`Action failed: ${data.error || 'Unknown error'}`);
+        }
       } else {
         toast.error('Failed to execute action');
       }
@@ -532,6 +557,67 @@ export function ChatInterface() {
                           {src.sourceType}: {src.sourceLabel}
                         </Badge>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Inline proposed actions */}
+                  {message.role === 'assistant' && message.pendingActions && message.pendingActions.length > 0 && (
+                    <div className="mt-3 space-y-2 border-t border-slate-200 dark:border-slate-700 pt-2">
+                      <p className="text-xs font-medium text-slate-500">Proposed Actions:</p>
+                      {message.pendingActions.map((action) => {
+                        const storeAction = pendingActions.find((a) => a.id === action.id);
+                        const status = storeAction?.status || action.status;
+                        return (
+                          <div key={action.id} className={cn(
+                            'rounded-lg border p-3',
+                            status === 'executed' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' :
+                            status === 'rejected' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 opacity-60' :
+                            'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                          )}>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Wrench className="h-4 w-4 text-amber-600 shrink-0" />
+                                <span className="text-sm font-medium truncate">{action.description}</span>
+                              </div>
+                              {status === 'pending' && (
+                                <div className="flex gap-1 shrink-0">
+                                  <Button size="sm" variant="outline" className="h-7 px-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30" onClick={() => handleApproveAction(action.id)}>
+                                    <Check className="h-3 w-3 mr-1" /> Approve
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="h-7 px-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30" onClick={() => handleRejectAction(action.id)}>
+                                    <X className="h-3 w-3 mr-1" /> Reject
+                                  </Button>
+                                </div>
+                              )}
+                              {status === 'executed' && <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 shrink-0">Executed</Badge>}
+                              {status === 'rejected' && <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 shrink-0">Rejected</Badge>}
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
+                              {action.toolName}: {JSON.stringify(action.toolArguments).substring(0, 120)}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Suggested next steps */}
+                  {message.role === 'assistant' && message.suggestedNextSteps && message.suggestedNextSteps.length > 0 && (
+                    <div className="mt-3 border-t border-slate-200 dark:border-slate-700 pt-2">
+                      <p className="text-xs font-medium text-slate-500 mb-2">Suggested Next Steps:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {message.suggestedNextSteps.map((step, i) => (
+                          <Button
+                            key={i}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={() => handleSend(step.chatPrompt)}
+                          >
+                            {step.text}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   )}
 

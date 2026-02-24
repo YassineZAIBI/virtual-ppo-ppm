@@ -183,6 +183,26 @@ export interface Document {
   source: 'uploaded' | 'generated' | 'synced';
 }
 
+// Jira Project Schema (discovered on connection)
+
+export interface JiraProjectSchema {
+  projectKey: string;
+  projectName: string;
+  issueTypes: Array<{
+    id: string;
+    name: string;
+    subtask: boolean;
+    hierarchyLevel: number; // -1=subtask, 0=base, 1=epic, 2+=initiative
+  }>;
+  hierarchy: Array<{
+    level: number;
+    typeName: string;
+    issueTypeNames: string[];
+    canContain: string[]; // type names at lower levels
+  }>;
+  discoveredAt: string;
+}
+
 // Integration types
 
 export interface JiraIssue {

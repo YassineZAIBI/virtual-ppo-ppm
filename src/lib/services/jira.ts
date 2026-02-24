@@ -1,7 +1,7 @@
 // Jira REST API Service
 // Provides full CRUD operations for Jira issues, projects, transitions, and search.
 
-import type { JiraIssue, JiraProject } from '../types';
+import type { JiraIssue, JiraProject, JiraProjectSchema } from '../types';
 
 export class JiraService {
   private baseUrl: string;
@@ -132,6 +132,7 @@ export class JiraService {
       summary: string;
       description: string;
       issueType: string;
+      parentKey?: string;
       labels?: string[];
       storyPoints?: number;
     }
@@ -160,6 +161,10 @@ export class JiraService {
           issuetype: { name: data.issueType },
         },
       };
+
+      if (data.parentKey) {
+        body.fields.parent = { key: data.parentKey };
+      }
 
       if (data.labels && data.labels.length > 0) {
         body.fields.labels = data.labels;
@@ -398,6 +403,80 @@ export class JiraService {
         throw error;
       }
       throw new Error(`Failed to search Jira issues: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Discovers the project's issue type hierarchy via the createmeta endpoint.
+   * Returns issue types with hierarchy levels so the AI knows what types exist and how they nest.
+   */
+  async getProjectSchema(projectKey: string): Promise<JiraProjectSchema> {
+    try {
+      // Fetch project info for the name
+      const projResp = await fetch(
+        `${this.baseUrl}/rest/api/3/project/${projectKey}`,
+        { method: 'GET', headers: this.headers() }
+      );
+      let projectName = projectKey;
+      if (projResp.ok) {
+        const projData = await projResp.json();
+        projectName = projData.name || projectKey;
+      }
+
+      // Fetch issue types via createmeta
+      const response = await fetch(
+        `${this.baseUrl}/rest/api/3/issue/createmeta/${projectKey}/issuetypes`,
+        { method: 'GET', headers: this.headers() }
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(
+          `Jira API error fetching schema for ${projectKey}: ${response.status} ${response.statusText} - ${errorBody}`
+        );
+      }
+
+      const data = await response.json();
+      const issueTypes = (data.issueTypes || data.values || data || []).map((it: any) => ({
+        id: String(it.id),
+        name: it.name,
+        subtask: it.subtask || false,
+        hierarchyLevel: it.hierarchyLevel ?? (it.subtask ? -1 : 0),
+      }));
+
+      // Build hierarchy by grouping issue types by level
+      const levelMap = new Map<number, string[]>();
+      for (const it of issueTypes) {
+        const existing = levelMap.get(it.hierarchyLevel) || [];
+        existing.push(it.name);
+        levelMap.set(it.hierarchyLevel, existing);
+      }
+
+      const levels = Array.from(levelMap.entries()).sort((a, b) => b[0] - a[0]);
+      const hierarchy = levels.map(([level, names]) => {
+        const lowerLevels = levels
+          .filter(([l]) => l < level)
+          .flatMap(([, n]) => n);
+        return {
+          level,
+          typeName: names[0],
+          issueTypeNames: names,
+          canContain: lowerLevels,
+        };
+      });
+
+      return {
+        projectKey,
+        projectName,
+        issueTypes,
+        hierarchy,
+        discoveredAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Jira API error')) {
+        throw error;
+      }
+      throw new Error(`Failed to fetch project schema for ${projectKey}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

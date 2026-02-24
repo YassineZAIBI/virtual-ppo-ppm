@@ -78,6 +78,7 @@ export interface AgentChatMessage {
   toolsExecuted?: ToolExecution[];
   pendingActions?: PendingAction[];
   sources?: SourceAttribution[];
+  suggestedNextSteps?: Array<{ text: string; chatPrompt: string; icon?: string }>;
   metadata?: {
     sources?: string[];
     confidence?: number;
@@ -112,6 +113,7 @@ export interface StoreDataSnapshot {
   risks: any[];
   roadmapItems: any[];
   meetings: any[];
+  jiraProjectSchema?: any;
 }
 
 // Chat API request/response shapes

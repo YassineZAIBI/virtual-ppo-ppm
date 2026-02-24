@@ -37,8 +37,11 @@ export async function GET(request: NextRequest) {
         const issueKey = searchParams.get('issueKey') || '';
         const issue = await jira.getIssue(issueKey);
         return NextResponse.json({ issue });
+      case 'schema':
+        const schema = await jira.getProjectSchema(projectKey);
+        return NextResponse.json({ schema });
       default:
-        return NextResponse.json({ error: 'Invalid action. Use: projects, issues, issue' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid action. Use: projects, issues, issue, schema' }, { status: 400 });
     }
   } catch (error: any) {
     console.error('Jira API error:', error);

@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bot, Shield, Activity, MessageSquare, FileText, Send, Loader2, CheckCircle2, Zap, RefreshCw } from 'lucide-react';
+import { Bot, Shield, Activity, MessageSquare, FileText, Send, Loader2, CheckCircle2, Zap, RefreshCw, ChevronDown, ChevronRight, GitBranch } from 'lucide-react';
 import { toast } from 'sonner';
 import type { JiraProject } from '@/lib/types';
 
@@ -27,12 +27,14 @@ const modelPlaceholders: Record<string, string> = {
 };
 
 export function SettingsView() {
-  const { settings, updateLLMConfig, updateIntegrations, updatePreferences, initiatives, addInitiative } = useAppStore();
+  const { settings, updateLLMConfig, updateIntegrations, updatePreferences, initiatives, addInitiative, jiraProjectSchema, setJiraProjectSchema } = useAppStore();
   const [activeTab, setActiveTab] = useState('llm');
   const [isTesting, setIsTesting] = useState<string | null>(null);
   const [isTestingLLM, setIsTestingLLM] = useState(false);
   const [jiraProjects, setJiraProjects] = useState<JiraProject[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isDiscoveringSchema, setIsDiscoveringSchema] = useState(false);
+  const [showHierarchy, setShowHierarchy] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('azmyra-jira-last-sync');
     return null;
@@ -391,7 +393,31 @@ export function SettingsView() {
                     <Label className="text-xs">Project</Label>
                     <Select
                       value={settings.integrations.jira.projectKey || ''}
-                      onValueChange={(val) => updateIntegrations({ jira: { ...settings.integrations.jira, projectKey: val } })}
+                      onValueChange={async (val) => {
+                        updateIntegrations({ jira: { ...settings.integrations.jira, projectKey: val } });
+                        // Auto-discover project schema
+                        setIsDiscoveringSchema(true);
+                        try {
+                          const params = new URLSearchParams({
+                            action: 'schema',
+                            projectKey: val,
+                            url: settings.integrations.jira.url,
+                            email: settings.integrations.jira.email,
+                            apiToken: settings.integrations.jira.apiToken,
+                          });
+                          const resp = await fetch(`/api/integrations/jira?${params}`);
+                          if (resp.ok) {
+                            const data = await resp.json();
+                            setJiraProjectSchema(data.schema);
+                            setShowHierarchy(true);
+                            toast.success(`Discovered ${data.schema.issueTypes?.length || 0} issue types in ${val}`);
+                          }
+                        } catch (err: any) {
+                          console.error('Schema discovery failed:', err);
+                        } finally {
+                          setIsDiscoveringSchema(false);
+                        }
+                      }}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Select a project to sync" />
@@ -404,6 +430,39 @@ export function SettingsView() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+
+                {/* Project Hierarchy Display */}
+                {jiraProjectSchema && settings.integrations.jira.projectKey && (
+                  <div className="pt-2 border-t">
+                    <button
+                      onClick={() => setShowHierarchy(!showHierarchy)}
+                      className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors w-full"
+                    >
+                      {showHierarchy ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                      <GitBranch className="h-3.5 w-3.5" />
+                      Project Hierarchy ({jiraProjectSchema.issueTypes?.length || 0} issue types)
+                      {isDiscoveringSchema && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
+                    </button>
+                    {showHierarchy && jiraProjectSchema.hierarchy && (
+                      <div className="mt-2 ml-5 space-y-1">
+                        {jiraProjectSchema.hierarchy.map((level: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2" style={{ paddingLeft: `${Math.max(0, (2 - level.level)) * 16}px` }}>
+                            <span className="text-xs font-mono text-slate-400">L{level.level}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {level.issueTypeNames.join(', ')}
+                            </Badge>
+                            {level.canContain.length > 0 && (
+                              <span className="text-xs text-slate-400">→ contains: {level.canContain.join(', ')}</span>
+                            )}
+                          </div>
+                        ))}
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Discovered: {new Date(jiraProjectSchema.discoveredAt).toLocaleString()}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
