@@ -222,6 +222,16 @@ export function ChatInterface() {
       if (!response.ok) throw new Error('Failed to get response');
       const data = await response.json();
 
+      const editPendingActions = (data.pending_actions || []).map((a: any) => ({
+        id: a.id,
+        agentId: a.agent_id || 'strategy',
+        toolName: a.tool_name,
+        toolArguments: a.tool_arguments,
+        description: a.description,
+        status: 'pending' as const,
+        createdAt: new Date(),
+      }));
+
       addChatMessage({
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -230,9 +240,14 @@ export function ChatInterface() {
         agentId: data.agent_id,
         agentName: data.agent_name,
         toolsExecuted: data.tools_executed || [],
-        pendingActions: data.pending_actions || [],
+        pendingActions: editPendingActions,
+        suggestedNextSteps: data.suggested_next_steps || [],
         sources: data.sources || [],
       });
+
+      for (const action of editPendingActions) {
+        addPendingAction(action);
+      }
     } catch (error) {
       addChatMessage({
         id: crypto.randomUUID(),
@@ -593,7 +608,7 @@ export function ChatInterface() {
                               {status === 'rejected' && <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 shrink-0">Rejected</Badge>}
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
-                              {action.toolName}: {JSON.stringify(action.toolArguments).substring(0, 120)}
+                              {action.toolName}: {JSON.stringify(action.toolArguments ?? {}).substring(0, 120)}
                             </p>
                           </div>
                         );

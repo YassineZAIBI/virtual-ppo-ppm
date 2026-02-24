@@ -16,6 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Plus, ArrowRight, Save, Trash2, Search, DollarSign,
   AlertTriangle, Clock, HelpCircle, ExternalLink,
+  CheckSquare, Square, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Initiative } from '@/lib/types';
@@ -37,6 +38,8 @@ export function InitiativesPipeline() {
   const router = useRouter();
   const [showNewIdea, setShowNewIdea] = useState(false);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [newIdea, setNewIdea] = useState({
     title: '',
     description: '',
@@ -95,6 +98,52 @@ export function InitiativesPipeline() {
     router.push(`/discovery?id=${initiativeId}`);
   };
 
+  const toggleSelection = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllInStage = (stageId: string) => {
+    const stageItems = initiatives.filter((i) => i.status === stageId);
+    const allSelected = stageItems.every((i) => selectedIds.has(i.id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const item of stageItems) {
+        if (allSelected) next.delete(item.id);
+        else next.add(item.id);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(initiatives.map((i) => i.id)));
+  };
+
+  const deselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    const count = selectedIds.size;
+    for (const id of selectedIds) {
+      deleteInitiative(id);
+    }
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+    toast.success(`Deleted ${count} initiative${count > 1 ? 's' : ''}`);
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -104,9 +153,30 @@ export function InitiativesPipeline() {
         </div>
         <div className="flex items-center gap-2">
           <ShareButton resourceType="initiatives" />
-          <Button onClick={() => setShowNewIdea(true)}>
-            <Plus className="h-4 w-4 mr-2" />New Idea
-          </Button>
+          {selectionMode ? (
+            <>
+              <span className="text-sm text-slate-500">{selectedIds.size} selected</span>
+              <Button variant="outline" size="sm" onClick={selectAll}>Select All</Button>
+              <Button variant="outline" size="sm" onClick={deselectAll}>Deselect All</Button>
+              <Button variant="destructive" size="sm" disabled={selectedIds.size === 0} onClick={handleBulkDelete}>
+                <Trash2 className="h-4 w-4 mr-1" />Delete ({selectedIds.size})
+              </Button>
+              <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
+                <X className="h-4 w-4 mr-1" />Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              {initiatives.length > 0 && (
+                <Button variant="outline" onClick={() => setSelectionMode(true)}>
+                  <CheckSquare className="h-4 w-4 mr-2" />Select
+                </Button>
+              )}
+              <Button onClick={() => setShowNewIdea(true)}>
+                <Plus className="h-4 w-4 mr-2" />New Idea
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -364,15 +434,38 @@ export function InitiativesPipeline() {
           const stageInitiatives = initiatives.filter((i) => i.status === stage.id);
           return (
             <div key={stage.id} className="min-w-[220px]">
-              <div className={cn('rounded-t-lg p-2 text-center font-medium text-sm', stage.color)}>
+              <div className={cn('rounded-t-lg p-2 text-center font-medium text-sm flex items-center justify-center gap-1', stage.color)}>
+                {selectionMode && stageInitiatives.length > 0 && (
+                  <button onClick={() => toggleSelectAllInStage(stage.id)} className="hover:opacity-80">
+                    {stageInitiatives.every((i) => selectedIds.has(i.id))
+                      ? <CheckSquare className="h-4 w-4 text-blue-600" />
+                      : <Square className="h-4 w-4 text-slate-400" />
+                    }
+                  </button>
+                )}
                 {stage.label}
-                <Badge variant="secondary" className="ml-2">{stageInitiatives.length}</Badge>
+                <Badge variant="secondary" className="ml-1">{stageInitiatives.length}</Badge>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900 rounded-b-lg p-2 space-y-2 min-h-[400px]">
                 {stageInitiatives.map((initiative) => (
-                  <Card key={initiative.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setEditingInitiative({ ...initiative })}>
+                  <Card
+                    key={initiative.id}
+                    className={cn(
+                      'cursor-pointer hover:shadow-md transition-shadow',
+                      selectionMode && selectedIds.has(initiative.id) && 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950'
+                    )}
+                    onClick={() => selectionMode ? toggleSelection(initiative.id, { stopPropagation: () => {} } as React.MouseEvent) : setEditingInitiative({ ...initiative })}
+                  >
                     <CardContent className="pt-4 pb-3">
                       <div className="flex items-center gap-1.5 mb-1">
+                        {selectionMode && (
+                          <button onClick={(e) => toggleSelection(initiative.id, e)} className="shrink-0">
+                            {selectedIds.has(initiative.id)
+                              ? <CheckSquare className="h-4 w-4 text-blue-600" />
+                              : <Square className="h-4 w-4 text-slate-400" />
+                            }
+                          </button>
+                        )}
                         <h4 className="font-medium text-slate-900 dark:text-white text-sm">{initiative.title}</h4>
                         {isSampleData(initiative.id) && <ExampleBadge />}
                         {initiative.jiraIssueType && (
