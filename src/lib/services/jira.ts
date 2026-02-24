@@ -177,7 +177,106 @@ export class JiraService {
   }
 
   /**
+   * Sanitizes labels for Jira (no spaces allowed).
+   */
+  private sanitizeLabels(labels: string[]): string[] {
+    return labels
+      .map((l) => l.trim().replace(/\s+/g, '-'))
+      .filter(Boolean);
+  }
+
+  /**
+   * Fetches required fields for an issue type in a project via createmeta.
+   * Returns a map of fieldKey → { required, allowedValues, defaultValue, name }.
+   */
+  private async getRequiredFields(
+    projectKey: string,
+    issueTypeId: string
+  ): Promise<Map<string, { name: string; required: boolean; hasDefaultValue: boolean; allowedValues: any[] }>> {
+    const fields = new Map<string, { name: string; required: boolean; hasDefaultValue: boolean; allowedValues: any[] }>();
+    try {
+      const resp = await fetch(
+        `${this.baseUrl}/rest/api/3/issue/createmeta/${projectKey}/issuetypes/${issueTypeId}`,
+        { method: 'GET', headers: this.headers() }
+      );
+      if (!resp.ok) return fields;
+      const data = await resp.json();
+      const values = data.fields || data.values || [];
+      const fieldList = Array.isArray(values) ? values : Object.values(values);
+      for (const f of fieldList) {
+        if (f.required) {
+          fields.set(f.fieldId || f.key, {
+            name: f.name,
+            required: true,
+            hasDefaultValue: !!f.hasDefaultValue,
+            allowedValues: f.allowedValues || [],
+          });
+        }
+      }
+    } catch {
+      // Gracefully skip — we'll handle errors on create
+    }
+    return fields;
+  }
+
+  /**
+   * Attempts to auto-fix a 400 error from Jira issue creation.
+   * Returns a patched body if fixable, or null if not.
+   */
+  private autoFixCreateErrors(
+    errorBody: string,
+    body: any
+  ): any | null {
+    try {
+      const err = JSON.parse(errorBody);
+      const fieldErrors: Record<string, string> = err.errors || {};
+      const msgErrors: string[] = err.errorMessages || [];
+      let patched = JSON.parse(JSON.stringify(body)); // deep clone
+      let fixed = false;
+
+      // Fix label errors (spaces not allowed)
+      if (fieldErrors.labels?.includes("can't contain spaces") || msgErrors.some((m) => m.includes("can't contain spaces"))) {
+        if (patched.fields.labels) {
+          patched.fields.labels = this.sanitizeLabels(patched.fields.labels);
+          fixed = true;
+        }
+      }
+
+      // Fix required field errors — remove non-essential fields that cause errors
+      // or strip the problematic optional fields
+      for (const [fieldKey, errorMsg] of Object.entries(fieldErrors)) {
+        if (typeof errorMsg === 'string' && errorMsg.includes('is required')) {
+          // For required fields we didn't provide: skip them if they're custom fields
+          // (we can't guess their values, but removing the error-causing optional fields we DID set may help)
+          // If it's a custom field we set (like story points), remove it
+          if (fieldKey.startsWith('customfield_') && patched.fields[fieldKey] !== undefined) {
+            delete patched.fields[fieldKey];
+            fixed = true;
+          }
+          // For required custom fields we DIDN'T set, we can't auto-fix — but we can
+          // try setting it to a default if it has allowed values
+        }
+      }
+
+      // If a required custom field error persists and we haven't set it,
+      // remove optional fields that might be causing cascade issues
+      for (const [fieldKey, errorMsg] of Object.entries(fieldErrors)) {
+        if (typeof errorMsg === 'string' && errorMsg.includes('is required') && !patched.fields[fieldKey]) {
+          // This is a field Jira requires but we haven't included — we can't magically know the value.
+          // Skip it on retry by not adding it (it's already not there).
+          // But we should still mark as "fixed" to trigger the retry with cleaned labels etc.
+        }
+      }
+
+      return fixed ? patched : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Creates a new issue in the specified project.
+   * Includes smart sanitization and auto-retry on 400 errors.
    */
   async createIssue(
     projectKey: string,
@@ -194,6 +293,14 @@ export class JiraService {
       // Resolve issue type by fetching valid types for the project and fuzzy-matching
       const resolvedIssueType = await this.resolveIssueType(projectKey, data.issueType);
 
+      // Pre-sanitize labels (Jira doesn't allow spaces)
+      const sanitizedLabels = data.labels ? this.sanitizeLabels(data.labels) : [];
+
+      // Fetch required fields for this issue type to pre-fill what we can
+      const requiredFields = resolvedIssueType.id
+        ? await this.getRequiredFields(projectKey, resolvedIssueType.id)
+        : new Map();
+
       // Build the request body using Atlassian Document Format (ADF) for description
       const body: any = {
         fields: {
@@ -208,7 +315,7 @@ export class JiraService {
                 content: [
                   {
                     type: 'text',
-                    text: data.description,
+                    text: data.description || 'No description provided.',
                   },
                 ],
               },
@@ -222,8 +329,8 @@ export class JiraService {
         body.fields.parent = { key: data.parentKey };
       }
 
-      if (data.labels && data.labels.length > 0) {
-        body.fields.labels = data.labels;
+      if (sanitizedLabels.length > 0) {
+        body.fields.labels = sanitizedLabels;
       }
 
       // Story points are commonly stored in customfield_10016 (Jira Software)
@@ -231,11 +338,72 @@ export class JiraService {
         body.fields.customfield_10016 = data.storyPoints;
       }
 
-      const response = await fetch(`${this.baseUrl}/rest/api/3/issue`, {
+      // Auto-fill required custom fields that have allowed values (pick first)
+      for (const [fieldKey, meta] of requiredFields) {
+        if (body.fields[fieldKey] !== undefined) continue; // already set
+        // Skip standard fields that are already handled
+        if (['project', 'summary', 'description', 'issuetype', 'parent', 'labels'].includes(fieldKey)) continue;
+        // If the field has allowed values, pick the first one
+        if (meta.allowedValues?.length > 0) {
+          const first = meta.allowedValues[0];
+          body.fields[fieldKey] = first.id ? { id: first.id } : first.value || first;
+        }
+      }
+
+      // Attempt 1
+      let response = await fetch(`${this.baseUrl}/rest/api/3/issue`, {
         method: 'POST',
         headers: this.headers(),
         body: JSON.stringify(body),
       });
+
+      // On 400 error: try to auto-fix and retry once
+      if (response.status === 400) {
+        const errorBody = await response.text();
+        console.warn(`Jira create attempt 1 failed (400): ${errorBody}`);
+
+        const patchedBody = this.autoFixCreateErrors(errorBody, body);
+        if (patchedBody) {
+          console.log('Retrying with auto-fixed payload...');
+          response = await fetch(`${this.baseUrl}/rest/api/3/issue`, {
+            method: 'POST',
+            headers: this.headers(),
+            body: JSON.stringify(patchedBody),
+          });
+        }
+
+        // If still failing after retry (or no patch possible), try minimal body
+        if (!response.ok) {
+          const retryErrorBody = patchedBody ? await response.text() : errorBody;
+          console.warn(`Jira create attempt 2 failed: ${retryErrorBody}`);
+
+          // Last resort: strip all optional fields and try bare minimum
+          const minimalBody: any = {
+            fields: {
+              project: { key: projectKey },
+              summary: data.summary,
+              description: body.fields.description,
+              issuetype: body.fields.issuetype,
+            },
+          };
+          if (data.parentKey) minimalBody.fields.parent = { key: data.parentKey };
+          // Re-add required custom fields
+          for (const [fieldKey, meta] of requiredFields) {
+            if (['project', 'summary', 'description', 'issuetype', 'parent'].includes(fieldKey)) continue;
+            if (meta.allowedValues?.length > 0) {
+              const first = meta.allowedValues[0];
+              minimalBody.fields[fieldKey] = first.id ? { id: first.id } : first.value || first;
+            }
+          }
+
+          console.log('Retrying with minimal payload...');
+          response = await fetch(`${this.baseUrl}/rest/api/3/issue`, {
+            method: 'POST',
+            headers: this.headers(),
+            body: JSON.stringify(minimalBody),
+          });
+        }
+      }
 
       if (!response.ok) {
         const errorBody = await response.text();
