@@ -187,13 +187,13 @@ export class JiraService {
 
   /**
    * Fetches required fields for an issue type in a project via createmeta.
-   * Returns a map of fieldKey → { required, allowedValues, defaultValue, name }.
+   * Returns a map of fieldKey → metadata including schema type for proper value formatting.
    */
   private async getRequiredFields(
     projectKey: string,
     issueTypeId: string
-  ): Promise<Map<string, { name: string; required: boolean; hasDefaultValue: boolean; allowedValues: any[] }>> {
-    const fields = new Map<string, { name: string; required: boolean; hasDefaultValue: boolean; allowedValues: any[] }>();
+  ): Promise<Map<string, { name: string; required: boolean; hasDefaultValue: boolean; allowedValues: any[]; isArray: boolean; schemaType: string }>> {
+    const fields = new Map<string, { name: string; required: boolean; hasDefaultValue: boolean; allowedValues: any[]; isArray: boolean; schemaType: string }>();
     try {
       const resp = await fetch(
         `${this.baseUrl}/rest/api/3/issue/createmeta/${projectKey}/issuetypes/${issueTypeId}`,
@@ -205,11 +205,14 @@ export class JiraService {
       const fieldList = Array.isArray(values) ? values : Object.values(values);
       for (const f of fieldList) {
         if (f.required) {
+          const schemaType = f.schema?.type || 'string';
           fields.set(f.fieldId || f.key, {
             name: f.name,
             required: true,
             hasDefaultValue: !!f.hasDefaultValue,
             allowedValues: f.allowedValues || [],
+            isArray: schemaType === 'array',
+            schemaType,
           });
         }
       }
@@ -220,12 +223,24 @@ export class JiraService {
   }
 
   /**
+   * Formats a field value based on schema type and allowed values.
+   */
+  private formatFieldValue(meta: { isArray: boolean; allowedValues: any[] }): any {
+    if (meta.allowedValues.length === 0) return undefined;
+    const first = meta.allowedValues[0];
+    const singleValue = first.id ? { id: first.id } : (first.value !== undefined ? { value: first.value } : first);
+    return meta.isArray ? [singleValue] : singleValue;
+  }
+
+  /**
    * Attempts to auto-fix a 400 error from Jira issue creation.
+   * Uses the requiredFields metadata to resolve missing/malformed fields.
    * Returns a patched body if fixable, or null if not.
    */
   private autoFixCreateErrors(
     errorBody: string,
-    body: any
+    body: any,
+    requiredFields: Map<string, { name: string; required: boolean; hasDefaultValue: boolean; allowedValues: any[]; isArray: boolean; schemaType: string }>
   ): any | null {
     try {
       const err = JSON.parse(errorBody);
@@ -242,29 +257,64 @@ export class JiraService {
         }
       }
 
-      // Fix required field errors — remove non-essential fields that cause errors
-      // or strip the problematic optional fields
-      for (const [fieldKey, errorMsg] of Object.entries(fieldErrors)) {
-        if (typeof errorMsg === 'string' && errorMsg.includes('is required')) {
-          // For required fields we didn't provide: skip them if they're custom fields
-          // (we can't guess their values, but removing the error-causing optional fields we DID set may help)
-          // If it's a custom field we set (like story points), remove it
-          if (fieldKey.startsWith('customfield_') && patched.fields[fieldKey] !== undefined) {
+      for (const [errorFieldName, errorMsg] of Object.entries(fieldErrors)) {
+        if (typeof errorMsg !== 'string') continue;
+
+        // Find matching required field by fieldKey or by name
+        let fieldKey = errorFieldName;
+        let meta = requiredFields.get(fieldKey);
+
+        // Error might reference the field name (e.g. "Teams") instead of the key (e.g. "customfield_10176")
+        if (!meta) {
+          for (const [key, m] of requiredFields) {
+            if (m.name === errorFieldName || m.name.toLowerCase() === errorFieldName.toLowerCase()) {
+              fieldKey = key;
+              meta = m;
+              break;
+            }
+          }
+        }
+
+        // "Specify the value ... in an array" → field needs array wrapping
+        if (errorMsg.includes('in an array')) {
+          if (meta && meta.allowedValues.length > 0) {
+            const val = this.formatFieldValue({ isArray: true, allowedValues: meta.allowedValues });
+            if (val !== undefined) {
+              patched.fields[fieldKey] = val;
+              fixed = true;
+            }
+          } else if (patched.fields[fieldKey] !== undefined) {
+            // Wrap existing value in array
+            const current = patched.fields[fieldKey];
+            patched.fields[fieldKey] = Array.isArray(current) ? current : [current];
+            fixed = true;
+          }
+          continue;
+        }
+
+        // "X is required" → field is missing, try to fill from metadata
+        if (errorMsg.includes('is required') || errorMsg.includes('required')) {
+          if (meta && meta.allowedValues.length > 0) {
+            const val = this.formatFieldValue(meta);
+            if (val !== undefined) {
+              patched.fields[fieldKey] = val;
+              fixed = true;
+            }
+          }
+          // If it's a custom field WE set that's causing issues, remove it
+          if (!meta && fieldKey.startsWith('customfield_') && patched.fields[fieldKey] !== undefined) {
             delete patched.fields[fieldKey];
             fixed = true;
           }
-          // For required custom fields we DIDN'T set, we can't auto-fix — but we can
-          // try setting it to a default if it has allowed values
+          continue;
         }
-      }
 
-      // If a required custom field error persists and we haven't set it,
-      // remove optional fields that might be causing cascade issues
-      for (const [fieldKey, errorMsg] of Object.entries(fieldErrors)) {
-        if (typeof errorMsg === 'string' && errorMsg.includes('is required') && !patched.fields[fieldKey]) {
-          // This is a field Jira requires but we haven't included — we can't magically know the value.
-          // Skip it on retry by not adding it (it's already not there).
-          // But we should still mark as "fixed" to trigger the retry with cleaned labels etc.
+        // "invalid" errors on optional fields we set — remove them
+        if (errorMsg.includes('invalid') || errorMsg.includes('not valid')) {
+          if (!['project', 'summary', 'description', 'issuetype'].includes(fieldKey) && patched.fields[fieldKey] !== undefined) {
+            delete patched.fields[fieldKey];
+            fixed = true;
+          }
         }
       }
 
@@ -338,15 +388,14 @@ export class JiraService {
         body.fields.customfield_10016 = data.storyPoints;
       }
 
-      // Auto-fill required custom fields that have allowed values (pick first)
+      // Auto-fill required custom fields that have allowed values (pick first, respecting array type)
       for (const [fieldKey, meta] of requiredFields) {
         if (body.fields[fieldKey] !== undefined) continue; // already set
         // Skip standard fields that are already handled
         if (['project', 'summary', 'description', 'issuetype', 'parent', 'labels'].includes(fieldKey)) continue;
-        // If the field has allowed values, pick the first one
-        if (meta.allowedValues?.length > 0) {
-          const first = meta.allowedValues[0];
-          body.fields[fieldKey] = first.id ? { id: first.id } : first.value || first;
+        const val = this.formatFieldValue(meta);
+        if (val !== undefined) {
+          body.fields[fieldKey] = val;
         }
       }
 
@@ -357,12 +406,13 @@ export class JiraService {
         body: JSON.stringify(body),
       });
 
-      // On 400 error: try to auto-fix and retry once
+      // On 400 error: parse the error, auto-fix, and retry (up to 2 retries)
       if (response.status === 400) {
         const errorBody = await response.text();
         console.warn(`Jira create attempt 1 failed (400): ${errorBody}`);
 
-        const patchedBody = this.autoFixCreateErrors(errorBody, body);
+        // Attempt 2: auto-fix based on error analysis
+        const patchedBody = this.autoFixCreateErrors(errorBody, body, requiredFields);
         if (patchedBody) {
           console.log('Retrying with auto-fixed payload...');
           response = await fetch(`${this.baseUrl}/rest/api/3/issue`, {
@@ -370,14 +420,26 @@ export class JiraService {
             headers: this.headers(),
             body: JSON.stringify(patchedBody),
           });
+
+          // Attempt 3: if still failing, auto-fix the new errors too
+          if (response.status === 400) {
+            const errorBody2 = await response.text();
+            console.warn(`Jira create attempt 2 failed (400): ${errorBody2}`);
+            const patchedBody2 = this.autoFixCreateErrors(errorBody2, patchedBody, requiredFields);
+            if (patchedBody2) {
+              console.log('Retrying with second auto-fix...');
+              response = await fetch(`${this.baseUrl}/rest/api/3/issue`, {
+                method: 'POST',
+                headers: this.headers(),
+                body: JSON.stringify(patchedBody2),
+              });
+            }
+          }
         }
 
-        // If still failing after retry (or no patch possible), try minimal body
+        // Last resort: strip all optional fields and try bare minimum with required fields
         if (!response.ok) {
-          const retryErrorBody = patchedBody ? await response.text() : errorBody;
-          console.warn(`Jira create attempt 2 failed: ${retryErrorBody}`);
-
-          // Last resort: strip all optional fields and try bare minimum
+          console.warn('Jira create attempts failed, trying minimal payload...');
           const minimalBody: any = {
             fields: {
               project: { key: projectKey },
@@ -387,16 +449,15 @@ export class JiraService {
             },
           };
           if (data.parentKey) minimalBody.fields.parent = { key: data.parentKey };
-          // Re-add required custom fields
+          // Re-add required custom fields with proper formatting
           for (const [fieldKey, meta] of requiredFields) {
             if (['project', 'summary', 'description', 'issuetype', 'parent'].includes(fieldKey)) continue;
-            if (meta.allowedValues?.length > 0) {
-              const first = meta.allowedValues[0];
-              minimalBody.fields[fieldKey] = first.id ? { id: first.id } : first.value || first;
+            const val = this.formatFieldValue(meta);
+            if (val !== undefined) {
+              minimalBody.fields[fieldKey] = val;
             }
           }
 
-          console.log('Retrying with minimal payload...');
           response = await fetch(`${this.baseUrl}/rest/api/3/issue`, {
             method: 'POST',
             headers: this.headers(),
