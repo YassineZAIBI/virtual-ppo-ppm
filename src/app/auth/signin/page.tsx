@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check, X as XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -33,6 +34,47 @@ function MicrosoftIcon({ className }: { className?: string }) {
   );
 }
 
+const PASSWORD_RULES = [
+  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+  { label: 'Uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'Lowercase letter', test: (p: string) => /[a-z]/.test(p) },
+  { label: 'A digit', test: (p: string) => /[0-9]/.test(p) },
+  { label: 'Special character', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+];
+
+function PasswordStrength({ password }: { password: string }) {
+  const passed = PASSWORD_RULES.filter((r) => r.test(password)).length;
+  const strength = passed <= 1 ? 'Weak' : passed <= 2 ? 'Fair' : passed <= 3 ? 'Good' : passed <= 4 ? 'Strong' : 'Excellent';
+  const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-lime-500', 'bg-green-500'];
+  const textColors = ['text-red-600', 'text-orange-600', 'text-yellow-600', 'text-lime-600', 'text-green-600'];
+
+  if (!password) return null;
+
+  return (
+    <div className="space-y-2 mt-2">
+      <div className="flex gap-1">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i < passed ? colors[passed - 1] : 'bg-slate-200 dark:bg-slate-700'}`} />
+        ))}
+      </div>
+      <p className={`text-xs font-medium ${textColors[Math.max(0, passed - 1)]}`}>{strength}</p>
+      <div className="space-y-1">
+        {PASSWORD_RULES.map((rule) => {
+          const ok = rule.test(password);
+          return (
+            <div key={rule.label} className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-600 dark:text-green-400' : 'text-slate-400 dark:text-slate-500'}`}>
+              {ok ? <Check className="h-3 w-3" /> : <XIcon className="h-3 w-3" />}
+              {rule.label}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
 function SignInForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -43,7 +85,13 @@ function SignInForm() {
     searchParams.get('register') === 'true'
   );
   const [name, setName] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const router = useRouter();
+
+  const passwordValid = useMemo(
+    () => PASSWORD_RULES.every((r) => r.test(password)),
+    [password]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,13 +99,27 @@ function SignInForm() {
 
     try {
       if (isRegistering) {
+        if (!passwordValid) {
+          toast.error('Password does not meet all requirements');
+          setIsLoading(false);
+          return;
+        }
+        if (TURNSTILE_SITE_KEY && !captchaToken) {
+          toast.error('Please complete the security check');
+          setIsLoading(false);
+          return;
+        }
+
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name, email, password, captchaToken }),
         });
         if (!res.ok) {
           const data = await res.json();
+          if (data.passwordErrors) {
+            throw new Error(data.passwordErrors.join(', '));
+          }
           throw new Error(data.error || 'Registration failed');
         }
         toast.success('Account created! Signing you in...');
@@ -158,13 +220,31 @@ function SignInForm() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={8} />
+              {isRegistering && <PasswordStrength password={password} />}
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+
+            {/* Turnstile CAPTCHA — only on register, only if site key is configured */}
+            {isRegistering && TURNSTILE_SITE_KEY && (
+              <div className="flex justify-center">
+                <Turnstile
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onSuccess={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  options={{ theme: 'light', size: 'normal' }}
+                />
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading || (isRegistering && !passwordValid) || (isRegistering && !!TURNSTILE_SITE_KEY && !captchaToken)}
+            >
               {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isRegistering ? 'Create Account' : 'Sign In'}
             </Button>
-            <Button type="button" variant="ghost" className="w-full" onClick={() => setIsRegistering(!isRegistering)}>
+            <Button type="button" variant="ghost" className="w-full" onClick={() => { setIsRegistering(!isRegistering); setCaptchaToken(null); }}>
               {isRegistering ? 'Already have an account? Sign in' : "Don't have an account? Register"}
             </Button>
           </form>
