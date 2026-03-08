@@ -10,6 +10,7 @@ import {
   Risk,
   Persona,
   JiraProjectSchema,
+  MarketResearchReport,
 } from './types';
 import type { AgentId, AgentChatMessage, AgentPendingAction } from './types';
 
@@ -81,6 +82,13 @@ interface AppState {
   // Pending chat prompt (for quick actions navigation)
   pendingChatPrompt: string | null;
   setPendingChatPrompt: (prompt: string | null) => void;
+
+  // Market Intelligence
+  marketResearches: MarketResearchReport[];
+  setMarketResearches: (items: MarketResearchReport[]) => void;
+  addMarketResearch: (item: MarketResearchReport) => void;
+  updateMarketResearch: (id: string, updates: Partial<MarketResearchReport>) => void;
+  deleteMarketResearch: (id: string) => void;
 
   // UI State
   isLoading: boolean;
@@ -240,6 +248,17 @@ export const useAppStore = create<AppState>()(
       // Pending chat prompt
       pendingChatPrompt: null,
       setPendingChatPrompt: (prompt) => set({ pendingChatPrompt: prompt }),
+
+      // Market Intelligence
+      marketResearches: [],
+      setMarketResearches: (items) => set({ marketResearches: items }),
+      addMarketResearch: (item) => set((state) => ({ marketResearches: [...state.marketResearches, item] })),
+      updateMarketResearch: (id, updates) => set((state) => ({
+        marketResearches: state.marketResearches.map((r) => r.id === id ? { ...r, ...updates } : r),
+      })),
+      deleteMarketResearch: (id) => set((state) => ({
+        marketResearches: state.marketResearches.filter((r) => r.id !== id),
+      })),
 
       // UI State
       isLoading: false,

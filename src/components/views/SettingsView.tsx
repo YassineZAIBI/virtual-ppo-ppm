@@ -235,7 +235,7 @@ export function SettingsView() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
+        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
         <p className="text-slate-500">Configure your AI assistant and integrations</p>
       </div>
 
@@ -438,7 +438,7 @@ export function SettingsView() {
                   <div className="pt-2 border-t">
                     <button
                       onClick={() => setShowHierarchy(!showHierarchy)}
-                      className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors w-full"
+                      className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-blue-600 transition-colors w-full"
                     >
                       {showHierarchy ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                       <GitBranch className="h-3.5 w-3.5" />
@@ -604,7 +604,7 @@ export function SettingsView() {
                           gated ? 'bg-amber-400' :
                           'bg-green-500'
                         }`} />
-                        <span className="text-slate-600 dark:text-slate-400">{tool}</span>
+                        <span className="text-muted-foreground">{tool}</span>
                         <Badge variant="outline" className="text-[10px] py-0 px-1 ml-auto">
                           {blocked ? 'off' : gated ? 'approval' : 'auto'}
                         </Badge>

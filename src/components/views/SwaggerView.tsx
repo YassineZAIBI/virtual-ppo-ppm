@@ -112,7 +112,7 @@ export function SwaggerView() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Swagger/API Management</h1>
+          <h1 className="text-2xl font-bold text-foreground">Swagger/API Management</h1>
           <p className="text-slate-500">Upload API specs and generate AI-powered test cases</p>
         </div>
         <div className="flex gap-2">
@@ -156,7 +156,7 @@ export function SwaggerView() {
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-auto">
                 {endpoints.map((ep, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded">
+                  <div key={i} className="flex items-center gap-2 p-2 bg-muted rounded">
                     <Badge className={cn('w-16 justify-center text-white',
                       ep.method === 'GET' && 'bg-green-500',
                       ep.method === 'POST' && 'bg-blue-500',

@@ -344,6 +344,68 @@ export type {
   AutonomyGateResult,
 } from './agents/types';
 
+// ============ Market Intelligence ============
+
+export interface MarketResearchReport {
+  id: string;
+  initiativeId?: string;
+  title: string;
+  query: string;
+  status: 'pending' | 'gathering' | 'synthesizing' | 'completed' | 'failed';
+  dataPoints: MarketDataPoint[];
+  synthesizedReport?: string;
+  reportMetadata: { sourceCount: number; dataPointCount: number };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MarketDataPoint {
+  id: string;
+  adapterKey: string;
+  sourceUrl: string;
+  sourceName: string;
+  title: string;
+  rawContent: string;
+  contentType: string;
+  extractedFacts: Array<{ fact: string; confidence: number; category: string }>;
+  publishedAt?: Date;
+  fetchedAt: Date;
+  metadata: Record<string, any>;
+}
+
+export interface DataConnectorConfigType {
+  id: string;
+  type: 'preset' | 'custom';
+  name: string;
+  adapterKey: string;
+  config: Record<string, any>;
+  dataMapping: Record<string, string>;
+  refreshSchedule: 'manual' | 'daily' | 'weekly';
+  isActive: boolean;
+  lastFetchAt?: Date;
+  lastFetchStatus?: string;
+}
+
+export interface ContentVersionEntry {
+  id: string;
+  entityType: string;
+  entityId: string;
+  content: string;
+  editedBy: 'ai' | 'user';
+  changeDescription?: string;
+  createdAt: Date;
+}
+
+export interface DataJobStatus {
+  id: string;
+  jobType: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  progress: number;
+  error?: string;
+  createdAt: Date;
+  completedAt?: Date;
+}
+
 // Default settings
 export const defaultSettings: UserSettings = {
   llm: {

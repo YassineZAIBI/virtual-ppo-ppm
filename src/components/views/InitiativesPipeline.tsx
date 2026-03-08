@@ -26,7 +26,7 @@ import { isSampleData } from '@/lib/sample-data';
 import { ExampleBadge } from '@/components/ui/example-badge';
 
 const stages = [
-  { id: 'idea', label: 'Ideas', color: 'bg-slate-100 dark:bg-slate-800', headerColor: 'bg-slate-200 dark:bg-slate-700' },
+  { id: 'idea', label: 'Ideas', color: 'bg-muted', headerColor: 'bg-accent' },
   { id: 'discovery', label: 'Discovery', color: 'bg-blue-50 dark:bg-blue-950', headerColor: 'bg-blue-100 dark:bg-blue-900' },
   { id: 'validation', label: 'Validation', color: 'bg-amber-50 dark:bg-amber-950', headerColor: 'bg-amber-100 dark:bg-amber-900' },
   { id: 'definition', label: 'Definition', color: 'bg-purple-50 dark:bg-purple-950', headerColor: 'bg-purple-100 dark:bg-purple-900' },
@@ -148,7 +148,7 @@ export function InitiativesPipeline() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Initiatives Pipeline</h1>
+          <h1 className="text-2xl font-bold text-foreground">Initiatives Pipeline</h1>
           <p className="text-slate-500">Manage ideas from conception to approval</p>
         </div>
         <div className="flex items-center gap-2">
@@ -213,14 +213,14 @@ export function InitiativesPipeline() {
 
               {/* Business Case Questions */}
               <div className="border-t pt-4 mt-4">
-                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
                   <HelpCircle className="h-4 w-4 text-blue-500" />
                   Business Case Questions
                 </h3>
 
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-xs text-slate-600 dark:text-slate-400">Why do you need this initiative?</Label>
+                    <Label className="text-xs text-muted-foreground">Why do you need this initiative?</Label>
                     <Textarea
                       value={newIdea.whyNeeded}
                       onChange={(e) => setNewIdea({ ...newIdea, whyNeeded: e.target.value })}
@@ -230,7 +230,7 @@ export function InitiativesPipeline() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-slate-600 dark:text-slate-400">What if this initiative is not approved or we don't have a solution?</Label>
+                    <Label className="text-xs text-muted-foreground">What if this initiative is not approved or we don't have a solution?</Label>
                     <Textarea
                       value={newIdea.whatIfNot}
                       onChange={(e) => setNewIdea({ ...newIdea, whatIfNot: e.target.value })}
@@ -240,7 +240,7 @@ export function InitiativesPipeline() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
                       <DollarSign className="h-3 w-3" />
                       Expected Business Value (mandays, revenue, time saved...)
                     </Label>
@@ -252,7 +252,7 @@ export function InitiativesPipeline() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       Expected Time to Market
                     </Label>
@@ -363,14 +363,14 @@ export function InitiativesPipeline() {
 
                 {/* Business Case Questions */}
                 <div className="border-t pt-4 mt-2">
-                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
                     <HelpCircle className="h-4 w-4 text-blue-500" />
                     Business Case Questions
                   </h3>
 
                   <div className="space-y-3">
                     <div>
-                      <Label className="text-xs text-slate-600 dark:text-slate-400">Why do you need this initiative?</Label>
+                      <Label className="text-xs text-muted-foreground">Why do you need this initiative?</Label>
                       <Textarea
                         value={editingInitiative.whyNeeded || ''}
                         onChange={(e) => setEditingInitiative({ ...editingInitiative, whyNeeded: e.target.value })}
@@ -380,7 +380,7 @@ export function InitiativesPipeline() {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-slate-600 dark:text-slate-400">What if this initiative is not approved or we don't have a solution?</Label>
+                      <Label className="text-xs text-muted-foreground">What if this initiative is not approved or we don't have a solution?</Label>
                       <Textarea
                         value={editingInitiative.whatIfNot || ''}
                         onChange={(e) => setEditingInitiative({ ...editingInitiative, whatIfNot: e.target.value })}
@@ -390,7 +390,7 @@ export function InitiativesPipeline() {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
                         <DollarSign className="h-3 w-3" />
                         Expected Business Value (mandays, revenue, time saved...)
                       </Label>
@@ -402,7 +402,7 @@ export function InitiativesPipeline() {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         Expected Time to Market
                       </Label>
@@ -446,7 +446,7 @@ export function InitiativesPipeline() {
                 {stage.label}
                 <Badge variant="secondary" className="ml-1">{stageInitiatives.length}</Badge>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-900 rounded-b-lg p-2 space-y-2 min-h-[400px]">
+              <div className="bg-background rounded-b-lg p-2 space-y-2 min-h-[400px]">
                 {stageInitiatives.map((initiative) => (
                   <Card
                     key={initiative.id}
@@ -466,7 +466,7 @@ export function InitiativesPipeline() {
                             }
                           </button>
                         )}
-                        <h4 className="font-medium text-slate-900 dark:text-white text-sm">{initiative.title}</h4>
+                        <h4 className="font-medium text-foreground text-sm">{initiative.title}</h4>
                         {isSampleData(initiative.id) && <ExampleBadge />}
                         {initiative.jiraIssueType && (
                           <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 font-medium shrink-0",
@@ -492,7 +492,7 @@ export function InitiativesPipeline() {
                             return (
                               <Tooltip key={pid}>
                                 <TooltipTrigger asChild>
-                                  <div className="h-5 w-5 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[10px] font-semibold text-blue-600 dark:text-blue-300 border border-white dark:border-slate-800">
+                                  <div className="h-5 w-5 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[10px] font-semibold text-blue-600 dark:text-blue-300 border border-border">
                                     {p.name.charAt(0)}
                                   </div>
                                 </TooltipTrigger>

@@ -144,7 +144,7 @@ function normalizeMarkdown(raw: string): string {
 
 const components: Components = {
   h1: ({ children }) => (
-    <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-8 mb-4 pb-3 border-b-2 border-blue-500 dark:border-blue-400 first:mt-0">
+    <h1 className="text-2xl font-bold text-foreground mt-8 mb-4 pb-3 border-b-2 border-blue-500 dark:border-blue-400 first:mt-0">
       {children}
     </h1>
   ),
@@ -157,17 +157,17 @@ const components: Components = {
     </div>
   ),
   h3: ({ children }) => (
-    <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mt-6 mb-3 first:mt-0">
+    <h3 className="text-base font-semibold text-foreground mt-6 mb-3 first:mt-0">
       {children}
     </h3>
   ),
   h4: ({ children }) => (
-    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-4 mb-2 first:mt-0">
+    <h4 className="text-sm font-semibold text-muted-foreground mt-4 mb-2 first:mt-0">
       {children}
     </h4>
   ),
   p: ({ children }) => (
-    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4 last:mb-0">
+    <p className="text-sm text-muted-foreground leading-relaxed mb-4 last:mb-0">
       {children}
     </p>
   ),
@@ -181,7 +181,7 @@ const components: Components = {
     const isOrdered = (props as any).ordered;
     const index = (props as any).index;
     return (
-      <li className="flex gap-2.5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+      <li className="flex gap-2.5 text-sm text-muted-foreground leading-relaxed">
         {isOrdered ? (
           <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-semibold flex items-center justify-center mt-0.5">
             {(index ?? 0) + 1}
@@ -194,10 +194,10 @@ const components: Components = {
     );
   },
   strong: ({ children }) => (
-    <strong className="font-semibold text-slate-800 dark:text-slate-200">{children}</strong>
+    <strong className="font-semibold text-foreground">{children}</strong>
   ),
   em: ({ children }) => (
-    <em className="italic text-slate-500 dark:text-slate-400">{children}</em>
+    <em className="italic text-muted-foreground">{children}</em>
   ),
   blockquote: ({ children }) => (
     <blockquote className="border-l-3 border-amber-400 bg-amber-50 dark:bg-amber-950/30 pl-4 pr-3 py-2 rounded-r-lg mb-4 text-sm text-amber-800 dark:text-amber-200">
@@ -208,33 +208,33 @@ const components: Components = {
     const isBlock = className?.includes('language-');
     if (isBlock) {
       return (
-        <div className="rounded-lg bg-slate-900 dark:bg-slate-950 p-4 mb-4 overflow-x-auto">
+        <div className="rounded-lg bg-slate-900 dark:bg-black/80 p-4 mb-4 overflow-x-auto">
           <code className="text-xs text-green-400 font-mono">{children}</code>
         </div>
       );
     }
     return (
-      <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs font-mono text-pink-600 dark:text-pink-400">
+      <code className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono text-pink-600 dark:text-pink-400">
         {children}
       </code>
     );
   },
   pre: ({ children }) => <>{children}</>,
   table: ({ children }) => (
-    <div className="my-5 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden overflow-x-auto shadow-sm">
+    <div className="my-5 rounded-xl border border-border overflow-hidden overflow-x-auto shadow-sm">
       <table className="w-full text-sm border-collapse">{children}</table>
     </div>
   ),
   thead: ({ children }) => (
-    <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800">
+    <thead className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-muted dark:to-muted">
       {children}
     </thead>
   ),
   tbody: ({ children }) => (
-    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">{children}</tbody>
+    <tbody className="divide-y divide-border">{children}</tbody>
   ),
   tr: ({ children }) => (
-    <tr className="hover:bg-blue-50/50 dark:hover:bg-slate-800/50 transition-colors even:bg-slate-50/50 dark:even:bg-slate-800/30">
+    <tr className="hover:bg-blue-50/50 dark:hover:bg-accent/50 transition-colors even:bg-slate-50/50 dark:even:bg-accent/30">
       {children}
     </tr>
   ),
@@ -244,12 +244,12 @@ const components: Components = {
     </th>
   ),
   td: ({ children }) => (
-    <td className="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300">
+    <td className="px-4 py-2.5 text-sm text-muted-foreground">
       {children}
     </td>
   ),
   hr: () => (
-    <hr className="my-6 border-slate-200 dark:border-slate-700" />
+    <hr className="my-6 border-border" />
   ),
   a: ({ children, href }) => (
     <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-300">
@@ -257,7 +257,7 @@ const components: Components = {
     </a>
   ),
   del: ({ children }) => (
-    <del className="text-slate-400 dark:text-slate-500 line-through">{children}</del>
+    <del className="text-muted-foreground line-through">{children}</del>
   ),
 };
 

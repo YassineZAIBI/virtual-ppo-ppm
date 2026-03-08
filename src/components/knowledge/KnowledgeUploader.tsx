@@ -37,8 +37,8 @@ function getFileIcon(fileType?: string) {
     case 'csv':
     case 'xlsx': return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
     case 'txt':
-    case 'md': return <FileText className="h-4 w-4 text-slate-500" />;
-    default: return <File className="h-4 w-4 text-slate-400" />;
+    case 'md': return <FileText className="h-4 w-4 text-muted-foreground" />;
+    default: return <File className="h-4 w-4 text-muted-foreground" />;
   }
 }
 
@@ -205,7 +205,7 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
   if (isLoadingDocs) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -214,19 +214,19 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
     <div className={compact ? 'space-y-3' : 'space-y-4'}>
       {!compact && (
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Add Context</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h2 className="text-xl font-bold text-foreground">Add Context</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Upload files or add URLs to give the AI more context about your product.
           </p>
         </div>
       )}
 
       {/* Limit indicators */}
-      <div className="flex gap-3 text-xs text-slate-500">
+      <div className="flex gap-3 text-xs text-muted-foreground">
         <span className={fileCount >= MAX_FILES ? 'text-amber-600 font-medium' : ''}>
           {fileCount} of {MAX_FILES} files
         </span>
-        <span className="text-slate-300">|</span>
+        <span className="text-muted-foreground/50">|</span>
         <span className={urlCount >= MAX_URLS ? 'text-amber-600 font-medium' : ''}>
           {urlCount} of {MAX_URLS} URLs
         </span>
@@ -242,7 +242,7 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
           className={`border-2 border-dashed rounded-lg p-${compact ? '3' : '6'} text-center cursor-pointer transition-colors ${
             isDragOver
               ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/30'
-              : 'border-slate-300 dark:border-slate-600 hover:border-blue-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+              : 'border-border hover:border-blue-300 hover:bg-accent'
           }`}
         >
           <input
@@ -255,15 +255,15 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
           {isUploading ? (
             <div className="flex items-center justify-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-              <span className="text-sm text-slate-600 dark:text-slate-400">Uploading...</span>
+              <span className="text-sm text-muted-foreground">Uploading...</span>
             </div>
           ) : (
             <>
-              <Upload className={`${compact ? 'h-5 w-5' : 'h-8 w-8'} text-slate-400 mx-auto ${compact ? 'mb-1' : 'mb-2'}`} />
-              <p className="text-sm text-slate-600 dark:text-slate-400">
+              <Upload className={`${compact ? 'h-5 w-5' : 'h-8 w-8'} text-muted-foreground mx-auto ${compact ? 'mb-1' : 'mb-2'}`} />
+              <p className="text-sm text-muted-foreground">
                 {isDragOver ? 'Drop file here' : 'Drag & drop or click to upload'}
               </p>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 PDF, DOCX, TXT, MD, CSV, XLSX (max 5MB)
               </p>
             </>
@@ -275,7 +275,7 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
       {urlCount < MAX_URLS && (
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Globe className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Globe className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
@@ -303,7 +303,7 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
 
       {/* Info about URL scraping */}
       {urlCount < MAX_URLS && !compact && (
-        <p className="text-xs text-slate-400 flex items-start gap-1">
+        <p className="text-xs text-muted-foreground flex items-start gap-1">
           <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
           Only public pages are supported. Pages requiring login will be rejected.
         </p>
@@ -313,12 +313,12 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
       {docs.length > 0 && (
         <div className={`space-y-1 ${compact ? '' : 'border rounded-lg p-2'}`}>
           {!compact && (
-            <p className="text-xs font-medium text-slate-500 px-1 mb-1">Knowledge Sources</p>
+            <p className="text-xs font-medium text-muted-foreground px-1 mb-1">Knowledge Sources</p>
           )}
           {docs.map((doc) => (
             <div
               key={doc.id}
-              className="flex items-center gap-2 p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 group"
+              className="flex items-center gap-2 p-2 rounded hover:bg-accent group"
             >
               {doc.sourceType === 'url' ? (
                 <Globe className="h-4 w-4 text-blue-500 shrink-0" />
@@ -329,7 +329,7 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
                 <p className="text-sm truncate" title={doc.sourceName}>
                   {doc.sourceName}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline" className="text-[10px] py-0 px-1">
                     {doc.sourceType === 'url' ? 'URL' : doc.fileType?.toUpperCase() || 'FILE'}
                   </Badge>
@@ -341,7 +341,7 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500"
+                className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500"
                 onClick={() => handleDelete(doc.id, doc.sourceName)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -354,8 +354,8 @@ export function KnowledgeUploader({ compact = false, onDocsChange }: KnowledgeUp
       {/* Empty state */}
       {docs.length === 0 && !compact && (
         <div className="text-center py-4">
-          <p className="text-sm text-slate-400">No knowledge sources added yet</p>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-sm text-muted-foreground">No knowledge sources added yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
             Upload files or scrape URLs to give agents more context
           </p>
         </div>

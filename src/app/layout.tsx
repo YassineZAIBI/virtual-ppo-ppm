@@ -33,7 +33,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>
-          <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
+          <div className="flex h-screen bg-slate-50 dark:bg-background">
             <Sidebar />
             <main className="flex-1 overflow-auto">
               {children}

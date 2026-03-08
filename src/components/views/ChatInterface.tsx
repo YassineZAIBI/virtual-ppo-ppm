@@ -353,14 +353,14 @@ export function ChatInterface() {
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)]">
       {/* Header */}
-      <div className="p-4 border-b bg-white dark:bg-slate-900">
+      <div className="p-4 border-b bg-card">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">AI Product Assistant</h2>
+              <h2 className="font-semibold text-foreground">AI Product Assistant</h2>
               <p className="text-sm text-slate-500">6 specialized agents at your service</p>
             </div>
           </div>
@@ -386,14 +386,14 @@ export function ChatInterface() {
                 <ChevronDown className="h-3 w-3" />
               </Button>
               {showAgentSelector && (
-                <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-slate-800 border rounded-lg shadow-lg z-50 py-1">
+                <div className="absolute right-0 top-full mt-1 w-56 bg-card border rounded-lg shadow-lg z-50 py-1">
                   {AGENT_OPTIONS.map((opt) => (
                     <button
                       key={opt.value ?? 'auto'}
                       onClick={() => { setSelectedAgent(opt.value as any); setShowAgentSelector(false); }}
                       className={cn(
-                        'w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2',
-                        selectedAgent === opt.value && 'bg-slate-100 dark:bg-slate-700'
+                        'w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2',
+                        selectedAgent === opt.value && 'bg-accent'
                       )}
                     >
                       {opt.value ? (() => { const info = AGENT_INFO[opt.value]; const Icon = info.icon; return <Icon className={cn('h-4 w-4', info.color)} />; })() : <Bot className="h-4 w-4 text-slate-400" />}
@@ -421,10 +421,10 @@ export function ChatInterface() {
           </p>
           <div className="space-y-2">
             {activePending.map((action) => (
-              <div key={action.id} className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-lg p-2 border border-amber-200 dark:border-amber-700">
+              <div key={action.id} className="flex items-center justify-between bg-card rounded-lg p-2 border border-amber-200 dark:border-amber-700">
                 <div className="flex items-center gap-2">
                   <Wrench className="h-4 w-4 text-amber-600" />
-                  <span className="text-sm text-slate-700 dark:text-slate-300">{action.description}</span>
+                  <span className="text-sm text-muted-foreground">{action.description}</span>
                   <Badge variant="outline" className="text-xs">{action.agentId}</Badge>
                 </div>
                 <div className="flex gap-1">
@@ -446,7 +446,7 @@ export function ChatInterface() {
         {chatMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <Bot className="h-16 w-16 text-slate-300 mb-4" />
-            <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">How can I help you today?</h3>
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">How can I help you today?</h3>
             <p className="text-slate-500 mb-4 max-w-md">
               I have 6 specialized agents ready to help with strategy, discovery, risk, communications, expert advice, and deep analysis.
             </p>
@@ -454,7 +454,7 @@ export function ChatInterface() {
               {Object.entries(AGENT_INFO).map(([id, info]) => {
                 const Icon = info.icon;
                 return (
-                  <Badge key={id} variant="outline" className="py-1 px-2 cursor-pointer hover:bg-slate-100" onClick={() => setSelectedAgent(id as AgentId)}>
+                  <Badge key={id} variant="outline" className="py-1 px-2 cursor-pointer hover:bg-accent" onClick={() => setSelectedAgent(id as AgentId)}>
                     <Icon className={cn('h-3 w-3 mr-1', info.color)} />
                     {info.name}
                   </Badge>
@@ -463,7 +463,7 @@ export function ChatInterface() {
             </div>
             <div className="flex flex-wrap gap-2 justify-center max-w-lg">
               {suggestions.map((s) => (
-                <Button key={s} variant="outline" size="sm" onClick={() => setInput(s)} className="text-slate-600 dark:text-slate-300">
+                <Button key={s} variant="outline" size="sm" onClick={() => setInput(s)} className="text-muted-foreground">
                   {s}
                 </Button>
               ))}
@@ -483,7 +483,7 @@ export function ChatInterface() {
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <div className={cn('max-w-[80%] rounded-lg relative', message.role === 'user' ? 'bg-blue-600 text-white p-3' : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white p-3')}>
+                <div className={cn('max-w-[80%] rounded-lg relative', message.role === 'user' ? 'bg-blue-600 text-white p-3' : 'bg-muted text-foreground p-3')}>
                   {/* Edit button for user messages */}
                   {message.role === 'user' && !isLoading && editingMessageId !== message.id && (
                     <button
@@ -514,14 +514,14 @@ export function ChatInterface() {
                           if (e.key === 'Enter' && !e.shiftKey) handleEditSubmit(message.id);
                           if (e.key === 'Escape') cancelEditing();
                         }}
-                        className="bg-white text-slate-900 dark:bg-slate-700 dark:text-white"
+                        className="bg-card text-foreground"
                         autoFocus
                       />
                       <div className="flex gap-1 justify-end">
                         <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-blue-200 hover:text-white hover:bg-blue-700" onClick={cancelEditing}>
                           Cancel
                         </Button>
-                        <Button size="sm" className="h-6 px-2 text-xs bg-white text-blue-600 hover:bg-blue-50" onClick={() => handleEditSubmit(message.id)}>
+                        <Button size="sm" className="h-6 px-2 text-xs bg-card text-blue-600 hover:bg-blue-50 dark:text-blue-400" onClick={() => handleEditSubmit(message.id)}>
                           <Send className="h-3 w-3 mr-1" /> Resend
                         </Button>
                       </div>
@@ -534,10 +534,10 @@ export function ChatInterface() {
 
                   {/* Tools executed (collapsible) */}
                   {message.toolsExecuted && message.toolsExecuted.length > 0 && (
-                    <div className="mt-2 border-t border-slate-200 dark:border-slate-700 pt-2">
+                    <div className="mt-2 border-t border-border pt-2">
                       <button
                         onClick={() => toggleTools(message.id)}
-                        className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+                        className="flex items-center gap-1 text-xs text-slate-500 hover:text-foreground"
                       >
                         {expandedTools[message.id] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                         <Wrench className="h-3 w-3" />
@@ -553,7 +553,7 @@ export function ChatInterface() {
                                 tool.status === 'pending' ? 'bg-amber-500' :
                                 tool.status === 'blocked' ? 'bg-slate-400' : 'bg-red-500'
                               )} />
-                              <span className="text-slate-600 dark:text-slate-400">
+                              <span className="text-muted-foreground">
                                 {tool.toolName}
                               </span>
                               <Badge variant="outline" className="text-[10px] py-0 px-1">{tool.status}</Badge>
@@ -577,7 +577,7 @@ export function ChatInterface() {
 
                   {/* Inline proposed actions */}
                   {message.role === 'assistant' && message.pendingActions && message.pendingActions.length > 0 && (
-                    <div className="mt-3 space-y-2 border-t border-slate-200 dark:border-slate-700 pt-2">
+                    <div className="mt-3 space-y-2 border-t border-border pt-2">
                       <p className="text-xs font-medium text-slate-500">Proposed Actions:</p>
                       {message.pendingActions.map((action) => {
                         const storeAction = pendingActions.find((a) => a.id === action.id);
@@ -607,7 +607,7 @@ export function ChatInterface() {
                               {status === 'executed' && <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 shrink-0">Executed</Badge>}
                               {status === 'rejected' && <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 shrink-0">Rejected</Badge>}
                             </div>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
+                            <p className="text-xs text-muted-foreground mt-1 truncate">
                               {action.toolName}: {JSON.stringify(action.toolArguments ?? {}).substring(0, 120)}
                             </p>
                           </div>
@@ -618,7 +618,7 @@ export function ChatInterface() {
 
                   {/* Suggested next steps */}
                   {message.role === 'assistant' && message.suggestedNextSteps && message.suggestedNextSteps.length > 0 && (
-                    <div className="mt-3 border-t border-slate-200 dark:border-slate-700 pt-2">
+                    <div className="mt-3 border-t border-border pt-2">
                       <p className="text-xs font-medium text-slate-500 mb-2">Suggested Next Steps:</p>
                       <div className="flex flex-wrap gap-2">
                         {message.suggestedNextSteps.map((step, i) => (
@@ -644,7 +644,7 @@ export function ChatInterface() {
                 </div>
                 {message.role === 'user' && (
                   <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarFallback className="bg-slate-200 text-slate-600">U</AvatarFallback>
+                    <AvatarFallback className="bg-muted text-muted-foreground">U</AvatarFallback>
                   </Avatar>
                 )}
               </div>
@@ -660,7 +660,7 @@ export function ChatInterface() {
                     {selectedAgent ? (() => { const Icon = AGENT_INFO[selectedAgent]?.icon || Bot; return <Icon className="h-4 w-4" />; })() : <Bot className="h-4 w-4" />}
                   </AvatarFallback>
                 </Avatar>
-                <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3 min-w-[240px]">
+                <div className="bg-muted rounded-lg p-3 min-w-[240px]">
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="outline" className="text-xs">
                       {selectedAgent ? AGENT_INFO[selectedAgent]?.name : 'Processing'}
@@ -672,7 +672,7 @@ export function ChatInterface() {
                         'flex items-center gap-2 text-xs transition-all duration-300',
                         i < processingStep ? 'text-green-600 dark:text-green-400' :
                         i === processingStep ? 'text-blue-600 dark:text-blue-400' :
-                        'text-slate-300 dark:text-slate-600'
+                        'text-muted-foreground/50'
                       )}>
                         {i < processingStep ? (
                           <Check className="h-3 w-3 shrink-0" />
@@ -693,7 +693,7 @@ export function ChatInterface() {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t bg-white dark:bg-slate-900">
+      <div className="p-4 border-t bg-card">
         <div className="flex gap-2 max-w-3xl mx-auto">
           <Popover>
             <PopoverTrigger asChild>

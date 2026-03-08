@@ -71,8 +71,8 @@ export function IntegrationStep({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{description}</p>
+          <h2 className="text-xl font-bold text-foreground">{title}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{description}</p>
         </div>
         {isConnected && (
           <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 gap-1">
@@ -125,7 +125,7 @@ export function IntegrationStep({
           {testResult.preview.projects && (
             <div className="space-y-1">
               {testResult.preview.projects.map((p: any) => (
-                <div key={p.key} className="text-slate-600 dark:text-slate-400">
+                <div key={p.key} className="text-muted-foreground">
                   {p.key} - {p.name}
                 </div>
               ))}
@@ -134,14 +134,14 @@ export function IntegrationStep({
           {testResult.preview.spaces && (
             <div className="space-y-1">
               {testResult.preview.spaces.map((s: any) => (
-                <div key={s.key} className="text-slate-600 dark:text-slate-400">
+                <div key={s.key} className="text-muted-foreground">
                   {s.key} - {s.name}
                 </div>
               ))}
             </div>
           )}
           {testResult.preview.channelName && (
-            <div className="text-slate-600 dark:text-slate-400">
+            <div className="text-muted-foreground">
               #{testResult.preview.channelName} ({testResult.preview.memberCount} members)
               {testResult.preview.topic && <p className="text-xs mt-1">Topic: {testResult.preview.topic}</p>}
             </div>

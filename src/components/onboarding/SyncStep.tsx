@@ -131,10 +131,10 @@ export function SyncStep({ credentials, connected, onSyncComplete }: SyncStepPro
   if (!hasConnections) {
     return (
       <div className="text-center space-y-4 py-8">
-        <AlertCircle className="h-12 w-12 text-slate-400 mx-auto" />
+        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto" />
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">No Integrations Connected</h2>
-          <p className="text-slate-500 mt-2">
+          <h2 className="text-xl font-bold text-foreground">No Integrations Connected</h2>
+          <p className="text-muted-foreground mt-2">
             You haven&apos;t connected any integrations yet. Go back to connect Jira, Confluence, or Slack,
             or skip this step to set them up later.
           </p>
@@ -146,8 +146,8 @@ export function SyncStep({ credentials, connected, onSyncComplete }: SyncStepPro
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Import Your Data</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        <h2 className="text-xl font-bold text-foreground">Import Your Data</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           Review and select items to import from your connected integrations.
         </p>
       </div>
@@ -174,7 +174,7 @@ export function SyncStep({ credentials, connected, onSyncComplete }: SyncStepPro
       {previewItems.length > 0 && !syncResults && (
         <>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-muted-foreground">
               {previewItems.filter((i) => i.selected).length} of {previewItems.filter((i) => i.type !== 'error').length} items selected
             </span>
             <div className="flex gap-2">
@@ -187,7 +187,7 @@ export function SyncStep({ credentials, connected, onSyncComplete }: SyncStepPro
             {previewItems.map((item) => (
               <label
                 key={item.externalId}
-                className={`flex items-center gap-3 p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer ${
+                className={`flex items-center gap-3 p-2 rounded hover:bg-accent cursor-pointer ${
                   item.type === 'error' ? 'opacity-50' : ''
                 }`}
               >
@@ -205,7 +205,7 @@ export function SyncStep({ credentials, connected, onSyncComplete }: SyncStepPro
                 </Badge>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{item.title}</p>
-                  {item.details && <p className="text-xs text-slate-500 truncate">{item.details}</p>}
+                  {item.details && <p className="text-xs text-muted-foreground truncate">{item.details}</p>}
                 </div>
               </label>
             ))}
@@ -235,12 +235,12 @@ export function SyncStep({ credentials, connected, onSyncComplete }: SyncStepPro
             <span className="font-medium">Sync Complete!</span>
           </div>
           {syncResults.map((result: any) => (
-            <div key={result.source} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+            <div key={result.source} className="p-3 rounded-lg bg-muted">
               <div className="flex items-center justify-between">
                 <span className="font-medium capitalize">{result.source}</span>
                 <div className="flex gap-2 text-sm">
                   <span className="text-green-600">{result.imported} imported</span>
-                  {result.skipped > 0 && <span className="text-slate-500">{result.skipped} skipped</span>}
+                  {result.skipped > 0 && <span className="text-muted-foreground">{result.skipped} skipped</span>}
                   {result.failed > 0 && <span className="text-red-500">{result.failed} failed</span>}
                 </div>
               </div>

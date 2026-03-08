@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { Initiative, DiscoveryNote } from '@/lib/types';
 import { ShareButton } from '@/components/share/ShareButton';
+import { MarketResearchPanel } from '@/components/market-research/MarketResearchPanel';
 
 const DISCOVERY_TABS = [
   { id: 'ai-prep', label: 'AI Preparation', icon: Sparkles },
@@ -295,7 +296,7 @@ Structure with these sections:
   return (
     <div className="flex h-[calc(100vh-0px)]">
       {/* Left Navigation Panel */}
-      <div className="w-72 border-r bg-slate-50 dark:bg-slate-900 flex flex-col">
+      <div className="w-72 border-r bg-background flex flex-col">
         <div className="p-4 border-b">
           <div className="flex items-center gap-2 mb-3">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push('/initiatives')}>
@@ -329,10 +330,10 @@ Structure with these sections:
                       'w-full text-left p-3 rounded-lg transition-all',
                       isActive
                         ? 'bg-blue-100 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700'
-                        : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                        : 'hover:bg-accent'
                     )}
                   >
-                    <h4 className="font-medium text-sm text-slate-900 dark:text-white truncate">{init.title}</h4>
+                    <h4 className="font-medium text-sm text-foreground truncate">{init.title}</h4>
                     <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{init.description || 'No description'}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <Badge variant="outline" className={cn(
@@ -368,7 +369,7 @@ Structure with these sections:
             {/* Initiative Header */}
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white">{activeInitiative.title}</h1>
+                <h1 className="text-xl font-bold text-foreground">{activeInitiative.title}</h1>
                 <Badge variant="outline" className="text-xs">{activeInitiative.businessValue} value</Badge>
               </div>
               <p className="text-sm text-slate-500">{activeInitiative.description}</p>
@@ -380,7 +381,7 @@ Structure with these sections:
                     <Card className="border-blue-200 dark:border-blue-800">
                       <CardContent className="p-3">
                         <p className="text-[10px] font-medium text-blue-600 uppercase tracking-wider mb-1">Why Needed</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3">{activeInitiative.whyNeeded}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-3">{activeInitiative.whyNeeded}</p>
                       </CardContent>
                     </Card>
                   )}
@@ -388,7 +389,7 @@ Structure with these sections:
                     <Card className="border-green-200 dark:border-green-800">
                       <CardContent className="p-3">
                         <p className="text-[10px] font-medium text-green-600 uppercase tracking-wider mb-1">Expected Value</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">{activeInitiative.expectedValue}</p>
+                        <p className="text-xs text-muted-foreground">{activeInitiative.expectedValue}</p>
                       </CardContent>
                     </Card>
                   )}
@@ -396,7 +397,7 @@ Structure with these sections:
                     <Card className="border-purple-200 dark:border-purple-800">
                       <CardContent className="p-3">
                         <p className="text-[10px] font-medium text-purple-600 uppercase tracking-wider mb-1">Time to Market</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">{activeInitiative.expectedTimeToMarket}</p>
+                        <p className="text-xs text-muted-foreground">{activeInitiative.expectedTimeToMarket}</p>
                       </CardContent>
                     </Card>
                   )}
@@ -442,7 +443,7 @@ Structure with these sections:
                     </Button>
 
                     {getDiscoveryData(activeInitiative).aiAnalysis && (
-                      <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="p-5 bg-muted/50 rounded-xl border border-border">
                         <StyledMarkdown>{getDiscoveryData(activeInitiative).aiAnalysis!}</StyledMarkdown>
                       </div>
                     )}
@@ -450,8 +451,16 @@ Structure with these sections:
                 </Card>
               </TabsContent>
 
-              {/* Content Tabs (Documentation, Interviews, Market Research, Impact) */}
-              {DISCOVERY_TABS.filter((t) => t.id !== 'ai-prep').map((tab) => {
+              {/* Market Research Tab — uses real data pipeline */}
+              <TabsContent value="market-research" className="space-y-4">
+                <MarketResearchPanel
+                  initiativeId={activeInitiative.id}
+                  initiativeTitle={activeInitiative.title}
+                />
+              </TabsContent>
+
+              {/* Content Tabs (Documentation, Interviews, Impact) */}
+              {DISCOVERY_TABS.filter((t) => t.id !== 'ai-prep' && t.id !== 'market-research').map((tab) => {
                 const noteType = tabTypeMap[tab.id];
                 const notes = noteType ? getNotesByType(activeInitiative, noteType) : [];
                 const Icon = tab.icon;
@@ -459,7 +468,7 @@ Structure with these sections:
                 return (
                   <TabsContent key={tab.id} value={tab.id} className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <Icon className="h-4 w-4" />
                         {tab.label}
                         <Badge variant="secondary" className="text-xs">{notes.length}</Badge>

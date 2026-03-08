@@ -30,6 +30,12 @@ model User {
   shareLinks     ShareLink[]
   pendingActions PendingAction[]
   knowledgeDocs  KnowledgeDocument[]
+
+  // Market Intelligence
+  marketResearches MarketResearch[]
+  contentVersions  ContentVersion[]
+  dataConnectors   DataConnectorConfig[]
+  dataJobs         DataJob[]
 }
 
 model Account {
@@ -287,4 +293,93 @@ model KnowledgeDocument {
   updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ Market Research ============
+model MarketResearch {
+  id                String   @id @default(cuid())
+  userId            String
+  initiativeId      String?
+  title             String
+  query             String
+  status            String   @default("pending") // pending, gathering, synthesizing, completed, failed
+  synthesizedReport String?
+  reportMetadata    String   @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dataPoints DataPoint[]
+}
+
+model DataPoint {
+  id             String    @id @default(cuid())
+  researchId     String
+  adapterKey     String
+  sourceUrl      String
+  sourceName     String
+  title          String    @default("")
+  rawContent     String
+  contentType    String    @default("article")
+  extractedFacts String    @default("[]")
+  publishedAt    DateTime?
+  fetchedAt      DateTime  @default(now())
+  metadata       String    @default("{}")
+
+  research MarketResearch @relation(fields: [researchId], references: [id], onDelete: Cascade)
+
+  @@index([researchId, adapterKey])
+}
+
+model ContentVersion {
+  id                String   @id @default(cuid())
+  userId            String
+  entityType        String
+  entityId          String
+  content           String
+  editedBy          String   @default("ai")
+  changeDescription String?
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+}
+
+model DataConnectorConfig {
+  id              String    @id @default(cuid())
+  userId          String
+  type            String    // preset, custom
+  name            String
+  adapterKey      String
+  config          String    @default("{}")
+  dataMapping     String    @default("{}")
+  refreshSchedule String    @default("manual")
+  isActive        Boolean   @default(true)
+  lastFetchAt     DateTime?
+  lastFetchStatus String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ Async Job Queue ============
+model DataJob {
+  id          String    @id @default(cuid())
+  userId      String
+  jobType     String
+  status      String    @default("pending") // pending, running, completed, failed
+  input       String    @default("{}")
+  output      String?
+  error       String?
+  progress    Int       @default(0)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([jobType, status])
 }

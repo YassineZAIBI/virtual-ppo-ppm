@@ -203,10 +203,10 @@ export function ShareDialog({ open, onOpenChange, defaultResourceType, resourceI
                   const label = RESOURCE_TYPES.find(r => r.value === link.resourceType)?.label || link.resourceType;
 
                   return (
-                    <div key={link.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-sm">
+                    <div key={link.id} className="flex items-center justify-between p-2 rounded-lg bg-muted text-sm">
                       <div className="flex items-center gap-2 min-w-0">
                         <Badge variant="outline" className="shrink-0">{label}</Badge>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Eye className="h-3 w-3" />{link.viewCount}
                           <MessageSquare className="h-3 w-3" />{link.commentCount}
                           <Clock className="h-3 w-3" />
@@ -250,7 +250,7 @@ export function ShareDialog({ open, onOpenChange, defaultResourceType, resourceI
 
           {isLoadingLinks && (
             <div className="flex justify-center py-2">
-              <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
           )}
         </div>

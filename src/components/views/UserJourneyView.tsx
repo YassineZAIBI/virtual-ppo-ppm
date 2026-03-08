@@ -75,12 +75,12 @@ export function UserJourneyView() {
     initiatives.filter((i) => !i.personaIds?.includes(personaId));
 
   const avatarColors = [
-    'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300',
-    'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
-    'bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-300',
-    'bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300',
-    'bg-rose-100 text-rose-600 dark:bg-rose-900 dark:text-rose-300',
-    'bg-cyan-100 text-cyan-600 dark:bg-cyan-900 dark:text-cyan-300',
+    'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300',
+    'bg-purple-100 text-purple-600 dark:bg-purple-500/15 dark:text-purple-300',
+    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300',
+    'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300',
+    'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300',
+    'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-300',
   ];
 
   return (
@@ -89,7 +89,7 @@ export function UserJourneyView() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">User Personas</h1>
+            <h1 className="text-2xl font-bold text-foreground">User Personas</h1>
             <p className="text-slate-500">Define target users and link them to initiatives</p>
           </div>
           <Popover>
@@ -104,10 +104,10 @@ export function UserJourneyView() {
                   <Users className="h-4 w-4 text-blue-500" />
                   What are Personas?
                 </h4>
-                <p className="text-slate-600 dark:text-slate-400">
+                <p className="text-muted-foreground">
                   Personas represent your target users. Each persona captures the goals and pain points of a user segment.
                 </p>
-                <p className="text-slate-600 dark:text-slate-400">
+                <p className="text-muted-foreground">
                   <strong>Link personas to initiatives</strong> to track which user needs each initiative addresses. This helps prioritize work based on real user impact.
                 </p>
               </div>
@@ -123,7 +123,7 @@ export function UserJourneyView() {
       {personas.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center">
-            <Users className="h-10 w-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+            <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-slate-500 mb-3">No personas yet. Create your first persona to start mapping user needs to initiatives.</p>
             <Button variant="outline" onClick={() => setShowAddPersona(true)}>
               <Plus className="h-4 w-4 mr-2" />Create Persona
@@ -174,7 +174,7 @@ export function UserJourneyView() {
                     <h4 className="text-xs font-medium text-green-700 dark:text-green-400 mb-1 uppercase tracking-wider">Goals</h4>
                     <ul className="space-y-0.5">
                       {persona.goals.map((g, j) => (
-                        <li key={j} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-1.5">
+                        <li key={j} className="text-sm text-muted-foreground flex items-start gap-1.5">
                           <span className="text-green-500 mt-1.5 h-1 w-1 rounded-full bg-green-500 flex-shrink-0" />
                           {g}
                         </li>
@@ -189,7 +189,7 @@ export function UserJourneyView() {
                     <h4 className="text-xs font-medium text-red-700 dark:text-red-400 mb-1 uppercase tracking-wider">Pain Points</h4>
                     <ul className="space-y-0.5">
                       {persona.painPoints.map((p, j) => (
-                        <li key={j} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-1.5">
+                        <li key={j} className="text-sm text-muted-foreground flex items-start gap-1.5">
                           <span className="mt-1.5 h-1 w-1 rounded-full bg-red-500 flex-shrink-0" />
                           {p}
                         </li>
@@ -200,7 +200,7 @@ export function UserJourneyView() {
 
                 {/* Linked Initiatives */}
                 <div className="pt-2 border-t">
-                  <h4 className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1">
+                  <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider flex items-center gap-1">
                     <Link2 className="h-3 w-3" />
                     Linked Initiatives
                   </h4>
@@ -235,7 +235,7 @@ export function UserJourneyView() {
                               {unlinked.map((init) => (
                                 <button
                                   key={init.id}
-                                  className="w-full text-left px-2 py-1.5 rounded text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                  className="w-full text-left px-2 py-1.5 rounded text-sm hover:bg-accent transition-colors"
                                   onClick={() => handleLinkInitiative(persona.id, init.id)}
                                 >
                                   <span className="font-medium">{init.title}</span>

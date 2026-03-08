@@ -214,7 +214,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Gauge className="h-7 w-7 text-blue-600" />
             Value Meter
           </h1>
@@ -233,7 +233,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
               <Gauge className="h-6 w-6 text-blue-600" />
             </div>
             <div>
@@ -244,7 +244,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-xl bg-green-100 dark:bg-green-500/15 flex items-center justify-center">
               <CheckCircle2 className="h-6 w-6 text-green-600" />
             </div>
             <div>
@@ -255,7 +255,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className={cn('h-12 w-12 rounded-xl flex items-center justify-center', avgScore >= 60 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-amber-100 dark:bg-amber-900/30')}>
+            <div className={cn('h-12 w-12 rounded-xl flex items-center justify-center', avgScore >= 60 ? 'bg-green-100 dark:bg-green-500/15' : 'bg-amber-100 dark:bg-amber-500/15')}>
               {avgScore >= 60 ? <TrendingUp className="h-6 w-6 text-green-600" /> : <Minus className="h-6 w-6 text-amber-600" />}
             </div>
             <div>
@@ -266,7 +266,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-xl bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
               <AlertTriangle className="h-6 w-6 text-red-600" />
             </div>
             <div>
@@ -305,7 +305,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
               )}>
                 {/* Initiative Header Row */}
                 <div
-                  className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => assessment && toggleExpanded(initiative.id)}
                 >
                   <div className="flex items-center gap-4">
@@ -314,7 +314,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
                       'h-14 w-14 rounded-full flex items-center justify-center flex-shrink-0 border-4',
                       assessment
                         ? cn('border-current', getScoreColor(assessment.overallScore))
-                        : 'border-slate-200 dark:border-slate-700'
+                        : 'border-border'
                     )}>
                       {isLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
@@ -330,7 +330,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
                     {/* Initiative Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-slate-900 dark:text-white truncate">{initiative.title}</h3>
+                        <h3 className="font-semibold text-foreground truncate">{initiative.title}</h3>
                         <Badge variant="outline" className="text-xs capitalize">{initiative.status}</Badge>
                         {assessment && (
                           <Badge className={cn('text-xs', getScoreBg(assessment.overallScore), 'text-white')}>
@@ -393,11 +393,11 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
 
                 {/* Expanded Assessment Details */}
                 {assessment && isExpanded && (
-                  <CardContent className="pt-0 pb-4 px-4 border-t dark:border-slate-800">
+                  <CardContent className="pt-0 pb-4 px-4 border-t dark:border-border">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
                       {/* Left: Dimension Scores */}
                       <div className="space-y-4">
-                        <h4 className="font-medium text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
                           <Target className="h-4 w-4" /> Value Dimensions
                         </h4>
                         {DIMENSION_CONFIG.map((dim) => {
@@ -412,7 +412,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
                                 </div>
                                 <span className={cn('text-sm font-bold', getScoreColor(score))}>{score}/100</span>
                               </div>
-                              <div className="relative h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <div className="relative h-3 bg-muted rounded-full overflow-hidden">
                                 <div
                                   className={cn('absolute inset-y-0 left-0 rounded-full transition-all', getScoreBg(score))}
                                   style={{ width: `${score}%` }}
@@ -443,7 +443,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
                             </h4>
                             <ul className="space-y-1">
                               {assessment.strengths.map((s, i) => (
-                                <li key={i} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
+                                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                                   <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0 mt-0.5" />
                                   {s}
                                 </li>
@@ -460,7 +460,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
                             </h4>
                             <ul className="space-y-1">
                               {assessment.weaknesses.map((w, i) => (
-                                <li key={i} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
+                                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                                   <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0 mt-0.5" />
                                   {w}
                                 </li>
@@ -477,7 +477,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
                             </h4>
                             <ul className="space-y-1">
                               {assessment.recommendations.map((r, i) => (
-                                <li key={i} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
+                                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                                   <span className="text-blue-500 flex-shrink-0">{i + 1}.</span>
                                   {r}
                                 </li>

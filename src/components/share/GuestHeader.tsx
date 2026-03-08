@@ -30,16 +30,16 @@ export function GuestHeader({ expiresAt, resourceType }: GuestHeaderProps) {
   }, [expiresAt]);
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-3">
+    <header className="sticky top-0 z-50 bg-card border-b border-border px-4 py-3">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
             <span className="text-white font-bold text-xs">A</span>
           </div>
-          <span className="font-bold text-lg text-slate-900 dark:text-white">Azmyra</span>
+          <span className="font-bold text-lg text-foreground">Azmyra</span>
           <Badge variant="secondary" className="capitalize">{resourceType} View</Badge>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Badge variant="outline" className="gap-1">
             <Clock className="h-3 w-3" />
             {timeLeft}

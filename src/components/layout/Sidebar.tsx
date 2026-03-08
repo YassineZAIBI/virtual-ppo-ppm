@@ -38,8 +38,8 @@ export function Sidebar() {
   ) return null;
 
   return (
-    <div className={cn('flex flex-col bg-slate-900 text-white transition-all duration-300 h-screen sticky top-0', collapsed ? 'w-16' : 'w-64')}>
-      <div className="flex items-center justify-between p-4 border-b border-slate-700">
+    <div className={cn('flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 h-screen sticky top-0', collapsed ? 'w-16' : 'w-64')}>
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!collapsed && (
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
@@ -48,7 +48,7 @@ export function Sidebar() {
             <span className="font-bold text-lg">Azmyra</span>
           </div>
         )}
-        <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="text-slate-400 hover:text-white hover:bg-slate-800">
+        <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent">
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
@@ -63,7 +63,7 @@ export function Sidebar() {
               onClick={() => router.push(item.path)}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
-                isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
               )}
             >
               <Icon className="h-5 w-5 flex-shrink-0" />
@@ -73,10 +73,10 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-slate-700">
+      <div className="border-t border-sidebar-border">
         {!collapsed && (
           <div className="px-4 pt-3 pb-2">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Zap className="h-4 w-4" />
               <span>Autonomous Mode</span>
               <Badge variant="outline" className="ml-auto text-green-400 border-green-400">Active</Badge>
@@ -95,14 +95,14 @@ export function Sidebar() {
               </div>
               {!collapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{session.user.name || 'User'}</p>
-                  <p className="text-xs text-slate-500 truncate">{session.user.email}</p>
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">{session.user.name || 'User'}</p>
+                  <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
                 </div>
               )}
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-slate-500 hover:text-red-400 hover:bg-slate-800 flex-shrink-0 h-8 w-8"
+                className="text-muted-foreground hover:text-red-400 hover:bg-sidebar-accent flex-shrink-0 h-8 w-8"
                 onClick={() => signOut({ callbackUrl: '/' })}
                 title="Sign out"
               >

@@ -132,7 +132,7 @@ export function OnboardingWizard() {
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
             <span className="text-white font-bold text-lg">A</span>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Azmyra</h1>
+          <h1 className="text-3xl font-bold text-foreground">Azmyra</h1>
         </div>
 
         {/* Progress bar */}
@@ -160,10 +160,10 @@ export function OnboardingWizard() {
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium border-2 ${
                   step.id === currentStep
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-950'
+                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/10'
                     : step.id < currentStep
-                    ? 'border-green-600 bg-green-50 dark:bg-green-950'
-                    : 'border-slate-300 dark:border-slate-700'
+                    ? 'border-green-600 bg-green-50 dark:bg-green-500/10'
+                    : 'border-slate-300 dark:border-border'
                 }`}
               >
                 {step.id < currentStep ? '\u2713' : step.id + 1}

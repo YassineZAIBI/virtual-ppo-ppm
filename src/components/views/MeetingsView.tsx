@@ -111,7 +111,7 @@ export function MeetingsView() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Meetings</h1>
+          <h1 className="text-2xl font-bold text-foreground">Meetings</h1>
           <p className="text-slate-500">AI-powered meeting management & autonomous attendance</p>
         </div>
         <div className="flex gap-2">
@@ -127,7 +127,7 @@ export function MeetingsView() {
 
       {/* AI Agent Meeting Attendance */}
       {showAgent && (
-        <Card className="border-purple-200 bg-purple-50 dark:bg-purple-950 dark:border-purple-800">
+        <Card className="border-purple-200 bg-purple-50 dark:bg-purple-500/10 dark:border-purple-500/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-purple-800 dark:text-purple-200">
               <Bot className="h-5 w-5" />AI Meeting Agent
@@ -229,24 +229,24 @@ export function MeetingsView() {
                   <div className="flex items-start gap-4">
                     <div className={cn(
                       'h-10 w-10 rounded-full flex items-center justify-center',
-                      meeting.status === 'summarized' ? 'bg-green-100 dark:bg-green-900' :
-                      meeting.status === 'scheduled' ? 'bg-blue-100 dark:bg-blue-900' :
-                      'bg-slate-100 dark:bg-slate-800'
+                      meeting.status === 'summarized' ? 'bg-green-100 dark:bg-green-500/15' :
+                      meeting.status === 'scheduled' ? 'bg-blue-100 dark:bg-blue-500/15' :
+                      'bg-muted'
                     )}>
                       {meeting.status === 'summarized' ? <CheckCircle2 className="h-5 w-5 text-green-600" /> :
                        meeting.status === 'scheduled' ? <Calendar className="h-5 w-5 text-blue-600" /> :
-                       <Clock className="h-5 w-5 text-slate-600" />}
+                       <Clock className="h-5 w-5 text-muted-foreground" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-slate-900 dark:text-white">{meeting.title}</h3>
+                        <h3 className="font-semibold text-foreground">{meeting.title}</h3>
                         {isSampleData(meeting.id) && <ExampleBadge />}
                       </div>
                       <p className="text-sm text-slate-500">
                         {new Date(meeting.date).toLocaleDateString()} &bull; {meeting.duration} min
                       </p>
                       {meeting.summary && (
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 line-clamp-2">{meeting.summary}</p>
+                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{meeting.summary}</p>
                       )}
                     </div>
                   </div>
@@ -267,10 +267,10 @@ export function MeetingsView() {
                   <div className="mt-4 pt-4 border-t space-y-4">
                     {meeting.actionItems && meeting.actionItems.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Action Items</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Action Items</h4>
                         <div className="space-y-2">
                           {meeting.actionItems.map((item) => (
-                            <div key={item.id} className="flex items-center gap-2 text-sm bg-white dark:bg-slate-800 p-2 rounded">
+                            <div key={item.id} className="flex items-center gap-2 text-sm bg-card p-2 rounded">
                               <CheckCircle2 className="h-4 w-4 text-slate-400 shrink-0" />
                               <span className="flex-1">{item.description}</span>
                               {item.assignee && <Badge variant="secondary" className="text-xs">{item.assignee}</Badge>}
@@ -281,16 +281,16 @@ export function MeetingsView() {
                     )}
                     {meeting.decisions && meeting.decisions.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Decisions</h4>
-                        <ul className="list-disc list-inside text-sm text-slate-600 dark:text-slate-400">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Decisions</h4>
+                        <ul className="list-disc list-inside text-sm text-muted-foreground">
                           {meeting.decisions.map((d, i) => <li key={i}>{d}</li>)}
                         </ul>
                       </div>
                     )}
                     {meeting.challenges && meeting.challenges.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Challenges</h4>
-                        <ul className="list-disc list-inside text-sm text-slate-600 dark:text-slate-400">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Challenges</h4>
+                        <ul className="list-disc list-inside text-sm text-muted-foreground">
                           {meeting.challenges.map((c, i) => <li key={i}>{c}</li>)}
                         </ul>
                       </div>

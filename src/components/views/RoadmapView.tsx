@@ -45,7 +45,7 @@ const STATUS_CONFIG: Record<string, { color: string; bgColor: string; icon: type
   definition: { color: 'text-purple-700 dark:text-purple-400', bgColor: 'bg-purple-500', icon: Target, label: 'Definition' },
   validation: { color: 'text-amber-700 dark:text-amber-400', bgColor: 'bg-amber-500', icon: Clock, label: 'Validating' },
   discovery: { color: 'text-sky-700 dark:text-sky-400', bgColor: 'bg-sky-500', icon: Map, label: 'Discovery' },
-  idea: { color: 'text-slate-600 dark:text-slate-400', bgColor: 'bg-slate-400', icon: Target, label: 'Idea' },
+  idea: { color: 'text-muted-foreground', bgColor: 'bg-slate-400', icon: Target, label: 'Idea' },
 };
 
 export function RoadmapView() {
@@ -181,12 +181,12 @@ export function RoadmapView() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Product Roadmap</h1>
+            <h1 className="text-2xl font-bold text-foreground">Product Roadmap</h1>
             <p className="text-slate-500">Plan and visualize your product initiatives across quarters</p>
           </div>
           <div className="flex items-center gap-2">
             {/* Year selector */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedYear(selectedYear - 1)}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -207,10 +207,10 @@ export function RoadmapView() {
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Card className="border-slate-200 dark:border-slate-700">
+          <Card className="border-border">
             <CardContent className="p-3 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.total}</p>
@@ -312,7 +312,7 @@ export function RoadmapView() {
                         <div
                           key={item.id}
                           className={cn(
-                            'p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700',
+                            'p-3 rounded-lg bg-card border border-border',
                             'hover:shadow-md transition-all cursor-pointer group'
                           )}
                           onClick={() => setSelectedItem(selectedItem?.id === item.id ? null : item)}
@@ -321,7 +321,7 @@ export function RoadmapView() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 mb-1">
                                 <StatusIcon className={cn('h-3.5 w-3.5 flex-shrink-0', config.color)} />
-                                <h4 className="font-medium text-sm text-slate-900 dark:text-white truncate">
+                                <h4 className="font-medium text-sm text-foreground truncate">
                                   {item.title}
                                 </h4>
                                 {item.jiraIssueType && (
@@ -377,7 +377,7 @@ export function RoadmapView() {
 
                           {/* Expanded details */}
                           {selectedItem?.id === item.id && (
-                            <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700 space-y-1.5 text-xs">
+                            <div className="mt-3 pt-2 border-t border-border space-y-1.5 text-xs">
                               {item.stakeholders.length > 0 && (
                                 <p className="text-slate-500"><span className="font-medium">Stakeholders:</span> {item.stakeholders.join(', ')}</p>
                               )}
@@ -408,7 +408,7 @@ export function RoadmapView() {
         {unassigned.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <ArrowRight className="h-4 w-4" />
                 Unassigned Initiatives ({unassigned.length})
                 <span className="text-xs font-normal ml-2">Click to assign to a quarter</span>
@@ -421,10 +421,10 @@ export function RoadmapView() {
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-400 transition-colors"
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted border border-dashed border-border hover:border-blue-400 transition-colors"
                     >
                       <div className="flex-1 min-w-0 mr-3">
-                        <h4 className="font-medium text-sm text-slate-900 dark:text-white truncate">{item.title}</h4>
+                        <h4 className="font-medium text-sm text-foreground truncate">{item.title}</h4>
                         <div className="flex items-center gap-1.5 mt-1">
                           <Badge className={cn('text-[10px] px-1.5 py-0', config.bgColor, 'text-white')}>
                             {config.label}

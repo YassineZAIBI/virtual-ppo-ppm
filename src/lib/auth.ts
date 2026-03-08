@@ -6,8 +6,28 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
 import { db } from './db'
 
+// Wrap PrismaAdapter to strip extra fields that providers like Azure AD send
+// (e.g. ext_expires_in) which don't exist in our Account schema
+const prismaAdapter = PrismaAdapter(db) as ReturnType<typeof PrismaAdapter>
+const KNOWN_ACCOUNT_FIELDS = new Set([
+  'userId', 'type', 'provider', 'providerAccountId',
+  'refresh_token', 'access_token', 'expires_at',
+  'token_type', 'scope', 'id_token', 'session_state',
+])
+
+const originalLinkAccount = prismaAdapter.linkAccount!
+prismaAdapter.linkAccount = (account: any) => {
+  const cleaned: Record<string, any> = {}
+  for (const key of Object.keys(account)) {
+    if (KNOWN_ACCOUNT_FIELDS.has(key)) {
+      cleaned[key] = account[key]
+    }
+  }
+  return originalLinkAccount(cleaned as any)
+}
+
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(db) as NextAuthOptions['adapter'],
+  adapter: prismaAdapter as NextAuthOptions['adapter'],
   providers: [
     CredentialsProvider({
       name: 'credentials',

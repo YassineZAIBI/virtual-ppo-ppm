@@ -54,7 +54,7 @@ function PasswordStrength({ password }: { password: string }) {
     <div className="space-y-2 mt-2">
       <div className="flex gap-1">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i < passed ? colors[passed - 1] : 'bg-slate-200 dark:bg-slate-700'}`} />
+          <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i < passed ? colors[passed - 1] : 'bg-muted'}`} />
         ))}
       </div>
       <p className={`text-xs font-medium ${textColors[Math.max(0, passed - 1)]}`}>{strength}</p>
@@ -62,7 +62,7 @@ function PasswordStrength({ password }: { password: string }) {
         {PASSWORD_RULES.map((rule) => {
           const ok = rule.test(password);
           return (
-            <div key={rule.label} className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-600 dark:text-green-400' : 'text-slate-400 dark:text-slate-500'}`}>
+            <div key={rule.label} className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
               {ok ? <Check className="h-3 w-3" /> : <XIcon className="h-3 w-3" />}
               {rule.label}
             </div>

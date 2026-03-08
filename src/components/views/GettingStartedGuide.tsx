@@ -121,24 +121,24 @@ export function GettingStartedGuide() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Getting Started with Azmyra</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">
+        <h1 className="text-2xl font-bold text-foreground">Getting Started with Azmyra</h1>
+        <p className="text-muted-foreground mt-1">
           Learn how to use each feature and get the most out of your AI product manager.
         </p>
       </div>
 
       {/* Example Data Info */}
-      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-800">
         <CardContent className="pt-4 pb-4">
           <div className="flex items-start gap-3">
-            <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
               <FlaskConical className="h-4 w-4 text-amber-600" />
             </div>
             <div>
               <p className="font-medium text-amber-800 dark:text-amber-200">About Example Data</p>
               <p className="text-sm text-amber-700 dark:text-amber-300 mt-0.5">
                 Your workspace is pre-loaded with example initiatives, meetings, and risks so you can explore the platform right away.
-                Items tagged with <Badge variant="outline" className="text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-700 text-[10px] px-1.5 py-0 mx-1"><FlaskConical className="h-2.5 w-2.5 mr-0.5 inline" />Example</Badge> are sample data.
+                Items tagged with <Badge variant="outline" className="text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700 text-[10px] px-1.5 py-0 mx-1"><FlaskConical className="h-2.5 w-2.5 mr-0.5 inline" />Example</Badge> are sample data.
                 Feel free to modify or delete them as you add your own content.
               </p>
             </div>
@@ -154,12 +154,12 @@ export function GettingStartedGuide() {
             <AccordionItem key={step.id} value={step.id} className="border rounded-lg px-4">
               <AccordionTrigger className="hover:no-underline">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
-                    <Icon className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                  <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div className="text-left">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-900 dark:text-white">{step.title}</span>
+                      <span className="font-semibold text-foreground">{step.title}</span>
                       <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${step.badgeColor}`}>
                         {step.badge}
                       </Badge>
@@ -169,10 +169,10 @@ export function GettingStartedGuide() {
               </AccordionTrigger>
               <AccordionContent className="pb-4">
                 <div className="pl-12 space-y-3">
-                  <p className="text-slate-600 dark:text-slate-400">{step.description}</p>
+                  <p className="text-muted-foreground">{step.description}</p>
                   <div className="space-y-1.5">
                     {step.tips.map((tip, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400">
+                      <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                         <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-blue-500" />
                         <span>{tip}</span>
                       </div>

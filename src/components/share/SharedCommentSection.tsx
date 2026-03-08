@@ -92,24 +92,24 @@ export function SharedCommentSection({ token, accessLevel }: SharedCommentSectio
         {/* Comments list */}
         {isLoading ? (
           <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : comments.length > 0 ? (
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {comments.map((comment) => (
-              <div key={comment.id} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+              <div key={comment.id} className="p-3 rounded-lg bg-muted">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-medium text-sm">{comment.guestName}</span>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-muted-foreground">
                     {new Date(comment.createdAt).toLocaleString()}
                   </span>
                 </div>
-                <p className="text-sm text-slate-700 dark:text-slate-300">{comment.content}</p>
+                <p className="text-sm text-muted-foreground">{comment.content}</p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-slate-500 text-center py-2">No comments yet. Be the first!</p>
+          <p className="text-sm text-muted-foreground text-center py-2">No comments yet. Be the first!</p>
         )}
 
         {/* Comment form */}

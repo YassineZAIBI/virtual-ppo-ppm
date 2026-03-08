@@ -2,7 +2,9 @@
 // Provides a unified interface for multiple LLM providers:
 // OpenAI, Anthropic, Azure OpenAI, Gemini, Z-AI, and Ollama.
 
-import type { LLMConfig } from '../types';
+import type { LLMConfig, LLMProvider } from '../types';
+import { db } from '../db';
+import { decrypt } from '../encryption';
 
 interface ChatMessage {
   role: string;
@@ -810,6 +812,23 @@ export class LLMService {
       reader.releaseLock();
     }
   }
+}
+
+export async function getUserLLMConfig(userId: string): Promise<LLMConfig> {
+  const settings = await db.userSettingsRecord.findUnique({
+    where: { userId },
+  });
+
+  if (!settings || !settings.llmProvider || !settings.llmApiKey) {
+    throw new Error('LLM not configured. Please set up your LLM provider in Settings.');
+  }
+
+  return {
+    provider: settings.llmProvider as LLMProvider,
+    apiKey: settings.llmApiKey ? decrypt(settings.llmApiKey) : '',
+    apiEndpoint: settings.llmApiEndpoint || undefined,
+    model: settings.llmModel || undefined,
+  };
 }
 
 export default LLMService;
