@@ -59,3 +59,53 @@ export const FetchOptionsSchema = z.object({
 }).optional();
 
 export type AdapterCategory = AdapterMetadata['category'];
+
+// ============ Resilient Fetch Helper ============
+
+/**
+ * Fetch with retry on 429/5xx, timeout, and error logging.
+ * Throws on permanent failure so the pipeline can log it.
+ */
+export async function resilientFetch(
+  url: string,
+  options: RequestInit & { adapterKey?: string; retries?: number; timeoutMs?: number } = {}
+): Promise<Response> {
+  const { adapterKey = 'unknown', retries = 2, timeoutMs = 25000, ...fetchOptions } = options;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, {
+        ...fetchOptions,
+        signal: fetchOptions.signal ?? controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (res.ok) return res;
+
+      // Retry on 429 (rate limit) or 5xx (server error)
+      if ((res.status === 429 || res.status >= 500) && attempt < retries) {
+        const retryAfter = res.headers.get('Retry-After');
+        const waitMs = retryAfter ? Math.min(parseInt(retryAfter, 10) * 1000, 10000) : (attempt + 1) * 2000;
+        console.warn(`[${adapterKey}] HTTP ${res.status}, retrying in ${waitMs}ms (attempt ${attempt + 1}/${retries})`);
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
+
+      // Non-retryable error
+      throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    } catch (error) {
+      clearTimeout(timeout);
+      if (attempt < retries && error instanceof Error && error.name === 'AbortError') {
+        console.warn(`[${adapterKey}] Timeout, retrying (attempt ${attempt + 1}/${retries})`);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error(`[${adapterKey}] All ${retries + 1} attempts failed`);
+}

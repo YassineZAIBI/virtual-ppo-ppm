@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { gatherMarketData } from '@/lib/services/market-research';
-import { createJob, startJob, completeJob, failJob } from '@/lib/services/data-pipeline/job-queue';
+import { createJob, startJob, updateJobProgress, completeJob, failJob } from '@/lib/services/data-pipeline/job-queue';
 
 export async function POST(
   req: NextRequest,
@@ -42,10 +42,14 @@ export async function POST(
     (async () => {
       try {
         await startJob(job.id);
-        await gatherMarketData(id, research.query, adapterKeys);
+        await gatherMarketData(id, research.query, adapterKeys, async (completed, total) => {
+          const progress = Math.round((completed / total) * 100);
+          await updateJobProgress(job.id, progress).catch(() => {});
+        });
         await completeJob(job.id, { researchId: id, adapterKeys });
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
+        console.error(`[Gather] Job ${job.id} failed:`, msg);
         await failJob(job.id, msg);
       }
     })();

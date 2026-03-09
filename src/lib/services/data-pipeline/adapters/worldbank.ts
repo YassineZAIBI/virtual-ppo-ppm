@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 interface WBIndicator {
@@ -38,9 +38,7 @@ const worldbank: DataAdapter = {
     try {
       // First, search for matching indicators
       const indicatorUrl = `https://api.worldbank.org/v2/indicator?format=json&per_page=${maxResults}&source=2&q=${encodeURIComponent(query)}`;
-      const indicatorRes = await fetch(indicatorUrl, { signal: options?.signal });
-
-      if (!indicatorRes.ok) return [];
+      const indicatorRes = await resilientFetch(indicatorUrl, { adapterKey: 'worldbank', signal: options?.signal });
 
       const indicatorJson = await indicatorRes.json();
 
@@ -107,7 +105,8 @@ const worldbank: DataAdapter = {
       }
 
       return results;
-    } catch {
+    } catch (error) {
+      console.error('[worldbank] Fetch failed:', error instanceof Error ? error.message : error);
       return [];
     }
   },

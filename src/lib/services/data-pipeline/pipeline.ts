@@ -43,12 +43,19 @@ export async function fetchFromSources(
       // Rate limit
       await rateLimiter.acquire(key);
 
-      // Fetch
+      // Fetch with timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
       const results = await adapter.fetch(query, {
         maxResults: options.maxResults ?? 10,
         config: options.config,
-        signal: options.signal,
+        signal: options.signal ?? controller.signal,
       });
+
+      clearTimeout(timeout);
+
+      console.log(`[Pipeline] Adapter "${key}": fetched ${results.length} results for "${query}"`);
 
       // Cache results
       if (useCache && results.length > 0) {
@@ -59,7 +66,7 @@ export async function fetchFromSources(
       onAdapterComplete?.(key, results);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error(`Adapter "${key}" failed for query "${query}":`, errorMsg);
+      console.error(`[Pipeline] Adapter "${key}" failed for query "${query}":`, errorMsg);
       onAdapterComplete?.(key, [], errorMsg);
     } finally {
       completed++;

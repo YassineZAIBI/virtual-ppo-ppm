@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 interface HNHit {
@@ -30,9 +30,7 @@ const hackernews: DataAdapter = {
 
     try {
       const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=${maxResults}`;
-      const res = await fetch(url, { signal: options?.signal });
-
-      if (!res.ok) return [];
+      const res = await resilientFetch(url, { adapterKey: 'hackernews', signal: options?.signal });
 
       const json = await res.json();
       const hits: HNHit[] = json.hits ?? [];
@@ -58,7 +56,8 @@ const hackernews: DataAdapter = {
         },
         relevanceHint: Math.min(hit.points / 500, 1),
       }));
-    } catch {
+    } catch (error) {
+      console.error(`[hackernews] Fetch failed:`, error instanceof Error ? error.message : error);
       return [];
     }
   },

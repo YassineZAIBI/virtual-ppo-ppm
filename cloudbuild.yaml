@@ -1,0 +1,11 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAACiIQxuYz9aK1Ve8'
+      - '-t'
+      - 'gcr.io/theproductowner-8620d/azmyra-app'
+      - '.'
+images:
+  - 'gcr.io/theproductowner-8620d/azmyra-app'

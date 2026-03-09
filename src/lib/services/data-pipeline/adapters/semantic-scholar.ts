@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 interface S2Paper {
@@ -30,9 +30,7 @@ const semanticScholar: DataAdapter = {
     try {
       const fields = 'title,abstract,url,year,citationCount,authors';
       const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${maxResults}&fields=${fields}`;
-      const res = await fetch(url, { signal: options?.signal });
-
-      if (!res.ok) return [];
+      const res = await resilientFetch(url, { adapterKey: 'semantic-scholar', signal: options?.signal });
 
       const json = await res.json();
       const papers: S2Paper[] = json?.data ?? [];
@@ -61,7 +59,8 @@ const semanticScholar: DataAdapter = {
           ? Math.min(paper.citationCount / maxCitations, 1)
           : 0,
       }));
-    } catch {
+    } catch (error) {
+      console.error('[semantic-scholar] Fetch failed:', error instanceof Error ? error.message : error);
       return [];
     }
   },

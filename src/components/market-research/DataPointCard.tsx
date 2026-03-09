@@ -26,7 +26,8 @@ function getAdapterIcon(adapterKey: string) {
   return ADAPTER_ICONS[category] || Search;
 }
 
-function formatDate(date: Date | string): string {
+function formatDate(date: Date | string | undefined | null): string {
+  if (!date) return '';
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString(undefined, {
     month: 'short',
@@ -37,7 +38,8 @@ function formatDate(date: Date | string): string {
   });
 }
 
-function truncate(text: string, maxLength: number = 200): string {
+function truncate(text: string | undefined | null, maxLength: number = 200): string {
+  if (!text) return '';
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength).trimEnd() + '...';
 }
@@ -54,6 +56,15 @@ export function DataPointCard({
   extractedFacts,
 }: MarketDataPoint) {
   const Icon = getAdapterIcon(adapterKey);
+
+  // extractedFacts may come as a JSON string from the DB — parse it safely
+  const facts: Array<{ fact: string; confidence: number; category: string }> = (() => {
+    if (Array.isArray(extractedFacts)) return extractedFacts;
+    if (typeof extractedFacts === 'string') {
+      try { return JSON.parse(extractedFacts); } catch { return []; }
+    }
+    return [];
+  })();
 
   return (
     <Card className="border-border bg-card">
@@ -93,11 +104,11 @@ export function DataPointCard({
         </p>
 
         {/* Extracted facts */}
-        {extractedFacts && extractedFacts.length > 0 && (
+        {facts.length > 0 && (
           <div className="space-y-1">
             <span className="text-xs font-medium text-foreground">Key Facts</span>
             <ul className="space-y-0.5">
-              {extractedFacts.slice(0, 3).map((fact, i) => (
+              {facts.slice(0, 3).map((fact, i) => (
                 <li
                   key={i}
                   className="text-xs text-muted-foreground flex items-start gap-1.5"

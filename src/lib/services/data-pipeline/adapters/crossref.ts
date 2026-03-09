@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 interface CrossrefItem {
@@ -33,14 +33,13 @@ const crossref: DataAdapter = {
       const selectFields = 'DOI,title,abstract,URL,published-print,is-referenced-by-count,author,publisher,container-title';
       const url = `https://api.crossref.org/works?query=${encodeURIComponent(query)}&rows=${maxResults}&select=${encodeURIComponent(selectFields)}`;
 
-      const res = await fetch(url, {
+      const res = await resilientFetch(url, {
+        adapterKey: 'crossref',
         headers: {
           'User-Agent': 'Azmyra/1.0 (mailto:contact@theproductowner.org)',
         },
         signal: options?.signal,
       });
-
-      if (!res.ok) return [];
 
       const json = await res.json();
       const items: CrossrefItem[] = json?.message?.items ?? [];
@@ -82,7 +81,8 @@ const crossref: DataAdapter = {
           },
         };
       });
-    } catch {
+    } catch (error) {
+      console.error('[crossref] Fetch failed:', error instanceof Error ? error.message : error);
       return [];
     }
   },

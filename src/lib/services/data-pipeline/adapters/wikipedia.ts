@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 interface WikiSearchResult {
@@ -29,9 +29,7 @@ const wikipedia: DataAdapter = {
 
     try {
       const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=${maxResults}&utf8=1&origin=*`;
-      const res = await fetch(url, { signal: options?.signal });
-
-      if (!res.ok) return [];
+      const res = await resilientFetch(url, { adapterKey: 'wikipedia', signal: options?.signal });
 
       const json = await res.json();
       const searchResults: WikiSearchResult[] = json?.query?.search ?? [];
@@ -58,7 +56,8 @@ const wikipedia: DataAdapter = {
           },
         };
       });
-    } catch {
+    } catch (error) {
+      console.error('[wikipedia] Fetch failed:', error instanceof Error ? error.message : error);
       return [];
     }
   },

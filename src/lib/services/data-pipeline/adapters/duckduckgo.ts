@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 const duckduckgo: DataAdapter = {
@@ -19,7 +19,8 @@ const duckduckgo: DataAdapter = {
 
     try {
       const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-      const res = await fetch(url, {
+      const res = await resilientFetch(url, {
+        adapterKey: 'duckduckgo',
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -28,8 +29,6 @@ const duckduckgo: DataAdapter = {
         body: `q=${encodeURIComponent(query)}`,
         signal: options?.signal,
       });
-
-      if (!res.ok) return [];
 
       const html = await res.text();
       const results: DataResult[] = [];
@@ -77,7 +76,8 @@ const duckduckgo: DataAdapter = {
       }
 
       return results;
-    } catch {
+    } catch (error) {
+      console.error('[duckduckgo] Fetch failed:', error instanceof Error ? error.message : error);
       return [];
     }
   },

@@ -94,8 +94,8 @@ export function AdapterSelector({ selectedKeys, onChange }: AdapterSelectorProps
   }
 
   return (
-    <ScrollArea className="max-h-[360px]">
-      <div className="space-y-5">
+    <ScrollArea className="max-h-[480px] pr-3">
+      <div className="space-y-4">
         {Object.entries(grouped).map(([category, items]) => {
           const config = CATEGORY_CONFIG[category] || {
             label: category.charAt(0).toUpperCase() + category.slice(1),
@@ -110,33 +110,33 @@ export function AdapterSelector({ selectedKeys, onChange }: AdapterSelectorProps
                 <span className="text-sm font-semibold text-foreground">
                   {config.label}
                 </span>
-                <Badge variant="secondary" className="text-[10px]">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                   {items.length}
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
+              <div className="grid grid-cols-2 gap-2 pl-6">
                 {items.map((adapter) => {
                   const isSelected = selectedKeys.includes(adapter.key);
                   return (
                     <label
                       key={adapter.key}
-                      className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                      className={`flex items-start gap-2.5 rounded-md border p-2.5 cursor-pointer transition-all min-h-[68px] ${
                         isSelected
-                          ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                          : 'border-border bg-card hover:bg-muted/50'
+                          ? 'border-primary/60 bg-primary/[0.06] ring-1 ring-primary/20 dark:bg-primary/[0.08] dark:border-primary/40'
+                          : 'border-border bg-background hover:border-muted-foreground/30 hover:bg-muted/40'
                       }`}
                     >
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => toggleAdapter(adapter.key)}
-                        className="mt-0.5"
+                        className="mt-0.5 shrink-0"
                       />
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-foreground">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-foreground leading-tight">
                           {adapter.name}
                         </div>
-                        <div className="text-xs text-muted-foreground leading-relaxed">
+                        <div className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
                           {adapter.description}
                         </div>
                       </div>

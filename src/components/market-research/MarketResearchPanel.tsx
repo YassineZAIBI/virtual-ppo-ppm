@@ -52,6 +52,7 @@ export function MarketResearchPanel({
     addMarketResearch,
     updateMarketResearch,
     deleteMarketResearch,
+    settings,
   } = useAppStore();
 
   // Dialog state
@@ -208,7 +209,18 @@ export function MarketResearchPanel({
     try {
       const res = await fetch(
         `/api/market-research/${activeResearchId}/synthesize`,
-        { method: 'POST' }
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            llmConfig: {
+              provider: settings.llm.provider,
+              apiKey: settings.llm.apiKey,
+              apiEndpoint: settings.llm.apiEndpoint,
+              model: settings.llm.model,
+            },
+          }),
+        }
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -255,6 +267,20 @@ export function MarketResearchPanel({
     },
     [activeResearchId, updateMarketResearch]
   );
+
+  const handleSelectResearch = async (id: string) => {
+    setActiveResearchId(id);
+    // Fetch full details (the list endpoint doesn't include rawContent, etc.)
+    try {
+      const res = await fetch(`/api/market-research/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        updateMarketResearch(id, data);
+      }
+    } catch {
+      // silent — we'll show what we have from the list
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -331,7 +357,7 @@ export function MarketResearchPanel({
                           ? 'border-primary bg-primary/5 dark:bg-primary/10'
                           : 'border-border bg-card hover:bg-muted/50'
                       }`}
-                      onClick={() => setActiveResearchId(r.id)}
+                      onClick={() => handleSelectResearch(r.id)}
                     >
                       <CardContent className="p-3 space-y-1.5">
                         <div className="flex items-start justify-between gap-1">
@@ -354,9 +380,9 @@ export function MarketResearchPanel({
                           <Badge variant={badge.variant} className="text-[10px]">
                             {badge.label}
                           </Badge>
-                          {r.dataPoints && (
+                          {r.dataPoints && r.dataPoints.length > 0 && (
                             <span className="text-[10px] text-muted-foreground">
-                              {r.dataPoints.length} data points
+                              {r.dataPoints?.length ?? 0} data points
                             </span>
                           )}
                         </div>
@@ -565,12 +591,15 @@ export function MarketResearchPanel({
 
       {/* New Research Dialog */}
       <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-        <DialogContent className="sm:max-w-[640px]">
-          <DialogHeader>
+        <DialogContent
+          className="sm:max-w-[780px] max-h-[90vh] overflow-hidden"
+          style={{ display: 'flex', flexDirection: 'column' }}
+        >
+          <DialogHeader className="shrink-0">
             <DialogTitle>Run Market Research</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-2 -mx-6 px-6">
             <div className="space-y-2">
               <Label htmlFor="research-title">Title</Label>
               <Input
@@ -601,7 +630,7 @@ export function MarketResearchPanel({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-4 -mx-6 px-6 -mb-2">
             <Button
               variant="outline"
               onClick={() => setShowNewDialog(false)}

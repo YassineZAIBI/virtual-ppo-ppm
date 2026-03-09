@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 interface OpenAlexWork {
@@ -52,9 +52,7 @@ const openalex: DataAdapter = {
       const selectFields = 'id,display_name,abstract_inverted_index,doi,publication_year,cited_by_count,primary_location';
       const url = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&per_page=${maxResults}&select=${selectFields}&mailto=contact@theproductowner.org`;
 
-      const res = await fetch(url, { signal: options?.signal });
-
-      if (!res.ok) return [];
+      const res = await resilientFetch(url, { adapterKey: 'openalex', signal: options?.signal });
 
       const json = await res.json();
       const works: OpenAlexWork[] = json?.results ?? [];
@@ -86,7 +84,8 @@ const openalex: DataAdapter = {
           },
         };
       });
-    } catch {
+    } catch (error) {
+      console.error('[openalex] Fetch failed:', error instanceof Error ? error.message : error);
       return [];
     }
   },

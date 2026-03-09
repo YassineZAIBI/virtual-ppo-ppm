@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { synthesizeReport } from '@/lib/services/market-research';
 import { createJob, startJob, completeJob, failJob } from '@/lib/services/data-pipeline/job-queue';
 import { getUserLLMConfig } from '@/lib/services/llm';
+import type { LLMConfig, LLMProvider } from '@/lib/types';
 
 export async function POST(
   req: NextRequest,
@@ -17,6 +18,7 @@ export async function POST(
     }
 
     const { id } = await params;
+    const body = await req.json().catch(() => ({}));
 
     // Verify ownership and that data exists
     const research = await db.marketResearch.findFirst({
@@ -30,8 +32,26 @@ export async function POST(
       return NextResponse.json({ error: 'No data points gathered yet. Run gather first.' }, { status: 400 });
     }
 
-    // Get user's LLM config
-    const llmConfig = await getUserLLMConfig(session.user.id);
+    // Get LLM config: prefer request body (client-side Zustand settings), fall back to DB
+    let llmConfig: LLMConfig;
+
+    if (body.llmConfig?.provider && body.llmConfig?.apiKey) {
+      llmConfig = {
+        provider: body.llmConfig.provider as LLMProvider,
+        apiKey: body.llmConfig.apiKey,
+        apiEndpoint: body.llmConfig.apiEndpoint || undefined,
+        model: body.llmConfig.model || undefined,
+      };
+    } else {
+      try {
+        llmConfig = await getUserLLMConfig(session.user.id);
+      } catch {
+        return NextResponse.json(
+          { error: 'LLM not configured. Please set up your LLM provider in Settings.' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Create async job
     const job = await createJob({

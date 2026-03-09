@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 interface RedditPost {
@@ -35,12 +35,11 @@ const reddit: DataAdapter = {
 
     try {
       const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=relevance&limit=${maxResults}`;
-      const res = await fetch(url, {
+      const res = await resilientFetch(url, {
+        adapterKey: 'reddit',
         headers: { 'User-Agent': 'Azmyra/1.0' },
         signal: options?.signal,
       });
-
-      if (!res.ok) return [];
 
       const json = await res.json();
       const children: RedditPost[] = json?.data?.children ?? [];
@@ -73,7 +72,8 @@ const reddit: DataAdapter = {
           relevanceHint: Math.min(post.score / 1000, 1),
         };
       });
-    } catch {
+    } catch (error) {
+      console.error('[reddit] Fetch failed:', error instanceof Error ? error.message : error);
       return [];
     }
   },

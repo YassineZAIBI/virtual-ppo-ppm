@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 const arxiv: DataAdapter = {
@@ -19,9 +19,7 @@ const arxiv: DataAdapter = {
 
     try {
       const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=${maxResults}`;
-      const res = await fetch(url, { signal: options?.signal });
-
-      if (!res.ok) return [];
+      const res = await resilientFetch(url, { adapterKey: 'arxiv', signal: options?.signal });
 
       const xml = await res.text();
       const results: DataResult[] = [];
@@ -79,7 +77,8 @@ const arxiv: DataAdapter = {
       }
 
       return results;
-    } catch {
+    } catch (error) {
+      console.error('[arxiv] Fetch failed:', error instanceof Error ? error.message : error);
       return [];
     }
   },

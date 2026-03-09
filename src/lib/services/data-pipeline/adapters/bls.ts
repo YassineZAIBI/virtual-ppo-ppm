@@ -1,4 +1,4 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
 import { registry } from '../registry';
 
 /**
@@ -115,26 +115,13 @@ const bls: DataAdapter = {
         headers['registrationkey'] = apiKey;
       }
 
-      const res = await fetch(apiUrl, {
+      const res = await resilientFetch(apiUrl, {
+        adapterKey: 'bls',
         method: 'POST',
         headers,
         body,
         signal: options?.signal,
       });
-
-      if (!res.ok) {
-        // Fallback: return series metadata without fetched data
-        return matched.map((series, i) => ({
-          sourceKey: 'bls',
-          sourceUrl: `https://data.bls.gov/timeseries/${series.id}`,
-          sourceName: 'Bureau of Labor Statistics',
-          title: series.name,
-          content: series.description,
-          contentType: 'statistic' as const,
-          fetchedAt: now,
-          metadata: { seriesId: series.id, rank: i + 1 },
-        }));
-      }
 
       const json = await res.json();
       const seriesResults: BLSSeriesData[] = json?.Results?.series ?? [];
@@ -171,7 +158,8 @@ const bls: DataAdapter = {
           },
         };
       });
-    } catch {
+    } catch (error) {
+      console.error('[bls] Fetch failed:', error instanceof Error ? error.message : error);
       return [];
     }
   },

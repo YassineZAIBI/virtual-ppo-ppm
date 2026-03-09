@@ -28,6 +28,11 @@ ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
 RUN npm run build
 
+# Stage 2b: Isolated prisma CLI install (all deps resolved cleanly)
+FROM node:20-alpine AS prisma-cli
+WORKDIR /prisma-cli
+RUN npm init -y && npm install prisma@6.19.2 --legacy-peer-deps
+
 # Stage 3: Production runner
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -47,10 +52,13 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy prisma client and CLI for migrations
+# Copy prisma client (for runtime ORM)
 COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
+
+# Copy full prisma CLI + deps from isolated install (for schema sync at startup)
+# This goes to a separate dir to avoid conflicts with standalone node_modules
+COPY --from=prisma-cli /prisma-cli /app/prisma-cli
 
 # Startup script
 COPY --chown=nextjs:nodejs start.sh ./start.sh
