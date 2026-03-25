@@ -36,6 +36,18 @@ export interface IntegrationCredentials {
     password: string;
     fromEmail: string;
   };
+  zoom: {
+    enabled: boolean;
+    accountId: string;
+    clientId: string;
+    clientSecret: string;
+  };
+  teams: {
+    enabled: boolean;
+    clientId: string;
+    tenantId: string;
+    clientSecret: string;
+  };
 }
 
 export interface UserSettings {
@@ -74,6 +86,12 @@ export interface Initiative {
   discovery?: DiscoveryData;
   // Linked personas
   personaIds?: string[];
+  // Azmyra 3.0 Strategy extensions
+  level?: 'solution' | 'epic' | 'idea';
+  pillar?: 'vision' | 'strategy' | 'tactics';
+  alignmentScore?: number;
+  businessImpactId?: string;
+  competitiveRank?: number;
 }
 
 export interface Persona {
@@ -90,7 +108,7 @@ export interface DiscoveryNote {
   title: string;
   content: string;
   createdAt: Date;
-  source?: string;
+  source?: 'ai-generated' | 'user-edited' | string;
 }
 
 export interface DiscoveryData {
@@ -106,13 +124,17 @@ export interface Meeting {
   date: Date;
   duration: number; // minutes
   participants: string[];
-  status: 'scheduled' | 'completed' | 'processing' | 'summarized';
+  status: 'scheduled' | 'completed' | 'processing' | 'summarized' | 'recording';
   transcript?: string;
   summary?: string;
   actionItems: ActionItem[];
   decisions: string[];
   challenges: string[];
   followUpEmail?: string;
+  platform?: 'zoom' | 'teams' | 'manual';
+  meetingUrl?: string;
+  botSessionId?: string;
+  liveTranscript?: string;
 }
 
 export interface ActionItem {
@@ -406,6 +428,210 @@ export interface DataJobStatus {
   completedAt?: Date;
 }
 
+// ============ Vision Pillar (Azmyra 3.0) ============
+
+export interface NorthStarData {
+  id: string;
+  statement: string;
+  context?: string;
+  confidence: number;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BusinessGoalData {
+  id: string;
+  northStarId: string;
+  title: string;
+  description?: string;
+  metric?: string;
+  target?: string;
+  deadline?: Date;
+  priority: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TargetGroupData {
+  id: string;
+  businessGoalId: string;
+  name: string;
+  role?: string;
+  demographics?: string;
+  behaviors?: string;
+  goals?: string;
+  painPoints?: string;
+  needs?: NeedData[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface NeedData {
+  id: string;
+  targetGroupId: string;
+  title: string;
+  description?: string;
+  severity: number;
+  frequency?: string;
+  products?: ProductMappingData[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProductMappingData {
+  id: string;
+  needId: string;
+  name: string;
+  type: 'existing' | 'planned' | 'idea';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface VisionPyramid {
+  northStar: NorthStarData | null;
+  businessGoals: BusinessGoalData[];
+  targetGroups: TargetGroupData[];
+  needs: NeedData[];
+  products: ProductMappingData[];
+  visionComplete: boolean;
+}
+
+// ============ Competitors Eye ============
+
+export interface CompetitorData {
+  id: string;
+  name: string;
+  website?: string;
+  description?: string;
+  tags?: string[];
+  isActive: boolean;
+  feeds?: CompetitorFeedItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type CompetitorFeedType = 'news' | 'product_update' | 'vision_shift' | 'rumor' | 'pricing' | 'hiring';
+
+export interface CompetitorFeedItem {
+  id: string;
+  competitorId: string;
+  type: CompetitorFeedType;
+  title: string;
+  summary: string;
+  source?: string;
+  sourceAdapter?: string;
+  relevance: number;
+  sentiment?: 'positive' | 'negative' | 'neutral';
+  publishedAt?: Date;
+  createdAt: Date;
+}
+
+// ============ Alignment & Impact ============
+
+export interface AlignmentScoreData {
+  id: string;
+  entityType: 'initiative' | 'strategy_item' | 'risk';
+  entityId: string;
+  overallScore: number;
+  northStarRelevance: number;
+  businessGoalCoverage: number;
+  targetGroupImpact: number;
+  needFulfillment: number;
+  reasoning?: string;
+  computedBy: 'ai' | 'manual';
+  version: number;
+  createdAt: Date;
+}
+
+export interface BusinessImpactData {
+  id: string;
+  entityType: string;
+  entityId: string;
+  revenueEstimate?: number;
+  roiPercent?: number;
+  timeToValueWeeks?: number;
+  marketShareDelta?: number;
+  confidenceLevel?: 'low' | 'medium' | 'high';
+  assumptions?: string;
+  computedBy: 'ai' | 'manual';
+  createdAt: Date;
+}
+
+// ============ Autonomous Cron ============
+
+export type CronJobType = 'competitor_scan' | 'strategy_eval' | 'risk_reassess' | 'market_pulse' | 'full_portfolio_review';
+
+export interface CronJobData {
+  id: string;
+  jobType: CronJobType;
+  schedule: string;
+  lastRun?: Date;
+  nextRun?: Date;
+  status: 'active' | 'paused' | 'failed';
+  lastResult?: string;
+  lastError?: string;
+  runCount: number;
+  config?: string;
+  createdAt: Date;
+}
+
+export interface CronRunData {
+  id: string;
+  jobType: string;
+  status: 'running' | 'completed' | 'failed';
+  startedAt: Date;
+  endedAt?: Date;
+  result?: string;
+  error?: string;
+  duration?: number;
+  tokensUsed?: number;
+}
+
+// ============ User Alerts ============
+
+export type AlertType = 'competitor_move' | 'strategy_risk' | 'alignment_drift' | 'market_shift' | 'action_required';
+export type AlertSeverity = 'info' | 'warning' | 'critical';
+
+export interface UserAlertData {
+  id: string;
+  type: AlertType;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+  source?: string;
+  entityType?: string;
+  entityId?: string;
+  isRead: boolean;
+  isDismissed: boolean;
+  createdAt: Date;
+}
+
+// ============ Session Continuity ============
+
+export interface ChatSessionData {
+  id: string;
+  title?: string;
+  pillar?: 'vision' | 'strategy' | 'tactics' | 'general';
+  agent?: string;
+  isActive: boolean;
+  messageCount?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============ Utility ============
+
+export function safeJsonParse<T>(raw: string | null | undefined, fallback: T): T {
+  if (!raw) return fallback;
+  if (typeof raw !== 'string') return raw as T;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
 // Default settings
 export const defaultSettings: UserSettings = {
   llm: {
@@ -418,6 +644,8 @@ export const defaultSettings: UserSettings = {
     slack: { enabled: false, botToken: '', channelId: '' },
     confluence: { enabled: false, url: '', email: '', apiToken: '' },
     email: { enabled: false, smtpHost: '', smtpPort: 587, username: '', password: '', fromEmail: '' },
+    zoom: { enabled: false, accountId: '', clientId: '', clientSecret: '' },
+    teams: { enabled: false, clientId: '', tenantId: '', clientSecret: '' },
   },
   preferences: {
     autonomyLevel: 'oversight',

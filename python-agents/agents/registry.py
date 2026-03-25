@@ -159,6 +159,27 @@ AGENTS: dict[AgentId, AgentDefinition] = {
             "Proactive notifications",
         ],
     ),
+
+    AgentId.VISION_GUARD: AgentDefinition(
+        id=AgentId.VISION_GUARD,
+        name="VisionGuard",
+        description="Monitors vision alignment across all strategic initiatives",
+        icon="Eye",
+        color="cyan",
+        temperature=0.2,
+        max_iterations=4,
+        tools=[
+            "vision_alignment_check",
+            "batch_alignment_compute",
+        ],
+        capabilities=[
+            "Vision pyramid alignment analysis",
+            "Alignment drift detection",
+            "Strategy conflict identification",
+            "Corrective action recommendations",
+            "User need coverage validation",
+        ],
+    ),
 }
 
 

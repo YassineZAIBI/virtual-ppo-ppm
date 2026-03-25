@@ -29,6 +29,13 @@ import {
   Loader2,
   Trash2,
   RefreshCw,
+  TrendingUp,
+  Swords,
+  MessageCircleHeart,
+  Cpu,
+  Briefcase,
+  Brain,
+  LayoutTemplate,
 } from 'lucide-react';
 
 import { AdapterSelector } from './AdapterSelector';
@@ -36,7 +43,17 @@ import { DataPointCard } from './DataPointCard';
 import { SourceAttribution } from './SourceAttribution';
 import { JobProgress } from './JobProgress';
 
+import { RESEARCH_TEMPLATES, applyTemplate } from '@/lib/services/data-pipeline/research-templates';
 import type { MarketResearchReport, MarketDataPoint } from '@/lib/types';
+
+const TEMPLATE_ICONS: Record<string, typeof Search> = {
+  TrendingUp,
+  Swords,
+  MessageCircleHeart,
+  Cpu,
+  Briefcase,
+  Brain,
+};
 
 interface MarketResearchPanelProps {
   initiativeId?: string;
@@ -57,6 +74,7 @@ export function MarketResearchPanel({
 
   // Dialog state
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [dialogStep, setDialogStep] = useState<'template' | 'configure'>('template');
   const [newTitle, setNewTitle] = useState('');
   const [newQuery, setNewQuery] = useState('');
   const [selectedAdapters, setSelectedAdapters] = useState<string[]>([]);
@@ -104,16 +122,30 @@ export function MarketResearchPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initiativeId]);
 
-  // Prefill query from initiative title
+  // Open the dialog starting from the template picker step
   const openNewDialog = () => {
+    setDialogStep('template');
     setNewTitle(initiativeTitle ? `Research: ${initiativeTitle}` : '');
-    setNewQuery(
-      initiativeTitle
-        ? `Market analysis and competitive landscape for "${initiativeTitle}"`
-        : ''
-    );
+    setNewQuery(initiativeTitle ?? '');
     setSelectedAdapters([]);
     setShowNewDialog(true);
+  };
+
+  // Apply a research template
+  const handleSelectTemplate = (templateId: string) => {
+    const topic = initiativeTitle || '';
+    const result = applyTemplate(templateId, topic);
+    if (result) {
+      setNewTitle(result.title);
+      setNewQuery(result.query);
+      setSelectedAdapters(result.adapters);
+    }
+    setDialogStep('configure');
+  };
+
+  // Skip templates → go directly to manual configuration
+  const handleSkipTemplate = () => {
+    setDialogStep('configure');
   };
 
   const handleCreate = async () => {
@@ -596,57 +628,115 @@ export function MarketResearchPanel({
           style={{ display: 'flex', flexDirection: 'column' }}
         >
           <DialogHeader className="shrink-0">
-            <DialogTitle>Run Market Research</DialogTitle>
+            <DialogTitle>
+              {dialogStep === 'template' ? 'Choose a Research Template' : 'Configure Research'}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-2 -mx-6 px-6">
-            <div className="space-y-2">
-              <Label htmlFor="research-title">Title</Label>
-              <Input
-                id="research-title"
-                placeholder="e.g., Competitive Analysis - Q1 2026"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-              />
-            </div>
+          {/* Step 1: Template Picker */}
+          {dialogStep === 'template' && (
+            <>
+              <div className="flex-1 overflow-y-auto min-h-0 py-2 -mx-6 px-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {RESEARCH_TEMPLATES.map((template) => {
+                    const IconComp = TEMPLATE_ICONS[template.icon] || Search;
+                    return (
+                      <Card
+                        key={template.id}
+                        className="cursor-pointer border-border hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors"
+                        onClick={() => handleSelectTemplate(template.id)}
+                      >
+                        <CardContent className="p-4 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <IconComp className="h-5 w-5 text-primary shrink-0" />
+                            <span className="text-sm font-medium text-foreground">
+                              {template.name}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {template.description}
+                          </p>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="secondary" className="text-[10px]">
+                              {template.adapters.length} sources
+                            </Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="research-query">Research Query</Label>
-              <Textarea
-                id="research-query"
-                placeholder="Describe what you want to research..."
-                value={newQuery}
-                onChange={(e) => setNewQuery(e.target.value)}
-                rows={3}
-              />
-            </div>
+              <DialogFooter className="shrink-0 border-t pt-4 -mx-6 px-6 -mb-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowNewDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="ghost" onClick={handleSkipTemplate}>
+                  <LayoutTemplate className="h-4 w-4 mr-1" />
+                  Custom Research
+                </Button>
+              </DialogFooter>
+            </>
+          )}
 
-            <div className="space-y-2">
-              <Label>Data Sources</Label>
-              <AdapterSelector
-                selectedKeys={selectedAdapters}
-                onChange={setSelectedAdapters}
-              />
-            </div>
-          </div>
+          {/* Step 2: Configuration Form */}
+          {dialogStep === 'configure' && (
+            <>
+              <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-2 -mx-6 px-6">
+                <div className="space-y-2">
+                  <Label htmlFor="research-title">Title</Label>
+                  <Input
+                    id="research-title"
+                    placeholder="e.g., Competitive Analysis - Q1 2026"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                  />
+                </div>
 
-          <DialogFooter className="shrink-0 border-t pt-4 -mx-6 px-6 -mb-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowNewDialog(false)}
-              disabled={creating}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleCreate} disabled={creating}>
-              {creating ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4 mr-1" />
-              )}
-              Start Research
-            </Button>
-          </DialogFooter>
+                <div className="space-y-2">
+                  <Label htmlFor="research-query">Research Query</Label>
+                  <Textarea
+                    id="research-query"
+                    placeholder="Describe what you want to research..."
+                    value={newQuery}
+                    onChange={(e) => setNewQuery(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Data Sources</Label>
+                  <AdapterSelector
+                    selectedKeys={selectedAdapters}
+                    onChange={setSelectedAdapters}
+                    query={newQuery}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="shrink-0 border-t pt-4 -mx-6 px-6 -mb-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setDialogStep('template')}
+                  disabled={creating}
+                >
+                  Back
+                </Button>
+                <Button onClick={handleCreate} disabled={creating}>
+                  {creating ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4 mr-1" />
+                  )}
+                  Start Research
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

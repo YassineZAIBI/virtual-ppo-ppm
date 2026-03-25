@@ -36,6 +36,30 @@ model User {
   contentVersions  ContentVersion[]
   dataConnectors   DataConnectorConfig[]
   dataJobs         DataJob[]
+
+  // Vision Pillar (Azmyra 3.0)
+  northStar        NorthStar?
+  businessGoals    BusinessGoal[]
+  targetGroups     TargetGroup[]
+  needs            Need[]
+  productMappings  ProductMapping[]
+  visionComplete   Boolean  @default(false)
+
+  // Competitors Eye
+  competitors      Competitor[]
+  competitorFeeds  CompetitorFeed[]
+
+  // Alignment & Impact
+  alignmentScores  AlignmentScore[]
+  businessImpacts  BusinessImpact[]
+
+  // Autonomous AI
+  cronJobs         CronJob[]
+  cronRuns         CronRun[]
+  alerts           UserAlert[]
+
+  // Session Continuity
+  chatSessions     ChatSession[]
 }
 
 model Account {
@@ -107,6 +131,18 @@ model UserSettingsRecord {
   smtpPassword      String  @default("") // encrypted
   smtpFromEmail     String  @default("")
 
+  // Zoom meeting bot credentials
+  zoomEnabled       Boolean @default(false)
+  zoomAccountId     String  @default("")
+  zoomClientId      String  @default("")
+  zoomClientSecret  String  @default("") // encrypted
+
+  // Teams meeting bot credentials
+  teamsEnabled      Boolean @default(false)
+  teamsClientId     String  @default("")
+  teamsTenantId     String  @default("")
+  teamsClientSecret String  @default("") // encrypted
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -129,6 +165,14 @@ model Initiative {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Azmyra 3.0 Strategy extensions
+  level           String?  @default("idea") // "solution" | "epic" | "idea"
+  pillar          String?  @default("strategy") // "vision" | "strategy" | "tactics"
+  alignmentScore  Float?   // cached VAS (0-100)
+  businessImpactId String? // link to BusinessImpact
+  competitiveRank  Int?    // 1-N rank vs competitors
+  discovery       String   @default("{}") // JSON: { notes, aiAnalysis, status, lastUpdated }
+
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -146,7 +190,11 @@ model Meeting {
   actionItems  String   @default("[]") // JSON array of ActionItem
   decisions    String   @default("[]") // JSON array
   challenges   String   @default("[]") // JSON array
-  followUpEmail String?
+  followUpEmail  String?
+  platform       String?   // "zoom" | "teams" | "manual"
+  meetingUrl     String?
+  botSessionId   String?
+  liveTranscript String?   @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -165,6 +213,13 @@ model Risk {
   status         String   @default("identified") // identified, mitigating, resolved, accepted
   relatedItems   String   @default("[]") // JSON array
   mitigationPlan String?
+
+  // AI risk assessment (populated by agent)
+  aiAssessment   String?   @db.Text
+  aiSeverity     String?
+  aiMitigation   String?   @db.Text
+  assessedAt     DateTime?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -185,8 +240,12 @@ model ChatMessage {
   sources         String   @default("[]") // JSON array of SourceAttribution
   createdAt       DateTime @default(now())
 
-  userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatSessionId String?
+  chatSession   ChatSession? @relation(fields: [chatSessionId], references: [id], onDelete: SetNull)
+
+  @@index([chatSessionId])
 }
 
 // ============ Documents ============
@@ -382,4 +441,298 @@ model DataJob {
 
   @@index([userId, status])
   @@index([jobType, status])
+}
+
+// ============================================
+// VISION PILLAR MODELS (Azmyra 3.0)
+// ============================================
+
+model NorthStar {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  statement   String
+  context     String?  @db.Text
+  confidence  Float    @default(0)
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessGoals BusinessGoal[]
+
+  @@index([userId])
+}
+
+model BusinessGoal {
+  id          String    @id @default(cuid())
+  userId      String
+  northStarId String
+  title       String
+  description String?   @db.Text
+  metric      String?
+  target      String?
+  deadline    DateTime?
+  priority    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  northStar    NorthStar     @relation(fields: [northStarId], references: [id], onDelete: Cascade)
+  targetGroups TargetGroup[]
+
+  @@index([userId])
+  @@index([northStarId])
+}
+
+model TargetGroup {
+  id             String   @id @default(cuid())
+  userId         String
+  businessGoalId String
+  name           String
+  role           String?
+  demographics   String?  @db.Text
+  behaviors      String?  @db.Text
+  goals          String?  @db.Text
+  painPoints     String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessGoal BusinessGoal @relation(fields: [businessGoalId], references: [id], onDelete: Cascade)
+  needs        Need[]
+
+  @@index([userId])
+  @@index([businessGoalId])
+}
+
+model Need {
+  id            String   @id @default(cuid())
+  userId        String
+  targetGroupId String
+  title         String
+  description   String?  @db.Text
+  severity      Int      @default(5)
+  frequency     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetGroup TargetGroup      @relation(fields: [targetGroupId], references: [id], onDelete: Cascade)
+  products    ProductMapping[]
+
+  @@index([userId])
+  @@index([targetGroupId])
+}
+
+model ProductMapping {
+  id        String   @id @default(cuid())
+  userId    String
+  needId    String
+  name      String
+  type      String   // "existing" | "planned" | "idea"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  need Need @relation(fields: [needId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([needId])
+}
+
+// ============================================
+// COMPETITORS EYE MODELS
+// ============================================
+
+model Competitor {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  website     String?
+  description String?  @db.Text
+  tags        String?  // JSON array: ["direct", "indirect", "emerging"]
+  isActive    Boolean  @default(true)
+
+  // AI market analysis (populated by LLM from scraped data)
+  estimatedMarketCap  String?
+  estimatedUsers      String?
+  marketTrend         String?   // "growing" | "stable" | "declining"
+  predictedGrowth     Float?
+  marketAnalysis      String?   @db.Text
+  marketAnalysisAt    DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feeds CompetitorFeed[]
+
+  @@index([userId])
+}
+
+model CompetitorFeed {
+  id            String    @id @default(cuid())
+  userId        String
+  competitorId  String
+  type          String    // "news" | "product_update" | "vision_shift" | "rumor" | "pricing" | "hiring"
+  title         String
+  summary       String    @db.Text
+  source        String?
+  sourceAdapter String?
+  relevance     Float     @default(0.5)
+  sentiment     String?   // "positive" | "negative" | "neutral"
+  raw           String?   @db.Text
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([competitorId])
+  @@index([createdAt])
+  @@index([type])
+}
+
+// ============================================
+// VISION ALIGNMENT SCORING
+// ============================================
+
+model AlignmentScore {
+  id                   String   @id @default(cuid())
+  userId               String
+  entityType           String   // "initiative" | "strategy_item" | "risk"
+  entityId             String
+  overallScore         Float
+  northStarRelevance   Float
+  businessGoalCoverage Float
+  targetGroupImpact    Float
+  needFulfillment      Float
+  reasoning            String?  @db.Text
+  computedBy           String   @default("ai")
+  version              Int      @default(1)
+  createdAt            DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([overallScore])
+}
+
+// ============================================
+// BUSINESS IMPACT MODEL
+// ============================================
+
+model BusinessImpact {
+  id               String   @id @default(cuid())
+  userId           String
+  entityType       String   // "initiative"
+  entityId         String
+  revenueEstimate  Float?
+  roiPercent       Float?
+  timeToValueWeeks Int?
+  marketShareDelta Float?
+  confidenceLevel  String?  // "low" | "medium" | "high"
+  assumptions      String?  @db.Text
+  computedBy       String   @default("ai")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+}
+
+// ============================================
+// AUTONOMOUS CRON SYSTEM
+// ============================================
+
+model CronJob {
+  id          String    @id @default(cuid())
+  userId      String
+  jobType     String    // "competitor_scan" | "strategy_eval" | "risk_reassess" | "market_pulse" | "full_portfolio_review"
+  schedule    String    // cron expression
+  lastRun     DateTime?
+  nextRun     DateTime?
+  status      String    @default("active") // "active" | "paused" | "failed"
+  lastResult  String?   @db.Text
+  lastError   String?   @db.Text
+  runCount    Int       @default(0)
+  config      String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jobType])
+  @@index([nextRun])
+  @@index([status])
+}
+
+model CronRun {
+  id         String    @id @default(cuid())
+  userId     String
+  jobType    String
+  status     String    // "running" | "completed" | "failed"
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  result     String?   @db.Text
+  error      String?   @db.Text
+  duration   Int?      // milliseconds
+  tokensUsed Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jobType])
+  @@index([startedAt])
+}
+
+// ============================================
+// USER ALERTS (from autonomous AI)
+// ============================================
+
+model UserAlert {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String    // "competitor_move" | "strategy_risk" | "alignment_drift" | "market_shift" | "action_required"
+  severity    String    // "info" | "warning" | "critical"
+  title       String
+  message     String    @db.Text
+  source      String?
+  entityType  String?
+  entityId    String?
+  isRead      Boolean   @default(false)
+  isDismissed Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([severity])
+}
+
+// ============================================
+// SESSION CONTINUITY
+// ============================================
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String?
+  pillar    String?  // "vision" | "strategy" | "tactics" | "general"
+  agent     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@index([isActive])
 }

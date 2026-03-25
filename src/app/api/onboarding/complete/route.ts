@@ -18,7 +18,13 @@ export async function POST() {
       create: { userId, completed: true },
     });
 
-    return NextResponse.json({ success: true, redirect: '/' });
+    // Set visionComplete = true on the user
+    await db.user.update({
+      where: { id: userId },
+      data: { visionComplete: true },
+    });
+
+    return NextResponse.json({ success: true, redirect: '/vision' });
   } catch (error: any) {
     console.error('Onboarding complete error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

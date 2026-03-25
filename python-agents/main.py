@@ -38,8 +38,10 @@ from agents.loop import run_agent_loop
 from knowledge.rag import retrieve_context
 from knowledge.ingest import ingest_file, scrape_url
 from tools.mcp_client import execute_tool, describe_tool_action
+from scheduler.runner import scheduler
+from scheduler.registry import get_all_job_types
 
-app = FastAPI(title="Virtual PPO Agent Service", version="1.0.0")
+app = FastAPI(title="Virtual PPO Agent Service", version="2.0.0")
 
 # CORS — allow Next.js frontend
 app.add_middleware(
@@ -58,7 +60,13 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "agent-service", "agents": 6}
+    return {
+        "status": "ok",
+        "service": "agent-service",
+        "version": "2.0.0",
+        "agents": 6,
+        "scheduler": scheduler.get_status(),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +305,38 @@ async def scrape_url_endpoint(body: ScrapeRequest):
         "content": result["content"],
         "content_chunks": result["content_chunks"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Scheduler endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.get("/scheduler/status")
+async def scheduler_status():
+    """Return scheduler status and registered job types."""
+    return scheduler.get_status()
+
+
+class TriggerRequest(BaseModel):
+    user_id: str
+    config: dict[str, Any] | None = None
+
+
+@app.post("/scheduler/trigger/{job_type}")
+async def trigger_job(job_type: str, body: TriggerRequest):
+    """Manually trigger a specific job for a user."""
+    if job_type not in get_all_job_types():
+        raise HTTPException(status_code=404, detail=f"Unknown job type: {job_type}")
+    result = await scheduler.trigger_job(body.user_id, job_type, body.config)
+    return result
+
+
+@app.post("/scheduler/check")
+async def check_due_jobs():
+    """Check for and execute all due jobs. Called by Cloud Scheduler."""
+    result = await scheduler.check_and_run_due_jobs()
+    return result
 
 
 # ---------------------------------------------------------------------------

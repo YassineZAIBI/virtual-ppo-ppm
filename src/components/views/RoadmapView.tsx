@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   Map, Plus, Download, ChevronLeft, ChevronRight,
   Calendar, Target, AlertTriangle, CheckCircle2, Clock, ArrowRight,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Initiative } from '@/lib/types';
 import { ShareButton } from '@/components/share/ShareButton';
+import { AlignmentBadge } from '@/components/vision/AlignmentBadge';
+import { VisionGateBanner } from '@/components/layout/VisionGateBanner';
 
 type Quarter = 'Q1' | 'Q2' | 'Q3' | 'Q4';
 
@@ -49,7 +52,11 @@ const STATUS_CONFIG: Record<string, { color: string; bgColor: string; icon: type
 };
 
 export function RoadmapView() {
-  const { initiatives, addInitiative } = useAppStore();
+  const { initiatives, addInitiative, setInitiatives } = useAppStore();
+
+  useEffect(() => {
+    fetch('/api/initiatives').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setInitiatives(d); }).catch(() => {});
+  }, []);
   const currentYear = new Date().getFullYear();
   const currentQuarter = (`Q${Math.ceil((new Date().getMonth() + 1) / 3)}`) as Quarter;
 
@@ -58,6 +65,7 @@ export function RoadmapView() {
   const [selectedItem, setSelectedItem] = useState<Initiative | null>(null);
   const [assignDialog, setAssignDialog] = useState<Initiative | null>(null);
   const [newItem, setNewItem] = useState({ title: '', description: '', quarter: currentQuarter as string });
+  const [showIdeas, setShowIdeas] = useState(false);
 
   // Quarter assignments stored in localStorage-compatible state
   const [quarterAssignments, setQuarterAssignments] = useState<QuarterAssignment>(() => {
@@ -83,9 +91,14 @@ export function RoadmapView() {
     }
   };
 
-  const roadmapInitiatives = initiatives.filter(
-    (i) => ['approved', 'definition', 'validation', 'discovery'].includes(i.status)
-  );
+  const roadmapInitiatives = initiatives.filter((i) => {
+    const statusOk = ['approved', 'definition', 'validation', 'discovery'].includes(i.status);
+    if (!statusOk) return false;
+    // Default: show only Solution and Epic level items; toggle to include Ideas
+    const level = i.level || 'idea';
+    if (!showIdeas && level === 'idea') return false;
+    return true;
+  });
 
   const unassigned = roadmapInitiatives.filter(
     (i) => !quarterAssignments[i.id] || quarterAssignments[i.id].year !== selectedYear
@@ -178,6 +191,7 @@ export function RoadmapView() {
   return (
     <TooltipProvider>
       <div className="p-6 space-y-6">
+        <VisionGateBanner />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -185,6 +199,16 @@ export function RoadmapView() {
             <p className="text-slate-500">Plan and visualize your product initiatives across quarters</p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Level toggle */}
+            <Button
+              variant={showIdeas ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setShowIdeas(!showIdeas)}
+            >
+              <Layers className="h-3.5 w-3.5 mr-1" />
+              {showIdeas ? 'Showing All' : 'Solution & Epic'}
+            </Button>
             {/* Year selector */}
             <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedYear(selectedYear - 1)}>
@@ -355,6 +379,15 @@ export function RoadmapView() {
                             <Badge className={cn('text-[10px] px-1.5 py-0', config.bgColor, 'text-white')}>
                               {config.label}
                             </Badge>
+                            <Badge variant="outline" className={cn(
+                              'text-[10px] px-1.5 py-0',
+                              (item.level || 'idea') === 'solution' && 'border-green-500/30 text-green-700 dark:text-green-400',
+                              (item.level || 'idea') === 'epic' && 'border-purple-500/30 text-purple-700 dark:text-purple-400',
+                              (item.level || 'idea') === 'idea' && 'border-slate-500/30 text-slate-600 dark:text-slate-400',
+                            )}>
+                              {(item.level || 'idea').charAt(0).toUpperCase() + (item.level || 'idea').slice(1)}
+                            </Badge>
+                            <AlignmentBadge score={item.alignmentScore ?? null} />
                             <Badge variant="outline" className={cn(
                               'text-[10px] px-1.5 py-0',
                               item.businessValue === 'high' && 'border-green-500 text-green-600',

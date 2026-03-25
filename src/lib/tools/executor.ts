@@ -7,7 +7,7 @@ export interface ToolExecutionResult {
   result?: any;
   error?: string;
   storeAction?: {
-    type: 'addInitiative' | 'updateInitiative' | 'moveInitiative';
+    type: 'addInitiative' | 'updateInitiative' | 'moveInitiative' | 'updateRisk' | 'addRisk';
     payload: any;
   };
 }
@@ -107,6 +107,64 @@ export async function executeToolCall(
           success: true,
           result: { id: args.initiativeId, updates },
           storeAction: { type: 'updateInitiative', payload: { id: args.initiativeId, updates } },
+        };
+      }
+
+      // ── Risk agent tools ──────────────────────────────────────────────
+
+      case 'update_risk_severity': {
+        try {
+          const { db } = await import('../db');
+          await db.risk.update({ where: { id: args.riskId }, data: { severity: args.severity } });
+        } catch { /* DB optional — store mutation handles UI */ }
+        return {
+          success: true,
+          result: { riskId: args.riskId, severity: args.severity },
+          storeAction: { type: 'updateRisk', payload: { id: args.riskId, updates: { severity: args.severity } } },
+        };
+      }
+
+      case 'update_risk_mitigation': {
+        try {
+          const { db } = await import('../db');
+          await db.risk.update({ where: { id: args.riskId }, data: { mitigationPlan: args.mitigationPlan } });
+        } catch { /* DB optional */ }
+        return {
+          success: true,
+          result: { riskId: args.riskId, mitigationPlan: args.mitigationPlan },
+          storeAction: { type: 'updateRisk', payload: { id: args.riskId, updates: { mitigationPlan: args.mitigationPlan } } },
+        };
+      }
+
+      case 'update_risk_status': {
+        try {
+          const { db } = await import('../db');
+          await db.risk.update({ where: { id: args.riskId }, data: { status: args.status } });
+        } catch { /* DB optional */ }
+        return {
+          success: true,
+          result: { riskId: args.riskId, status: args.status },
+          storeAction: { type: 'updateRisk', payload: { id: args.riskId, updates: { status: args.status } } },
+        };
+      }
+
+      case 'create_risk': {
+        const newRisk = {
+          id: crypto.randomUUID(),
+          title: args.title,
+          description: args.description || '',
+          severity: args.severity || 'medium',
+          probability: args.probability || 'medium',
+          impact: args.impact || 'medium',
+          status: 'identified',
+          relatedItems: [],
+          mitigationPlan: args.mitigationPlan || null,
+          createdAt: new Date(),
+        };
+        return {
+          success: true,
+          result: newRisk,
+          storeAction: { type: 'addRisk', payload: newRisk },
         };
       }
 

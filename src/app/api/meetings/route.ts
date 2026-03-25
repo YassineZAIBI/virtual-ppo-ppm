@@ -1,21 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { db } from '@/lib/db';
 import { LLMService } from '@/lib/services/llm';
 import { LLMConfig } from '@/lib/types';
 
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const meetings = await db.meeting.findMany({
+      where: { userId: session.user.id },
+      orderBy: { date: 'desc' },
+    });
+
+    return NextResponse.json(meetings);
+  } catch (error) {
+    console.error('[MEETINGS_GET]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { transcript, settings } = await request.json();
+    const body = await request.json();
+    const { transcript, settings: bodySettings, llmConfig: directConfig } = body;
 
     if (!transcript) {
       return NextResponse.json({ error: 'Transcript is required' }, { status: 400 });
     }
 
+    const src = directConfig || bodySettings?.llm || {};
     const llmConfig: LLMConfig = {
-      provider: settings?.llm?.provider || 'openai',
-      apiKey: settings?.llm?.apiKey || '',
-      apiEndpoint: settings?.llm?.apiEndpoint,
-      model: settings?.llm?.model,
+      provider: src.provider || 'openai',
+      apiKey: src.apiKey || '',
+      apiEndpoint: src.apiEndpoint,
+      model: src.model,
     };
+
+    if (!llmConfig.apiKey) {
+      return NextResponse.json({ error: 'LLM not configured. Please set up your LLM provider in Settings.' }, { status: 400 });
+    }
 
     const llm = LLMService.create(llmConfig);
 
@@ -68,6 +96,27 @@ Provide your response in this exact JSON format (no markdown, just raw JSON):
       status: 'pending',
       source: 'meeting'
     }));
+
+    // Persist to database
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+      try {
+        await db.meeting.create({
+          data: {
+            userId: session.user.id,
+            title: analysis.title || 'Meeting Summary',
+            summary: analysis.summary || 'Unable to generate summary.',
+            transcript,
+            status: 'summarized',
+            actionItems: JSON.stringify(formattedActionItems),
+            decisions: JSON.stringify(analysis.decisions || []),
+            challenges: JSON.stringify(analysis.challenges || []),
+          },
+        });
+      } catch (e) {
+        console.error('[MEETINGS_POST] DB persist error:', e);
+      }
+    }
 
     return NextResponse.json({
       title: analysis.title || 'Meeting Summary',

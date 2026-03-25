@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Plus, ArrowRight, Save, Trash2, Search, DollarSign,
   AlertTriangle, Clock, HelpCircle, ExternalLink,
-  CheckSquare, Square, X,
+  CheckSquare, Square, X, Target, Loader2, BarChart3,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Initiative } from '@/lib/types';
@@ -24,6 +25,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ShareButton } from '@/components/share/ShareButton';
 import { isSampleData } from '@/lib/sample-data';
 import { ExampleBadge } from '@/components/ui/example-badge';
+import { AlignmentBadge } from '@/components/vision/AlignmentBadge';
+import { VisionGateBanner } from '@/components/layout/VisionGateBanner';
 
 const stages = [
   { id: 'idea', label: 'Ideas', color: 'bg-muted', headerColor: 'bg-accent' },
@@ -33,13 +36,37 @@ const stages = [
   { id: 'approved', label: 'Approved', color: 'bg-green-50 dark:bg-green-950', headerColor: 'bg-green-100 dark:bg-green-900' },
 ];
 
+const LEVEL_OPTIONS = [
+  { id: 'all', label: 'All', color: 'text-foreground' },
+  { id: 'solution', label: 'Solution', color: 'text-green-600' },
+  { id: 'epic', label: 'Epic', color: 'text-purple-600' },
+  { id: 'idea', label: 'Idea', color: 'text-muted-foreground' },
+] as const;
+
+const LEVEL_BADGE_COLORS: Record<string, string> = {
+  solution: 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30',
+  epic: 'bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30',
+  idea: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30',
+};
+
 export function InitiativesPipeline() {
-  const { initiatives, moveInitiative, addInitiative, updateInitiative, deleteInitiative, personas } = useAppStore();
+  const { initiatives, setInitiatives, moveInitiative, addInitiative, updateInitiative, deleteInitiative, personas } = useAppStore();
   const router = useRouter();
+
+  // Load initiatives from API on mount (replaces demo data with real DB data)
+  useEffect(() => {
+    fetch('/api/initiatives')
+      .then((res) => res.ok ? res.json() : Promise.reject())
+      .then((data) => { if (Array.isArray(data)) setInitiatives(data); })
+      .catch(() => {}); // keep store data as fallback
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showNewIdea, setShowNewIdea] = useState(false);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [levelFilter, setLevelFilter] = useState<string>('all');
+  const [scoringId, setScoringId] = useState<string | null>(null);
+  const [computingImpactId, setComputingImpactId] = useState<string | null>(null);
   const [newIdea, setNewIdea] = useState({
     title: '',
     description: '',
@@ -51,26 +78,43 @@ export function InitiativesPipeline() {
     expectedTimeToMarket: '',
   });
 
-  const handleAddIdea = () => {
+  const handleAddIdea = async () => {
     if (!newIdea.title.trim()) return;
-    addInitiative({
-      id: crypto.randomUUID(),
+    const payload = {
       title: newIdea.title,
       description: newIdea.description,
       status: 'idea',
       businessValue: newIdea.businessValue,
       effort: newIdea.effort,
-      stakeholders: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      tags: [],
-      risks: [],
-      dependencies: [],
       whyNeeded: newIdea.whyNeeded,
       whatIfNot: newIdea.whatIfNot,
       expectedValue: newIdea.expectedValue,
       expectedTimeToMarket: newIdea.expectedTimeToMarket,
-    });
+    };
+    try {
+      const res = await fetch('/api/initiatives', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        addInitiative({ ...saved, stakeholders: [], tags: [], risks: [], dependencies: [] });
+      } else {
+        // Fallback to local-only
+        addInitiative({
+          id: crypto.randomUUID(), ...payload,
+          stakeholders: [], createdAt: new Date(), updatedAt: new Date(),
+          tags: [], risks: [], dependencies: [],
+        });
+      }
+    } catch {
+      addInitiative({
+        id: crypto.randomUUID(), ...payload,
+        stakeholders: [], createdAt: new Date(), updatedAt: new Date(),
+        tags: [], risks: [], dependencies: [],
+      });
+    }
     setNewIdea({
       title: '', description: '', businessValue: 'medium', effort: 'medium',
       whyNeeded: '', whatIfNot: '', expectedValue: '', expectedTimeToMarket: '',
@@ -144,12 +188,78 @@ export function InitiativesPipeline() {
     setSelectedIds(new Set());
   };
 
+  const handleScoreAlignment = async (initiativeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setScoringId(initiativeId);
+    try {
+      const res = await fetch('/api/vision/alignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entityType: 'initiative', entityId: initiativeId }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      updateInitiative(initiativeId, { alignmentScore: data.overallScore });
+      toast.success(`Alignment score: ${data.overallScore}/100`);
+    } catch {
+      toast.error('Failed to score alignment');
+    } finally {
+      setScoringId(null);
+    }
+  };
+
+  const handleComputeImpact = async (initiativeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setComputingImpactId(initiativeId);
+    try {
+      const res = await fetch('/api/strategy/impact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initiativeId }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      updateInitiative(initiativeId, { businessImpactId: data.id });
+      toast.success('Business impact computed');
+    } catch {
+      toast.error('Failed to compute impact');
+    } finally {
+      setComputingImpactId(null);
+    }
+  };
+
+  // Filter initiatives by level
+  const filteredInitiatives = levelFilter === 'all'
+    ? initiatives
+    : initiatives.filter((i) => (i.level || 'idea') === levelFilter);
+
   return (
     <div className="p-6 space-y-6">
+      <VisionGateBanner />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Initiatives Pipeline</h1>
           <p className="text-slate-500">Manage ideas from conception to approval</p>
+          {/* Level Filter */}
+          <div className="flex items-center gap-1 mt-2">
+            <Layers className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+            {LEVEL_OPTIONS.map((opt) => (
+              <Button
+                key={opt.id}
+                variant={levelFilter === opt.id ? 'default' : 'ghost'}
+                size="sm"
+                className={cn('h-7 text-xs', levelFilter !== opt.id && opt.color)}
+                onClick={() => setLevelFilter(opt.id)}
+              >
+                {opt.label}
+                {opt.id !== 'all' && (
+                  <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
+                    {initiatives.filter((i) => (i.level || 'idea') === opt.id).length}
+                  </Badge>
+                )}
+              </Button>
+            ))}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <ShareButton resourceType="initiatives" />
@@ -289,12 +399,23 @@ export function InitiativesPipeline() {
                   <Label>Description</Label>
                   <Textarea value={editingInitiative.description} onChange={(e) => setEditingInitiative({ ...editingInitiative, description: e.target.value })} rows={3} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label>Status</Label>
                     <Select value={editingInitiative.status} onValueChange={(v) => setEditingInitiative({ ...editingInitiative, status: v as any })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>{stages.map((s) => (<SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>))}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Level</Label>
+                    <Select value={editingInitiative.level || 'idea'} onValueChange={(v) => setEditingInitiative({ ...editingInitiative, level: v as any })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="solution">Solution</SelectItem>
+                        <SelectItem value="epic">Epic</SelectItem>
+                        <SelectItem value="idea">Idea</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                   <div>
@@ -431,7 +552,7 @@ export function InitiativesPipeline() {
       {/* Kanban Board */}
       <div className="grid grid-cols-5 gap-4 min-h-[500px]">
         {stages.map((stage) => {
-          const stageInitiatives = initiatives.filter((i) => i.status === stage.id);
+          const stageInitiatives = filteredInitiatives.filter((i) => i.status === stage.id);
           return (
             <div key={stage.id} className="min-w-[220px]">
               <div className={cn('rounded-t-lg p-2 text-center font-medium text-sm flex items-center justify-center gap-1', stage.color)}>
@@ -534,6 +655,19 @@ export function InitiativesPipeline() {
                         )}
                       </div>
 
+                      {/* Level + VAS badges row */}
+                      <div className="flex items-center gap-1 mb-1.5 flex-wrap">
+                        <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', LEVEL_BADGE_COLORS[(initiative.level || 'idea')])}>
+                          {(initiative.level || 'idea').charAt(0).toUpperCase() + (initiative.level || 'idea').slice(1)}
+                        </Badge>
+                        <AlignmentBadge score={initiative.alignmentScore ?? null} />
+                        {initiative.competitiveRank != null && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
+                            #{initiative.competitiveRank}
+                          </Badge>
+                        )}
+                      </div>
+
                       <div className="flex items-center justify-between">
                         <Badge variant="outline" className={cn('text-xs',
                           initiative.businessValue === 'high' && 'border-green-500 text-green-600',
@@ -542,6 +676,28 @@ export function InitiativesPipeline() {
                           {initiative.businessValue} value
                         </Badge>
                         <div className="flex items-center gap-1">
+                          {/* Score Alignment button */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-1.5 text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950"
+                            onClick={(e) => handleScoreAlignment(initiative.id, e)}
+                            disabled={scoringId === initiative.id}
+                            title="Score vision alignment"
+                          >
+                            {scoringId === initiative.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Target className="h-3 w-3" />}
+                          </Button>
+                          {/* Compute Impact button */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
+                            onClick={(e) => handleComputeImpact(initiative.id, e)}
+                            disabled={computingImpactId === initiative.id}
+                            title="Compute business impact"
+                          >
+                            {computingImpactId === initiative.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
+                          </Button>
                           {/* Discovery link for discovery-stage items */}
                           {stage.id === 'discovery' && (
                             <Button

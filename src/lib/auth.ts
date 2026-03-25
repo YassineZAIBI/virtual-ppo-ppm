@@ -117,7 +117,7 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role ?? 'user'
       }
 
-      // Always re-check onboarding status from DB
+      // Re-check onboarding status from DB (preserve existing value on transient errors)
       if (token.id) {
         try {
           const onboarding = await db.onboardingProgress.findUnique({
@@ -125,7 +125,10 @@ export const authOptions: NextAuthOptions = {
           })
           token.onboardingCompleted = onboarding?.completed ?? false
         } catch {
-          token.onboardingCompleted = false
+          // Keep whatever value the token already has — don't reset to false on DB hiccups
+          if (token.onboardingCompleted === undefined) {
+            token.onboardingCompleted = false
+          }
         }
       }
 

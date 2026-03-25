@@ -12,9 +12,11 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bot, Shield, Activity, MessageSquare, FileText, Send, Loader2, CheckCircle2, Zap, RefreshCw, ChevronDown, ChevronRight, GitBranch } from 'lucide-react';
+import { Bot, Shield, Activity, MessageSquare, FileText, Send, Loader2, CheckCircle2, Zap, RefreshCw, ChevronDown, ChevronRight, GitBranch, Cpu, Database, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import type { JiraProject } from '@/lib/types';
+import { CronDashboard } from '@/components/settings/CronDashboard';
+import { ConnectorManager } from '@/components/connectors/ConnectorManager';
 
 const modelPlaceholders: Record<string, string> = {
   openai: 'gpt-4',
@@ -240,9 +242,15 @@ export function SettingsView() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="llm">LLM Provider</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="connectors">
+            <Database className="h-3.5 w-3.5 mr-1" />Data Sources
+          </TabsTrigger>
+          <TabsTrigger value="autonomous">
+            <Cpu className="h-3.5 w-3.5 mr-1" />Autonomous AI
+          </TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
         </TabsList>
 
@@ -498,6 +506,113 @@ export function SettingsView() {
             )}
           </Card>
 
+          {/* Zoom Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Video className="h-5 w-5" />Zoom
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {settings.integrations.zoom.enabled && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => testConnection('zoom')}
+                      disabled={isTesting === 'zoom'}
+                    >
+                      {isTesting === 'zoom' ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      )}
+                      Test
+                    </Button>
+                  )}
+                  <Switch
+                    checked={settings.integrations.zoom.enabled}
+                    onCheckedChange={(checked) => updateIntegrations({
+                      zoom: { ...settings.integrations.zoom, enabled: checked }
+                    })}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            {settings.integrations.zoom.enabled && (
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-xs">Account ID</Label>
+                  <Input
+                    value={settings.integrations.zoom.accountId}
+                    onChange={(e) => updateIntegrations({ zoom: { ...settings.integrations.zoom, accountId: e.target.value } })}
+                    placeholder="Your Zoom Account ID"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Client ID</Label>
+                  <Input
+                    value={settings.integrations.zoom.clientId}
+                    onChange={(e) => updateIntegrations({ zoom: { ...settings.integrations.zoom, clientId: e.target.value } })}
+                    placeholder="Your Zoom Client ID"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Client Secret</Label>
+                  <Input
+                    type="password"
+                    value={settings.integrations.zoom.clientSecret}
+                    onChange={(e) => updateIntegrations({ zoom: { ...settings.integrations.zoom, clientSecret: e.target.value } })}
+                    placeholder="Your Zoom Client Secret"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Get credentials from <strong>marketplace.zoom.us</strong> → Create a Server-to-Server OAuth app.
+                </p>
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Teams Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Shield className="h-5 w-5" />Microsoft Teams
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {settings.integrations.teams.enabled && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => testConnection('teams')}
+                      disabled={isTesting === 'teams'}
+                    >
+                      {isTesting === 'teams' ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      )}
+                      Test
+                    </Button>
+                  )}
+                  <Switch
+                    checked={settings.integrations.teams.enabled}
+                    onCheckedChange={(checked) => updateIntegrations({
+                      teams: { ...settings.integrations.teams, enabled: checked }
+                    })}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            {settings.integrations.teams.enabled && (
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Teams credentials are configured on the server. No additional setup needed — just paste a Teams meeting link and click Join.
+                </p>
+              </CardContent>
+            )}
+          </Card>
+
           {integrationConfigs.map((integration) => (
             <Card key={integration.key}>
               <CardHeader className="pb-2">
@@ -552,6 +667,14 @@ export function SettingsView() {
               )}
             </Card>
           ))}
+        </TabsContent>
+
+        <TabsContent value="connectors" className="mt-4">
+          <ConnectorManager />
+        </TabsContent>
+
+        <TabsContent value="autonomous" className="mt-4">
+          <CronDashboard />
         </TabsContent>
 
         <TabsContent value="preferences" className="space-y-4 mt-4">

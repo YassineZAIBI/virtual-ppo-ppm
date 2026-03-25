@@ -12,7 +12,7 @@ export interface DataAdapter {
 export interface AdapterMetadata {
   name: string;
   icon: string;
-  category: 'search' | 'social' | 'research' | 'government' | 'mcp' | 'feed' | 'activity' | 'custom';
+  category: 'search' | 'social' | 'research' | 'government' | 'mcp' | 'feed' | 'activity' | 'custom' | 'review' | 'news' | 'competitor' | 'jobs';
   description: string;
   rateLimit: { requests: number; windowMs: number };
   capabilities: { searchable: boolean; streamable: boolean; realtime: boolean };

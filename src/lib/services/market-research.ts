@@ -92,41 +92,63 @@ export async function synthesizeReport(
       grouped.get(key)!.push(dp);
     }
 
-    // Build structured context for LLM
+    // Build structured context for LLM — only include data points with actual content
+    const usablePoints = research.dataPoints.filter(
+      dp => dp.rawContent && dp.rawContent.trim().length > 20
+    );
+
     let context = `## Research Topic: ${research.query}\n\n`;
-    context += `**Data collected from ${research.dataPoints.length} sources:**\n\n`;
+    context += `**${usablePoints.length} data points collected from real sources:**\n\n`;
 
     for (const [category, points] of grouped) {
-      context += `### ${category.charAt(0).toUpperCase() + category.slice(1)} Sources (${points.length})\n\n`;
-      for (const dp of points) {
+      const usable = points.filter(dp => dp.rawContent && dp.rawContent.trim().length > 20);
+      if (usable.length === 0) continue;
+      context += `### ${category.charAt(0).toUpperCase() + category.slice(1)} Sources (${usable.length})\n\n`;
+      for (const dp of usable) {
         context += `**[${dp.sourceName}](${dp.sourceUrl})** — ${dp.title}\n`;
         // Truncate content to avoid token limits
-        const truncated = dp.rawContent.length > 1000
-          ? dp.rawContent.slice(0, 1000) + '...'
+        const truncated = dp.rawContent.length > 1200
+          ? dp.rawContent.slice(0, 1200) + '...'
           : dp.rawContent;
         context += `${truncated}\n\n`;
       }
     }
 
-    const prompt = `You are a senior market research analyst. Synthesize the following REAL data points into a comprehensive, well-structured market research report.
+    const prompt = `You are a senior market research analyst producing a report on: "${research.query}"
+
+Below are REAL data points gathered from live sources. Your task is to synthesize ONLY the relevant information into a focused, high-quality report.
 
 CRITICAL RULES:
-1. Every claim, statistic, or fact MUST cite its source using [Source Name](URL) format
-2. Do NOT fabricate any data — only use information from the provided sources
-3. Use ## for main sections, ### for subsections
-4. Include a "Key Statistics" section with a markdown table if applicable
-5. Include a "Sources" section at the end listing all referenced sources
-6. Use **bold** for emphasis, bullet points for lists
-7. Be analytical — don't just summarize, draw insights and identify patterns
+1. **RELEVANCE FIRST**: Ignore any data point that is NOT directly related to the research topic "${research.query}". Do NOT include off-topic results.
+2. Every claim, statistic, or fact MUST cite its source using [Source Name](URL) format.
+3. Do NOT fabricate, invent, or hallucinate any data — only use information explicitly present in the provided sources.
+4. If a source is vague or tangential, skip it rather than stretching its meaning.
+5. Use ## for main sections, ### for subsections.
+6. Use **bold** for emphasis, bullet points for lists, and markdown tables for statistics.
+7. Be analytical — identify patterns across sources, draw actionable insights, and highlight contradictions.
+8. If data is sparse for a section, say so honestly rather than padding with filler.
 
 Report Structure:
-- Executive Summary
-- Market Overview & Size (with real numbers from sources)
-- Key Trends & Signals
-- Competitive Landscape (if relevant data exists)
-- Key Statistics (table format)
-- Implications & Recommendations
-- Sources
+## Executive Summary
+(2-3 paragraph overview of the most important findings)
+
+## Market Overview
+(Size, growth, key players — only if data supports it)
+
+## Key Trends & Signals
+(What are the emerging patterns across sources?)
+
+## Community & Industry Sentiment
+(What are practitioners, users, and experts saying?)
+
+## Key Statistics
+(Markdown table of concrete numbers found in sources)
+
+## Strategic Implications & Recommendations
+(What should a product team do based on these findings?)
+
+## Sources
+(Numbered list of all sources actually referenced in the report)
 
 ${context}`;
 

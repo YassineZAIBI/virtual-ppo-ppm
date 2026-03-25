@@ -16,6 +16,7 @@ class AgentId(str, Enum):
     COMMUNICATIONS = "communications"
     ADVISOR = "advisor"
     THINKER = "thinker"
+    VISION_GUARD = "vision_guard"
 
 
 class AutonomyLevel(str, Enum):

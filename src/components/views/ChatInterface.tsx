@@ -53,8 +53,10 @@ export function ChatInterface() {
     pendingActions, addPendingAction, updatePendingAction, removePendingAction,
     initiatives, risks, roadmapItems, meetings,
     addInitiative, updateInitiative, moveInitiative,
+    addRisk, updateRisk,
     jiraProjectSchema,
     pendingChatPrompt, setPendingChatPrompt,
+    chatSessions, setChatSessions,
   } = useAppStore();
 
   const [input, setInput] = useState('');
@@ -75,6 +77,10 @@ export function ChatInterface() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatMessages, isLoading]);
+
+  useEffect(() => {
+    fetch('/api/chat/sessions').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setChatSessions(d); }).catch(() => {});
+  }, []);
 
   // Animate processing steps
   useEffect(() => {
@@ -294,6 +300,12 @@ export function ChatInterface() {
                 break;
               case 'moveInitiative':
                 moveInitiative(data.storeAction.payload.id, data.storeAction.payload.newStatus);
+                break;
+              case 'updateRisk':
+                updateRisk(data.storeAction.payload.id, data.storeAction.payload.updates);
+                break;
+              case 'addRisk':
+                addRisk(data.storeAction.payload);
                 break;
             }
           }

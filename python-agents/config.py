@@ -26,3 +26,8 @@ KB_MAX_CONTENT_CHARS = 50_000
 KB_CHUNK_SIZE = 500  # words
 KB_CHUNK_OVERLAP = 50  # words
 KB_ALLOWED_FILE_TYPES = {".pdf", ".docx", ".txt", ".md", ".csv", ".xlsx"}
+
+# Scheduler settings (Azmyra 3.0)
+SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "false").lower() == "true"
+SCHEDULER_DEFAULT_TIMEZONE = os.getenv("SCHEDULER_DEFAULT_TIMEZONE", "UTC")
+MAX_TOKENS_PER_CRON_RUN = int(os.getenv("MAX_TOKENS_PER_CRON_RUN", "10000"))

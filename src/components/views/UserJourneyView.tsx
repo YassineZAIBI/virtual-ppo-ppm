@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,8 +17,31 @@ import { isSampleData } from '@/lib/sample-data';
 import { ExampleBadge } from '@/components/ui/example-badge';
 
 export function UserJourneyView() {
-  const { personas, addPersona, updatePersona, deletePersona, initiatives, updateInitiative } = useAppStore();
+  const { personas, addPersona, updatePersona, deletePersona, initiatives, updateInitiative, setPersonas, setInitiatives } = useAppStore();
   const [showAddPersona, setShowAddPersona] = useState(false);
+
+  // Fetch target groups from API and map to personas format
+  useEffect(() => {
+    fetch('/api/vision/target-groups')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((tg: any) => ({
+            id: tg.id,
+            name: tg.name,
+            role: tg.role || '',
+            goals: tg.goals ? (typeof tg.goals === 'string' ? JSON.parse(tg.goals) : tg.goals) : [],
+            painPoints: tg.painPoints ? (typeof tg.painPoints === 'string' ? JSON.parse(tg.painPoints) : tg.painPoints) : [],
+          }));
+          setPersonas(mapped);
+        }
+      })
+      .catch(() => {});
+    fetch('/api/initiatives')
+      .then(r => r.ok ? r.json() : [])
+      .then(d => { if (Array.isArray(d)) setInitiatives(d); })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [linkingPersonaId, setLinkingPersonaId] = useState<string | null>(null);
   const [newPersona, setNewPersona] = useState({ name: '', role: '', goals: '', painPoints: '' });
 

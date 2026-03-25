@@ -17,12 +17,13 @@ import { StyledMarkdown } from '@/components/ui/styled-markdown';
 import {
   Search, Sparkles, FileText, Users, TrendingUp, Target,
   Plus, Trash2, Loader2, ChevronLeft, ArrowLeft,
-  BookOpen, MessageSquare, BarChart3, Zap, RefreshCw,
+  BookOpen, MessageSquare, BarChart3, Zap, RefreshCw, Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Initiative, DiscoveryNote } from '@/lib/types';
 import { ShareButton } from '@/components/share/ShareButton';
 import { MarketResearchPanel } from '@/components/market-research/MarketResearchPanel';
+import { VisionGateBanner } from '@/components/layout/VisionGateBanner';
 
 const DISCOVERY_TABS = [
   { id: 'ai-prep', label: 'AI Preparation', icon: Sparkles },
@@ -35,7 +36,11 @@ const DISCOVERY_TABS = [
 export function DiscoveryView() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { initiatives, updateInitiative, settings } = useAppStore();
+  const { initiatives, updateInitiative, settings, setInitiatives } = useAppStore();
+
+  useEffect(() => {
+    fetch('/api/initiatives').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setInitiatives(d); }).catch(() => {});
+  }, []);
 
   const selectedId = searchParams.get('id');
   const discoveryInitiatives = initiatives.filter((i) => i.status === 'discovery');
@@ -45,8 +50,24 @@ export function DiscoveryView() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAddNote, setShowAddNote] = useState(false);
   const [newNote, setNewNote] = useState({ title: '', content: '', type: 'general' as DiscoveryNote['type'] });
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editingAiAnalysis, setEditingAiAnalysis] = useState(false);
+  const [aiAnalysisContent, setAiAnalysisContent] = useState('');
 
   const activeInitiative = initiatives.find((i) => i.id === activeInitiativeId);
+
+  const persistDiscovery = async (initiativeId: string, discovery: any) => {
+    try {
+      await fetch(`/api/initiatives/${initiativeId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discovery }),
+      });
+    } catch {
+      // silent fail — store still has the data
+    }
+  };
 
   useEffect(() => {
     if (selectedId && initiatives.find((i) => i.id === selectedId)) {
@@ -57,7 +78,13 @@ export function DiscoveryView() {
   }, [selectedId, discoveryInitiatives.length]);
 
   const getDiscoveryData = (initiative: Initiative) => {
-    return initiative.discovery || { notes: [], status: 'not_started' as const };
+    const d = initiative.discovery;
+    return {
+      notes: d?.notes || [],
+      status: d?.status || 'not_started',
+      aiAnalysis: d?.aiAnalysis || undefined,
+      lastUpdated: d?.lastUpdated || undefined,
+    };
   };
 
   const getNotesByType = (initiative: Initiative, type: string) => {
@@ -76,14 +103,14 @@ export function DiscoveryView() {
       content: newNote.content,
       createdAt: new Date(),
     };
-    updateInitiative(activeInitiative.id, {
-      discovery: {
-        ...data,
-        notes: [...data.notes, note],
-        status: 'in_progress',
-        lastUpdated: new Date(),
-      },
-    });
+    const newDiscovery = {
+      ...data,
+      notes: [...data.notes, note],
+      status: 'in_progress',
+      lastUpdated: new Date(),
+    };
+    updateInitiative(activeInitiative.id, { discovery: newDiscovery });
+    persistDiscovery(activeInitiative.id, newDiscovery);
     setNewNote({ title: '', content: '', type: 'general' });
     setShowAddNote(false);
     toast.success('Note added!');
@@ -92,14 +119,27 @@ export function DiscoveryView() {
   const deleteNote = (noteId: string) => {
     if (!activeInitiative) return;
     const data = getDiscoveryData(activeInitiative);
-    updateInitiative(activeInitiative.id, {
-      discovery: {
-        ...data,
-        notes: data.notes.filter((n) => n.id !== noteId),
-        lastUpdated: new Date(),
-      },
-    });
+    const newDiscovery = {
+      ...data,
+      notes: data.notes.filter((n) => n.id !== noteId),
+      lastUpdated: new Date(),
+    };
+    updateInitiative(activeInitiative.id, { discovery: newDiscovery });
+    persistDiscovery(activeInitiative.id, newDiscovery);
     toast.success('Note removed');
+  };
+
+  const saveNoteEdit = (noteId: string) => {
+    if (!activeInitiative) return;
+    const data = getDiscoveryData(activeInitiative);
+    const updatedNotes = data.notes.map(n =>
+      n.id === noteId ? { ...n, content: editContent, source: 'user-edited' as const } : n
+    );
+    const newDiscovery = { ...data, notes: updatedNotes, lastUpdated: new Date() };
+    updateInitiative(activeInitiative.id, { discovery: newDiscovery });
+    persistDiscovery(activeInitiative.id, newDiscovery);
+    setEditingNoteId(null);
+    toast.success('Note updated');
   };
 
   const runAiAnalysis = async (prompt: string, context: string) => {
@@ -178,14 +218,14 @@ How to de-risk before investing`;
     const result = await runAiAnalysis(prompt, 'discovery-prep');
     if (result) {
       const data = getDiscoveryData(activeInitiative);
-      updateInitiative(activeInitiative.id, {
-        discovery: {
-          ...data,
-          aiAnalysis: result,
-          status: 'in_progress',
-          lastUpdated: new Date(),
-        },
-      });
+      const newDiscovery = {
+        ...data,
+        aiAnalysis: result,
+        status: 'in_progress',
+        lastUpdated: new Date(),
+      };
+      updateInitiative(activeInitiative.id, { discovery: newDiscovery });
+      persistDiscovery(activeInitiative.id, newDiscovery);
       toast.success('AI discovery preparation complete!');
     }
   };
@@ -274,14 +314,14 @@ Structure with these sections:
         createdAt: new Date(),
         source: 'ai-generated',
       };
-      updateInitiative(activeInitiative.id, {
-        discovery: {
-          ...data,
-          notes: [...data.notes, note],
-          status: 'in_progress',
-          lastUpdated: new Date(),
-        },
-      });
+      const newDiscovery = {
+        ...data,
+        notes: [...data.notes, note],
+        status: 'in_progress',
+        lastUpdated: new Date(),
+      };
+      updateInitiative(activeInitiative.id, { discovery: newDiscovery });
+      persistDiscovery(activeInitiative.id, newDiscovery);
       toast.success(`${DISCOVERY_TABS.find((t) => t.id === section)?.label} content generated!`);
     }
   };
@@ -299,7 +339,7 @@ Structure with these sections:
       <div className="w-72 border-r bg-background flex flex-col">
         <div className="p-4 border-b">
           <div className="flex items-center gap-2 mb-3">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push('/initiatives')}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push('/strategy')}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex-1">
@@ -356,6 +396,7 @@ Structure with these sections:
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
+        <div className="p-4 pb-0"><VisionGateBanner /></div>
         {!activeInitiative ? (
           <div className="flex items-center justify-center h-full text-slate-400">
             <div className="text-center">
@@ -444,7 +485,42 @@ Structure with these sections:
 
                     {getDiscoveryData(activeInitiative).aiAnalysis && (
                       <div className="p-5 bg-muted/50 rounded-xl border border-border">
-                        <StyledMarkdown>{getDiscoveryData(activeInitiative).aiAnalysis!}</StyledMarkdown>
+                        {editingAiAnalysis ? (
+                          <div className="space-y-3">
+                            <Textarea
+                              value={aiAnalysisContent}
+                              onChange={(e) => setAiAnalysisContent(e.target.value)}
+                              rows={20}
+                              className="font-mono text-sm"
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={() => setEditingAiAnalysis(false)}>Cancel</Button>
+                              <Button size="sm" onClick={() => {
+                                const data = getDiscoveryData(activeInitiative);
+                                const newDiscovery = { ...data, aiAnalysis: aiAnalysisContent, lastUpdated: new Date() };
+                                updateInitiative(activeInitiative.id, { discovery: newDiscovery });
+                                persistDiscovery(activeInitiative.id, newDiscovery);
+                                setEditingAiAnalysis(false);
+                                toast.success('Discovery plan updated');
+                              }}>Save</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="relative group">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => {
+                                setAiAnalysisContent(getDiscoveryData(activeInitiative).aiAnalysis!);
+                                setEditingAiAnalysis(true);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3 mr-1" />Edit
+                            </Button>
+                            <StyledMarkdown>{getDiscoveryData(activeInitiative).aiAnalysis!}</StyledMarkdown>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -539,6 +615,9 @@ Structure with these sections:
                                   {note.source === 'ai-generated' && (
                                     <Badge variant="secondary" className="text-[10px]">AI Generated</Badge>
                                   )}
+                                  {note.source === 'user-edited' && (
+                                    <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-600">User Edited</Badge>
+                                  )}
                                 </CardTitle>
                                 <div className="flex items-center gap-2">
                                   <span className="text-[10px] text-slate-400">
@@ -556,7 +635,35 @@ Structure with these sections:
                               </div>
                             </CardHeader>
                             <CardContent>
-                              <StyledMarkdown>{note.content}</StyledMarkdown>
+                              {editingNoteId === note.id ? (
+                                <div className="space-y-3">
+                                  <Textarea
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                    rows={12}
+                                    className="font-mono text-sm"
+                                  />
+                                  <div className="flex gap-2 justify-end">
+                                    <Button variant="outline" size="sm" onClick={() => setEditingNoteId(null)}>Cancel</Button>
+                                    <Button size="sm" onClick={() => saveNoteEdit(note.id)}>Save</Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="relative group">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => {
+                                      setEditContent(note.content);
+                                      setEditingNoteId(note.id);
+                                    }}
+                                  >
+                                    <Pencil className="h-3 w-3 mr-1" />Edit
+                                  </Button>
+                                  <StyledMarkdown>{note.content}</StyledMarkdown>
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         ))}

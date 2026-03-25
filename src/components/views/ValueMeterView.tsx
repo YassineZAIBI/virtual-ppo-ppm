@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
@@ -64,7 +64,11 @@ function getScoreLabel(score: number): string {
 }
 
 export function ValueMeterView() {
-  const { initiatives, settings } = useAppStore();
+  const { initiatives, settings, setInitiatives } = useAppStore();
+
+  useEffect(() => {
+    fetch('/api/initiatives').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d) && d.length > 0) setInitiatives(d); }).catch(() => {});
+  }, []);
   const [assessments, setAssessments] = useState<Record<string, ValueAssessment>>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('vppo-value-assessments');

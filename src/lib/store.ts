@@ -11,6 +11,17 @@ import {
   Persona,
   JiraProjectSchema,
   MarketResearchReport,
+  VisionPyramid,
+  NorthStarData,
+  BusinessGoalData,
+  TargetGroupData,
+  NeedData,
+  ProductMappingData,
+  CompetitorData,
+  CompetitorFeedItem,
+  UserAlertData,
+  CronJobData,
+  ChatSessionData,
 } from './types';
 import type { AgentId, AgentChatMessage, AgentPendingAction } from './types';
 
@@ -28,6 +39,7 @@ interface AppState {
 
   // Initiatives
   initiatives: Initiative[];
+  setInitiatives: (initiatives: Initiative[]) => void;
   addInitiative: (initiative: Initiative) => void;
   updateInitiative: (id: string, updates: Partial<Initiative>) => void;
   deleteInitiative: (id: string) => void;
@@ -35,6 +47,7 @@ interface AppState {
 
   // Meetings
   meetings: Meeting[];
+  setMeetings: (meetings: Meeting[]) => void;
   addMeeting: (meeting: Meeting) => void;
   updateMeeting: (id: string, updates: Partial<Meeting>) => void;
   deleteMeeting: (id: string) => void;
@@ -65,12 +78,14 @@ interface AppState {
 
   // Risks
   risks: Risk[];
+  setRisks: (risks: Risk[]) => void;
   addRisk: (risk: Risk) => void;
   updateRisk: (id: string, updates: Partial<Risk>) => void;
   deleteRisk: (id: string) => void;
 
   // Personas
   personas: Persona[];
+  setPersonas: (personas: Persona[]) => void;
   addPersona: (persona: Persona) => void;
   updatePersona: (id: string, updates: Partial<Persona>) => void;
   deletePersona: (id: string) => void;
@@ -89,6 +104,59 @@ interface AppState {
   addMarketResearch: (item: MarketResearchReport) => void;
   updateMarketResearch: (id: string, updates: Partial<MarketResearchReport>) => void;
   deleteMarketResearch: (id: string) => void;
+
+  // Vision Pillar (Azmyra 3.0)
+  visionPyramid: VisionPyramid;
+  visionLoading: boolean;
+  setVisionLoading: (loading: boolean) => void;
+  setNorthStar: (ns: NorthStarData | null) => void;
+  setBusinessGoals: (goals: BusinessGoalData[]) => void;
+  addBusinessGoal: (goal: BusinessGoalData) => void;
+  updateBusinessGoal: (id: string, updates: Partial<BusinessGoalData>) => void;
+  deleteBusinessGoal: (id: string) => void;
+  setTargetGroups: (groups: TargetGroupData[]) => void;
+  addTargetGroup: (group: TargetGroupData) => void;
+  updateTargetGroup: (id: string, updates: Partial<TargetGroupData>) => void;
+  deleteTargetGroup: (id: string) => void;
+  setNeeds: (needs: NeedData[]) => void;
+  addNeed: (need: NeedData) => void;
+  updateNeed: (id: string, updates: Partial<NeedData>) => void;
+  deleteNeed: (id: string) => void;
+  setProducts: (products: ProductMappingData[]) => void;
+  addProduct: (product: ProductMappingData) => void;
+  deleteProduct: (id: string) => void;
+  setVisionComplete: (complete: boolean) => void;
+
+  // Competitors Eye
+  competitors: CompetitorData[];
+  competitorFeed: CompetitorFeedItem[];
+  setCompetitors: (items: CompetitorData[]) => void;
+  addCompetitor: (item: CompetitorData) => void;
+  updateCompetitor: (id: string, updates: Partial<CompetitorData>) => void;
+  deleteCompetitor: (id: string) => void;
+  setCompetitorFeed: (items: CompetitorFeedItem[]) => void;
+
+  // User Alerts
+  userAlerts: UserAlertData[];
+  unreadAlertCount: number;
+  setUserAlerts: (alerts: UserAlertData[]) => void;
+  addUserAlert: (alert: UserAlertData) => void;
+  markAlertRead: (id: string) => void;
+  dismissAlert: (id: string) => void;
+  setUnreadAlertCount: (count: number) => void;
+
+  // Cron Jobs
+  cronJobs: CronJobData[];
+  setCronJobs: (jobs: CronJobData[]) => void;
+  updateCronJob: (id: string, updates: Partial<CronJobData>) => void;
+
+  // Chat Sessions
+  chatSessions: ChatSessionData[];
+  activeChatSessionId: string | null;
+  setChatSessions: (sessions: ChatSessionData[]) => void;
+  addChatSession: (session: ChatSessionData) => void;
+  setActiveChatSessionId: (id: string | null) => void;
+  updateChatSession: (id: string, updates: Partial<ChatSessionData>) => void;
 
   // UI State
   isLoading: boolean;
@@ -134,6 +202,7 @@ export const useAppStore = create<AppState>()(
 
       // Initiatives
       initiatives: [],
+      setInitiatives: (initiatives) => set({ initiatives }),
       addInitiative: (initiative) =>
         set((state) => ({ initiatives: [...state.initiatives, initiative] })),
       updateInitiative: (id, updates) =>
@@ -155,6 +224,7 @@ export const useAppStore = create<AppState>()(
 
       // Meetings
       meetings: [],
+      setMeetings: (meetings) => set({ meetings }),
       addMeeting: (meeting) =>
         set((state) => ({ meetings: [...state.meetings, meeting] })),
       updateMeeting: (id, updates) =>
@@ -213,6 +283,7 @@ export const useAppStore = create<AppState>()(
 
       // Risks
       risks: [],
+      setRisks: (risks) => set({ risks }),
       addRisk: (risk) =>
         set((state) => ({ risks: [...state.risks, risk] })),
       updateRisk: (id, updates) =>
@@ -228,6 +299,7 @@ export const useAppStore = create<AppState>()(
 
       // Personas
       personas: [],
+      setPersonas: (personas) => set({ personas }),
       addPersona: (persona) =>
         set((state) => ({ personas: [...state.personas, persona] })),
       updatePersona: (id, updates) =>
@@ -258,6 +330,139 @@ export const useAppStore = create<AppState>()(
       })),
       deleteMarketResearch: (id) => set((state) => ({
         marketResearches: state.marketResearches.filter((r) => r.id !== id),
+      })),
+
+      // Vision Pillar (Azmyra 3.0)
+      visionPyramid: {
+        northStar: null,
+        businessGoals: [],
+        targetGroups: [],
+        needs: [],
+        products: [],
+        visionComplete: false,
+      },
+      visionLoading: false,
+      setVisionLoading: (loading) => set({ visionLoading: loading }),
+      setNorthStar: (ns) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, northStar: ns },
+      })),
+      setBusinessGoals: (goals) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, businessGoals: goals },
+      })),
+      addBusinessGoal: (goal) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, businessGoals: [...state.visionPyramid.businessGoals, goal] },
+      })),
+      updateBusinessGoal: (id, updates) => set((state) => ({
+        visionPyramid: {
+          ...state.visionPyramid,
+          businessGoals: state.visionPyramid.businessGoals.map((g) => g.id === id ? { ...g, ...updates } : g),
+        },
+      })),
+      deleteBusinessGoal: (id) => set((state) => ({
+        visionPyramid: {
+          ...state.visionPyramid,
+          businessGoals: state.visionPyramid.businessGoals.filter((g) => g.id !== id),
+        },
+      })),
+      setTargetGroups: (groups) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, targetGroups: groups },
+      })),
+      addTargetGroup: (group) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, targetGroups: [...state.visionPyramid.targetGroups, group] },
+      })),
+      updateTargetGroup: (id, updates) => set((state) => ({
+        visionPyramid: {
+          ...state.visionPyramid,
+          targetGroups: state.visionPyramid.targetGroups.map((g) => g.id === id ? { ...g, ...updates } : g),
+        },
+      })),
+      deleteTargetGroup: (id) => set((state) => ({
+        visionPyramid: {
+          ...state.visionPyramid,
+          targetGroups: state.visionPyramid.targetGroups.filter((g) => g.id !== id),
+        },
+      })),
+      setNeeds: (needs) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, needs },
+      })),
+      addNeed: (need) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, needs: [...state.visionPyramid.needs, need] },
+      })),
+      updateNeed: (id, updates) => set((state) => ({
+        visionPyramid: {
+          ...state.visionPyramid,
+          needs: state.visionPyramid.needs.map((n) => n.id === id ? { ...n, ...updates } : n),
+        },
+      })),
+      deleteNeed: (id) => set((state) => ({
+        visionPyramid: {
+          ...state.visionPyramid,
+          needs: state.visionPyramid.needs.filter((n) => n.id !== id),
+        },
+      })),
+      setProducts: (products) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, products },
+      })),
+      addProduct: (product) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, products: [...state.visionPyramid.products, product] },
+      })),
+      deleteProduct: (id) => set((state) => ({
+        visionPyramid: {
+          ...state.visionPyramid,
+          products: state.visionPyramid.products.filter((p) => p.id !== id),
+        },
+      })),
+      setVisionComplete: (complete) => set((state) => ({
+        visionPyramid: { ...state.visionPyramid, visionComplete: complete },
+      })),
+
+      // Competitors Eye
+      competitors: [],
+      competitorFeed: [],
+      setCompetitors: (items) => set({ competitors: items }),
+      addCompetitor: (item) => set((state) => ({ competitors: [...state.competitors, item] })),
+      updateCompetitor: (id, updates) => set((state) => ({
+        competitors: state.competitors.map((c) => c.id === id ? { ...c, ...updates } : c),
+      })),
+      deleteCompetitor: (id) => set((state) => ({
+        competitors: state.competitors.filter((c) => c.id !== id),
+      })),
+      setCompetitorFeed: (items) => set({ competitorFeed: items }),
+
+      // User Alerts
+      userAlerts: [],
+      unreadAlertCount: 0,
+      setUserAlerts: (alerts) => set({ userAlerts: alerts }),
+      addUserAlert: (alert) => set((state) => ({
+        userAlerts: [alert, ...state.userAlerts],
+        unreadAlertCount: state.unreadAlertCount + 1,
+      })),
+      markAlertRead: (id) => set((state) => ({
+        userAlerts: state.userAlerts.map((a) => a.id === id ? { ...a, isRead: true } : a),
+        unreadAlertCount: Math.max(0, state.unreadAlertCount - 1),
+      })),
+      dismissAlert: (id) => set((state) => ({
+        userAlerts: state.userAlerts.map((a) => a.id === id ? { ...a, isDismissed: true } : a),
+      })),
+      setUnreadAlertCount: (count) => set({ unreadAlertCount: count }),
+
+      // Cron Jobs
+      cronJobs: [],
+      setCronJobs: (jobs) => set({ cronJobs: jobs }),
+      updateCronJob: (id, updates) => set((state) => ({
+        cronJobs: state.cronJobs.map((j) => j.id === id ? { ...j, ...updates } : j),
+      })),
+
+      // Chat Sessions
+      chatSessions: [],
+      activeChatSessionId: null,
+      setChatSessions: (sessions) => set({ chatSessions: sessions }),
+      addChatSession: (session) => set((state) => ({
+        chatSessions: [session, ...state.chatSessions],
+      })),
+      setActiveChatSessionId: (id) => set({ activeChatSessionId: id }),
+      updateChatSession: (id, updates) => set((state) => ({
+        chatSessions: state.chatSessions.map((s) => s.id === id ? { ...s, ...updates } : s),
       })),
 
       // UI State

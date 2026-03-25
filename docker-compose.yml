@@ -44,6 +44,56 @@ services:
       db:
         condition: service_healthy
 
+  # Python Scrapling Service (deep web scraping)
+  scraper:
+    build:
+      context: ./python-scraper
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8200:8200"
+    environment:
+      - SCRAPER_SERVICE_PORT=8200
+      - SCRAPER_HEADLESS=true
+      - SCRAPER_MAX_CONCURRENT=3
+      - SCRAPER_MAX_PAGES=5
+      - NEXTJS_URL=http://app:3000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8200/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Whisper ASR Service (speech-to-text for meeting bot)
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - ASR_MODEL=base
+      - ASR_ENGINE=faster_whisper
+    profiles:
+      - meeting-bot
+
+  # Meeting Bot Service (Zoom SDK + audio → Whisper → transcript)
+  meeting-bot:
+    build:
+      context: ./meeting-bot
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8300:8300"
+    environment:
+      - WHISPER_URL=http://whisper:9000
+      - CALLBACK_URL=http://app:3000/api/meetings/bot/transcript-chunk
+    depends_on:
+      whisper:
+        condition: service_started
+    profiles:
+      - meeting-bot
+
   # Next.js Application
   app:
     build:
@@ -59,6 +109,7 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET in .env}
       - CREDENTIALS_ENCRYPTION_KEY=${CREDENTIALS_ENCRYPTION_KEY:-}
       - PYTHON_AGENTS_URL=http://agents:8100
+      - SCRAPER_SERVICE_URL=http://scraper:8200
       # LLM Providers
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -80,10 +131,14 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-}
+      # Meeting Bot
+      - MEETING_BOT_SERVICE_URL=http://meeting-bot:8300
     depends_on:
       db:
         condition: service_healthy
       agents:
+        condition: service_started
+      scraper:
         condition: service_started
 
 volumes:

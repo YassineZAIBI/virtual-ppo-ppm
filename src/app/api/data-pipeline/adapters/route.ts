@@ -15,7 +15,7 @@ export async function GET() {
 
     const adapters = registry.list().map(a => ({
       key: a.key,
-      ...a.metadata,
+      metadata: a.metadata,
     }));
 
     return NextResponse.json(adapters);

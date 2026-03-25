@@ -2,11 +2,26 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+// Route redirects: old paths → new pillar-based paths
+const REDIRECTS: Record<string, string> = {
+  '/initiatives': '/strategy',
+  '/roadmap': '/strategy/roadmap',
+  '/discovery': '/strategy/discovery',
+  '/user-journey': '/vision/audiences',
+  '/value-meter': '/vision',
+};
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Handle route redirects for old paths
+  const redirectTo = REDIRECTS[pathname];
+  if (redirectTo) {
+    return NextResponse.redirect(new URL(redirectTo, request.url), 308);
+  }
+
   // Public paths that don't require authentication
-  const publicPaths = ['/auth/signin', '/api/auth', '/api', '/share'];
+  const publicPaths = ['/auth/signin', '/api/auth', '/api', '/share', '/onboarding'];
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
   const isRootPath = pathname === '/';
 
