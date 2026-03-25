@@ -484,6 +484,31 @@ export const useAppStore = create<AppState>()(
         pendingActions: state.pendingActions,
         jiraProjectSchema: state.jiraProjectSchema,
       }),
+      merge: (persistedState: any, currentState: any) => {
+        // Deep-merge persisted settings with defaults so new keys never come back as undefined
+        const persisted = (persistedState || {}) as Record<string, any>;
+        const mergedSettings = {
+          ...defaultSettings,
+          ...persisted.settings,
+          llm: { ...defaultSettings.llm, ...persisted.settings?.llm },
+          integrations: {
+            ...defaultSettings.integrations,
+            ...persisted.settings?.integrations,
+            jira: { ...defaultSettings.integrations.jira, ...persisted.settings?.integrations?.jira },
+            slack: { ...defaultSettings.integrations.slack, ...persisted.settings?.integrations?.slack },
+            confluence: { ...defaultSettings.integrations.confluence, ...persisted.settings?.integrations?.confluence },
+            email: { ...defaultSettings.integrations.email, ...persisted.settings?.integrations?.email },
+            zoom: { ...defaultSettings.integrations.zoom, ...persisted.settings?.integrations?.zoom },
+            teams: { ...defaultSettings.integrations.teams, ...persisted.settings?.integrations?.teams },
+          },
+          preferences: { ...defaultSettings.preferences, ...persisted.settings?.preferences },
+        };
+        return {
+          ...currentState,
+          ...persisted,
+          settings: mergedSettings,
+        };
+      },
     }
   )
 );

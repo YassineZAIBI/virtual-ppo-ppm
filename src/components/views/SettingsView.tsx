@@ -343,7 +343,7 @@ export function SettingsView() {
                   <Activity className="h-5 w-5" />Jira
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  {settings.integrations.jira.enabled && (
+                  {settings.integrations.jira?.enabled && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -359,7 +359,7 @@ export function SettingsView() {
                     </Button>
                   )}
                   <Switch
-                    checked={settings.integrations.jira.enabled}
+                    checked={settings.integrations.jira?.enabled}
                     onCheckedChange={(checked) => updateIntegrations({
                       jira: { ...settings.integrations.jira, enabled: checked }
                     })}
@@ -367,12 +367,12 @@ export function SettingsView() {
                 </div>
               </div>
             </CardHeader>
-            {settings.integrations.jira.enabled && (
+            {settings.integrations.jira?.enabled && (
               <CardContent className="space-y-3">
                 <div>
                   <Label className="text-xs">Jira URL</Label>
                   <Input
-                    value={settings.integrations.jira.url}
+                    value={settings.integrations.jira?.url}
                     onChange={(e) => updateIntegrations({ jira: { ...settings.integrations.jira, url: e.target.value } })}
                     placeholder="https://your-domain.atlassian.net"
                   />
@@ -380,7 +380,7 @@ export function SettingsView() {
                 <div>
                   <Label className="text-xs">Email</Label>
                   <Input
-                    value={settings.integrations.jira.email}
+                    value={settings.integrations.jira?.email}
                     onChange={(e) => updateIntegrations({ jira: { ...settings.integrations.jira, email: e.target.value } })}
                     placeholder="you@company.com"
                   />
@@ -389,7 +389,7 @@ export function SettingsView() {
                   <Label className="text-xs">API Token</Label>
                   <Input
                     type="password"
-                    value={settings.integrations.jira.apiToken}
+                    value={settings.integrations.jira?.apiToken}
                     onChange={(e) => updateIntegrations({ jira: { ...settings.integrations.jira, apiToken: e.target.value } })}
                     placeholder="Your Jira API token"
                   />
@@ -400,7 +400,7 @@ export function SettingsView() {
                   <div>
                     <Label className="text-xs">Project</Label>
                     <Select
-                      value={settings.integrations.jira.projectKey || ''}
+                      value={settings.integrations.jira?.projectKey || ''}
                       onValueChange={async (val) => {
                         updateIntegrations({ jira: { ...settings.integrations.jira, projectKey: val } });
                         // Auto-discover project schema
@@ -409,9 +409,9 @@ export function SettingsView() {
                           const params = new URLSearchParams({
                             action: 'schema',
                             projectKey: val,
-                            url: settings.integrations.jira.url,
-                            email: settings.integrations.jira.email,
-                            apiToken: settings.integrations.jira.apiToken,
+                            url: settings.integrations.jira?.url,
+                            email: settings.integrations.jira?.email,
+                            apiToken: settings.integrations.jira?.apiToken,
                           });
                           const resp = await fetch(`/api/integrations/jira?${params}`);
                           if (resp.ok) {
@@ -442,7 +442,7 @@ export function SettingsView() {
                 )}
 
                 {/* Project Hierarchy Display */}
-                {jiraProjectSchema && settings.integrations.jira.projectKey && (
+                {jiraProjectSchema && settings.integrations.jira?.projectKey && (
                   <div className="pt-2 border-t">
                     <button
                       onClick={() => setShowHierarchy(!showHierarchy)}
@@ -475,7 +475,7 @@ export function SettingsView() {
                 )}
 
                 {/* Sync Button */}
-                {settings.integrations.jira.projectKey && (
+                {settings.integrations.jira?.projectKey && (
                   <div className="pt-2 border-t space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
@@ -498,7 +498,7 @@ export function SettingsView() {
                       </Button>
                     </div>
                     <p className="text-xs text-slate-500">
-                      Imports Initiatives, Epics &amp; Features from <strong>{settings.integrations.jira.projectKey}</strong>. Stories, bugs and tasks are excluded.
+                      Imports Initiatives, Epics &amp; Features from <strong>{settings.integrations.jira?.projectKey}</strong>. Stories, bugs and tasks are excluded.
                     </p>
                   </div>
                 )}
@@ -514,7 +514,7 @@ export function SettingsView() {
                   <Video className="h-5 w-5" />Zoom
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  {settings.integrations.zoom.enabled && (
+                  {settings.integrations.zoom?.enabled && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -530,29 +530,29 @@ export function SettingsView() {
                     </Button>
                   )}
                   <Switch
-                    checked={settings.integrations.zoom.enabled}
+                    checked={settings.integrations.zoom?.enabled}
                     onCheckedChange={(checked) => updateIntegrations({
-                      zoom: { ...settings.integrations.zoom, enabled: checked }
+                      zoom: { ...(settings.integrations.zoom || {}), enabled: checked }
                     })}
                   />
                 </div>
               </div>
             </CardHeader>
-            {settings.integrations.zoom.enabled && (
+            {settings.integrations.zoom?.enabled && (
               <CardContent className="space-y-3">
                 <div>
                   <Label className="text-xs">Account ID</Label>
                   <Input
-                    value={settings.integrations.zoom.accountId}
-                    onChange={(e) => updateIntegrations({ zoom: { ...settings.integrations.zoom, accountId: e.target.value } })}
+                    value={settings.integrations.zoom?.accountId}
+                    onChange={(e) => updateIntegrations({ zoom: { ...(settings.integrations.zoom || {}), accountId: e.target.value } })}
                     placeholder="Your Zoom Account ID"
                   />
                 </div>
                 <div>
                   <Label className="text-xs">Client ID</Label>
                   <Input
-                    value={settings.integrations.zoom.clientId}
-                    onChange={(e) => updateIntegrations({ zoom: { ...settings.integrations.zoom, clientId: e.target.value } })}
+                    value={settings.integrations.zoom?.clientId}
+                    onChange={(e) => updateIntegrations({ zoom: { ...(settings.integrations.zoom || {}), clientId: e.target.value } })}
                     placeholder="Your Zoom Client ID"
                   />
                 </div>
@@ -560,8 +560,8 @@ export function SettingsView() {
                   <Label className="text-xs">Client Secret</Label>
                   <Input
                     type="password"
-                    value={settings.integrations.zoom.clientSecret}
-                    onChange={(e) => updateIntegrations({ zoom: { ...settings.integrations.zoom, clientSecret: e.target.value } })}
+                    value={settings.integrations.zoom?.clientSecret}
+                    onChange={(e) => updateIntegrations({ zoom: { ...(settings.integrations.zoom || {}), clientSecret: e.target.value } })}
                     placeholder="Your Zoom Client Secret"
                   />
                 </div>
@@ -580,7 +580,7 @@ export function SettingsView() {
                   <Shield className="h-5 w-5" />Microsoft Teams
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  {settings.integrations.teams.enabled && (
+                  {settings.integrations.teams?.enabled && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -596,15 +596,15 @@ export function SettingsView() {
                     </Button>
                   )}
                   <Switch
-                    checked={settings.integrations.teams.enabled}
+                    checked={settings.integrations.teams?.enabled}
                     onCheckedChange={(checked) => updateIntegrations({
-                      teams: { ...settings.integrations.teams, enabled: checked }
+                      teams: { ...(settings.integrations.teams || {}), enabled: checked }
                     })}
                   />
                 </div>
               </div>
             </CardHeader>
-            {settings.integrations.teams.enabled && (
+            {settings.integrations.teams?.enabled && (
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
                   Teams credentials are configured on the server. No additional setup needed — just paste a Teams meeting link and click Join.
@@ -621,7 +621,7 @@ export function SettingsView() {
                     <integration.icon className="h-5 w-5" />{integration.title}
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    {(settings.integrations as any)[integration.key].enabled && (
+                    {(settings.integrations as any)?.[integration.key]?.enabled && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -637,7 +637,7 @@ export function SettingsView() {
                       </Button>
                     )}
                     <Switch
-                      checked={(settings.integrations as any)[integration.key].enabled}
+                      checked={(settings.integrations as any)?.[integration.key]?.enabled}
                       onCheckedChange={(checked) => updateIntegrations({
                         [integration.key]: { ...(settings.integrations as any)[integration.key], enabled: checked }
                       })}
@@ -645,7 +645,7 @@ export function SettingsView() {
                   </div>
                 </div>
               </CardHeader>
-              {(settings.integrations as any)[integration.key].enabled && (
+              {(settings.integrations as any)?.[integration.key]?.enabled && (
                 <CardContent className="space-y-3">
                   {integration.fields.map((field) => (
                     <div key={field.key}>
