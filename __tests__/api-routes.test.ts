@@ -493,16 +493,6 @@ describe('GET /api/data-pipeline/adapters', () => {
   });
 
   it('returns the adapter list', async () => {
-    const adapters = [
-      { key: 'google-trends', metadata: { name: 'Google Trends', description: 'Fetch trends' } },
-      { key: 'reddit', metadata: { name: 'Reddit', description: 'Fetch reddit posts' } },
-    ];
-    (registry.list as any).mockReturnValue(
-      adapters.map((a) => ({ key: a.key, ...a, metadata: a.metadata })),
-    );
-
-    // The route maps: registry.list().map(a => ({ key: a.key, ...a.metadata }))
-    // So registry.list() should return objects with { key, metadata }
     (registry.list as any).mockReturnValue([
       { key: 'google-trends', metadata: { name: 'Google Trends', description: 'Fetch trends' } },
       { key: 'reddit', metadata: { name: 'Reddit', description: 'Fetch reddit posts' } },
@@ -513,8 +503,8 @@ describe('GET /api/data-pipeline/adapters', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toEqual([
-      { key: 'google-trends', name: 'Google Trends', description: 'Fetch trends' },
-      { key: 'reddit', name: 'Reddit', description: 'Fetch reddit posts' },
+      { key: 'google-trends', metadata: { name: 'Google Trends', description: 'Fetch trends' } },
+      { key: 'reddit', metadata: { name: 'Reddit', description: 'Fetch reddit posts' } },
     ]);
   });
 });

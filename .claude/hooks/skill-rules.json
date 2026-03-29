@@ -1,0 +1,115 @@
+{
+  "api-routes": {
+    "description": "Next.js App Router API route patterns for Azmyra",
+    "priority": 8,
+    "triggers": {
+      "keywords": ["api route", "endpoint", "handler", "getServerSession", "nextresponse", "401", "unauthorized"],
+      "keywordPatterns": ["\\bapi\\b.*\\broute\\b", "\\bPOST|GET|PUT|DELETE\\b.*\\bhandler\\b"],
+      "pathPatterns": ["src/app/api/**/*.ts"],
+      "directoryMap": { "src/app/api": "api-routes" },
+      "intentPatterns": [
+        "(?:create|add|build).*(?:api|endpoint|route)",
+        "(?:fix|debug).*(?:api|endpoint|500|401|403)"
+      ]
+    }
+  },
+  "data-adapters": {
+    "description": "Data pipeline adapter pattern for the 33 market intelligence sources",
+    "priority": 9,
+    "triggers": {
+      "keywords": ["adapter", "data source", "market research", "scraping", "pipeline", "registry", "duckduckgo", "reddit"],
+      "keywordPatterns": ["\\bDataAdapter\\b", "\\bregistry\\.register\\b", "\\bdata.pipeline\\b"],
+      "pathPatterns": ["src/lib/services/data-pipeline/**"],
+      "directoryMap": { "data-pipeline": "data-adapters" },
+      "intentPatterns": [
+        "(?:add|create|new).*(?:adapter|source|connector)",
+        "(?:market|intelligence|research).*(?:data|source)"
+      ]
+    }
+  },
+  "prisma-patterns": {
+    "description": "Prisma ORM patterns, schema changes, JSON string fields, migrations for Azmyra's 36 models",
+    "priority": 9,
+    "triggers": {
+      "keywords": ["prisma", "schema", "migration", "db push", "model", "relation", "database", "query"],
+      "keywordPatterns": ["\\bdb\\.\\w+\\.(?:findMany|create|update|delete|upsert)\\b", "\\bschema\\.prisma\\b"],
+      "pathPatterns": ["prisma/**", "src/lib/db.ts"],
+      "directoryMap": { "prisma/": "prisma-patterns" },
+      "intentPatterns": [
+        "(?:add|create|modify).*(?:model|table|field|column)",
+        "(?:fix|debug).*(?:prisma|database|query|JSON.parse)"
+      ]
+    },
+    "excludePatterns": []
+  },
+  "ai-agents": {
+    "description": "Python FastAPI agent patterns, autonomy levels, MCP tool execution, pending actions for Azmyra's 6 agents",
+    "priority": 8,
+    "triggers": {
+      "keywords": ["agent", "fastapi", "autonomy", "strategy agent", "risk agent", "discovery agent", "communications agent", "thinker", "advisor", "mcp tool", "pending action"],
+      "keywordPatterns": ["\\bagent_service\\b", "\\bAGENT_SERVICE_URL\\b", "\\bautonomy.level\\b"],
+      "pathPatterns": ["meeting-bot/**", "src/app/api/agents/**"],
+      "directoryMap": { "meeting-bot": "ai-agents" },
+      "intentPatterns": [
+        "(?:build|add|fix).*(?:agent|autonomy|tool.execution)",
+        "(?:agent).*(?:strategy|risk|discovery|communication)"
+      ]
+    }
+  },
+  "ui-components": {
+    "description": "shadcn/ui + Radix component patterns, Tailwind CSS 4, dark mode, loading/error states for Azmyra",
+    "priority": 7,
+    "triggers": {
+      "keywords": ["component", "dialog", "modal", "button", "form", "table", "card", "shadcn", "radix", "tailwind", "loading state", "skeleton"],
+      "keywordPatterns": ["\\buse client\\b", "\\bDialogContent\\b", "\\bSheet|Drawer|Popover\\b"],
+      "pathPatterns": ["src/components/**/*.tsx"],
+      "directoryMap": { "src/components": "ui-components" },
+      "intentPatterns": [
+        "(?:build|create|add).*(?:UI|component|modal|dialog|view)",
+        "(?:loading|error|empty).*(?:state|screen|component)"
+      ]
+    },
+    "excludePatterns": ["api", "backend", "prisma"]
+  },
+  "testing-patterns": {
+    "description": "Vitest + React Testing Library patterns for Azmyra — unit, integration, mocking Prisma and NextAuth",
+    "priority": 7,
+    "triggers": {
+      "keywords": ["test", "vitest", "jest", "spec", "mock", "unit test", "integration test", "coverage"],
+      "keywordPatterns": ["\\btest(?:s|ing)?\\b", "\\bvi\\.mock\\b", "\\brender\\b.*\\bscreen\\b"],
+      "pathPatterns": ["**/*.test.ts", "**/*.test.tsx", "__tests__/**"],
+      "intentPatterns": [
+        "(?:write|add|create|fix).*(?:test|spec|mock)",
+        "(?:how|should).*(?:test|mock).*(?:prisma|nextauth|api)"
+      ]
+    }
+  },
+  "security": {
+    "description": "Security patterns for Azmyra — AES-256-GCM encryption, credential handling, auth guards, Turnstile",
+    "priority": 10,
+    "triggers": {
+      "keywords": ["encrypt", "decrypt", "credentials", "api key", "secret", "token", "password", "turnstile", "captcha", "auth guard"],
+      "keywordPatterns": ["\\bencryption\\.ts\\b", "\\bCREDENTIALS_ENCRYPTION_KEY\\b", "\\bAES.256\\b"],
+      "pathPatterns": ["src/lib/encryption.ts", "src/lib/auth.ts"],
+      "directoryMap": {},
+      "intentPatterns": [
+        "(?:store|save|handle).*(?:credential|api.key|secret|token|password)",
+        "(?:secure|encrypt|protect).*(?:data|field|value)"
+      ]
+    }
+  },
+  "debugging": {
+    "description": "Systematic debugging methodology for Azmyra — runtime errors, type errors, Prisma JSON crashes, agent failures",
+    "priority": 6,
+    "triggers": {
+      "keywords": ["bug", "error", "crash", "fix", "broken", "not working", "undefined", "null", "500", "failed"],
+      "keywordPatterns": ["\\berror\\b", "\\bundefined.*is not\\b", "\\bcannot read.*property\\b", "\\btype error\\b"],
+      "pathPatterns": [],
+      "intentPatterns": [
+        "(?:fix|debug|resolve|investigate).*(?:bug|error|crash|issue)",
+        "(?:why|how).*(?:failing|broken|not working|throwing)"
+      ]
+    },
+    "excludePatterns": ["test", "spec"]
+  }
+}

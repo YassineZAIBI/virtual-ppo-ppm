@@ -1,0 +1,55 @@
+name: Scheduled — Monthly Docs Sync
+
+on:
+  schedule:
+    - cron: '0 10 1 * *'  # 1st of every month at 10am UTC
+  workflow_dispatch:
+
+jobs:
+  docs-sync:
+    name: Sync Docs with Codebase
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Docs Sync
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-6
+          prompt: |
+            You are performing a monthly documentation sync for Azmyra.
+            
+            1. Get recent changes:
+               git log --oneline --since="30 days ago"
+            
+            2. Read current CLAUDE.md
+            
+            3. Check if CLAUDE.md is still accurate:
+               - Are the file counts still correct? (API routes, models, adapters, views)
+               - Are any tech stack versions outdated? Check package.json
+               - Are any of the "Known Fragile Areas" now resolved?
+               - Are there new patterns established in the codebase not yet documented?
+               - Are any "Common Mistakes" now fixed by tooling and no longer relevant?
+            
+            4. Read .claude/skills/*/SKILL.md files
+               - Are the code examples still accurate?
+               - Are there new patterns to document?
+            
+            5. If updates are needed:
+               - Update CLAUDE.md with accurate counts and information
+               - Update relevant SKILL.md files
+               - Commit: "docs: monthly sync — [month year]"
+               - Open a PR for review (do not merge directly)
+            
+            6. If everything is accurate:
+               - Comment: "Docs sync — no changes needed. All documentation is current."
+            
+            Be conservative: only update what is factually incorrect or significantly outdated.

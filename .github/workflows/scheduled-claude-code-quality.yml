@@ -1,0 +1,63 @@
+name: Scheduled — Weekly Code Quality
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9am UTC
+  workflow_dispatch:       # Manual trigger
+
+jobs:
+  quality-review:
+    name: Weekly Quality Sweep
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Claude Quality Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-6
+          prompt: |
+            You are running a weekly code quality review for Azmyra.
+            
+            Read CLAUDE.md for project context and constraints.
+            
+            1. Run: npx tsc --noEmit 2>&1 | head -40
+               Report all TypeScript errors found.
+            
+            2. Scan these directories for the top 3 quality issues each:
+               - src/app/api/ (API routes)
+               - src/components/views/ (view components)  
+               - src/lib/services/ (services)
+            
+            Look specifically for:
+            - Prisma JSON string fields used without JSON.parse()
+            - Missing auth guards in API routes
+            - Relative imports (should all use @/ alias)
+            - Missing loading/error/empty states in views
+            - Direct PrismaClient usage instead of db singleton
+            - Any file over 400 lines that should be refactored
+            
+            3. For issues that are safe to auto-fix (relative imports, missing JSON.parse):
+               Fix them directly and commit with message: "chore: weekly quality sweep fixes"
+            
+            4. For issues that need human review:
+               Create a GitHub issue titled "Weekly Quality Report — [date]" listing them.
+            
+            Keep fixes minimal and focused. Do not refactor working code.

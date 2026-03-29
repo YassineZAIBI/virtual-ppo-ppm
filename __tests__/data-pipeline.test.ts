@@ -438,6 +438,8 @@ describe('fetchFromSources', () => {
 
     const results = await fetchFromSources('test query', ['pipe-a1', 'pipe-a2'], {
       useCache: false,
+      rawQuery: true,
+      relevanceThreshold: 0,
     });
 
     expect(results).toHaveLength(2);
@@ -462,6 +464,8 @@ describe('fetchFromSources', () => {
 
     const results = await fetchFromSources('test', ['pipe-good', 'pipe-bad'], {
       useCache: false,
+      rawQuery: true,
+      relevanceThreshold: 0,
     });
 
     // Good adapter's results should still be present
@@ -516,6 +520,8 @@ describe('fetchFromSources', () => {
 
     const results = await fetchFromSources('query', ['pipe-cached'], {
       useCache: true,
+      rawQuery: true,
+      relevanceThreshold: 0,
     });
 
     // Should return cached data, not call fetch
@@ -536,6 +542,8 @@ describe('fetchFromSources', () => {
 
     const results = await fetchFromSources('query', ['pipe-nocache'], {
       useCache: false,
+      rawQuery: true,
+      relevanceThreshold: 0,
     });
 
     expect(results).toHaveLength(1);
@@ -611,7 +619,7 @@ describe('fetchFromSources', () => {
     });
     registry.register(adapter);
 
-    const results = await fetchFromSources('test', ['pipe-sort-hint'], { useCache: false });
+    const results = await fetchFromSources('test', ['pipe-sort-hint'], { useCache: false, rawQuery: true, relevanceThreshold: 0 });
 
     // r2 (0.9) should come before r1 (0.3) despite being older
     expect(results[0].title).toBe('High');
@@ -630,7 +638,7 @@ describe('fetchFromSources', () => {
     });
     registry.register(adapter);
 
-    const results = await fetchFromSources('test', ['pipe-sort-date'], { useCache: false });
+    const results = await fetchFromSources('test', ['pipe-sort-date'], { useCache: false, rawQuery: true, relevanceThreshold: 0 });
 
     // Newer fetchedAt should come first
     expect(results[0].title).toBe('New');

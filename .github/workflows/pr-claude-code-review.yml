@@ -1,0 +1,53 @@
+name: PR — Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  review:
+    name: Claude Code Review
+    if: |
+      github.event_name == 'pull_request' ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        contains(github.event.comment.body, '@claude')
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-6
+          prompt: |
+            You are reviewing a pull request for Azmyra — an AI-powered Product Management SaaS.
+            
+            Read .claude/agents/code-reviewer.md for the full review checklist.
+            Read CLAUDE.md for project context and constraints.
+            
+            Run: git diff origin/main...HEAD
+            
+            Apply the checklist from code-reviewer.md to every changed file.
+            
+            Pay special attention to:
+            - Prisma JSON string fields used without JSON.parse()
+            - LLM config stored in DB (must be client-side only)
+            - Missing auth guards in API routes
+            - Relative imports instead of @/ alias
+            - Direct PrismaClient use instead of db from @/lib/db
+            
+            Post a structured review comment with CRITICAL / WARNING / SUGGESTION items.
+            End with a VERDICT: ✅ Approve / ⚠️ Approve with fixes / ❌ Needs rework

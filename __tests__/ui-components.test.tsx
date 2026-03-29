@@ -175,6 +175,15 @@ vi.mock('lucide-react', () => {
     Sparkles: icon,
     Trash2: icon,
     RefreshCw: icon,
+    Star: icon,
+    Newspaper: icon,
+    Swords: icon,
+    Briefcase: icon,
+    TrendingUp: icon,
+    MessageCircleHeart: icon,
+    Cpu: icon,
+    Brain: icon,
+    LayoutTemplate: icon,
   };
 });
 
@@ -809,11 +818,11 @@ describe('AdapterSelector', () => {
     render(<AdapterSelector selectedKeys={[]} onChange={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Search')).toBeTruthy();
+      expect(screen.getByText('Search & Web')).toBeTruthy();
     });
 
-    expect(screen.getByText('Social')).toBeTruthy();
-    expect(screen.getByText('Research')).toBeTruthy();
+    expect(screen.getByText('Social & Community')).toBeTruthy();
+    expect(screen.getByText('Research & Academic')).toBeTruthy();
   });
 
   it('shows category count badges', async () => {
@@ -823,9 +832,9 @@ describe('AdapterSelector', () => {
       expect(screen.getByText('Google Search')).toBeTruthy();
     });
 
-    // The "Search" category has 2 adapters
+    // The "Search" category has 2 adapters, format is "selected/total"
     const badges = screen.getAllByTestId('badge');
-    const countBadge = badges.find((b) => b.textContent === '2');
+    const countBadge = badges.find((b) => b.textContent === '0/2');
     expect(countBadge).toBeTruthy();
   });
 
@@ -877,23 +886,17 @@ describe('AdapterSelector', () => {
     expect(onChange).toHaveBeenCalledWith(['search_bing']);
   });
 
-  it('falls back to defaults when fetch fails', async () => {
+  it('shows empty state when fetch fails', async () => {
     vi.mocked(globalThis.fetch).mockImplementation(async () =>
       new Response('Internal Server Error', { status: 500 })
     );
 
     render(<AdapterSelector selectedKeys={[]} onChange={vi.fn()} />);
 
-    // Should show the fallback adapters
+    // Should show 0 selected / 0 total after error
     await waitFor(() => {
-      expect(screen.getByText('Google Search')).toBeTruthy();
+      expect(screen.getByText(/0 \/ 0 selected/)).toBeTruthy();
     });
-
-    // Should also have other defaults
-    expect(screen.getByText('Bing Search')).toBeTruthy();
-    expect(screen.getByText('Reddit')).toBeTruthy();
-    expect(screen.getByText('arXiv')).toBeTruthy();
-    expect(screen.getByText('SEC EDGAR')).toBeTruthy();
   });
 
   it('shows toast error when fetch fails', async () => {

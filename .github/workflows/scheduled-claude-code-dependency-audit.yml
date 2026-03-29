@@ -1,0 +1,61 @@
+name: Scheduled — Dependency Audit
+
+on:
+  schedule:
+    - cron: '0 9 1,15 * *'  # 1st and 15th of every month
+  workflow_dispatch:
+
+jobs:
+  dependency-audit:
+    name: Biweekly Dependency Audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Security audit
+        run: npm audit --json > audit-report.json 2>/dev/null || true
+
+      - name: Claude Dependency Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-6
+          prompt: |
+            You are running a biweekly dependency audit for Azmyra (Next.js 16 + React 19 + TypeScript 5).
+            
+            1. Read the security audit:
+               cat audit-report.json
+            
+            2. Check for outdated packages:
+               npm outdated
+            
+            3. Assess each vulnerability:
+               - HIGH/CRITICAL severity → create a GitHub issue immediately
+               - LOW/MODERATE → note for next sprint
+            
+            4. For safe patch updates (patch version, no breaking changes):
+               - Update them: npm update [package]
+               - Run: npm run build (must succeed)
+               - Run: npx tsc --noEmit (must have 0 errors)
+               - If both pass: commit "chore: patch dependency updates [date]" and open a PR
+            
+            5. For minor/major updates to critical packages (Next.js, React, Prisma, NextAuth):
+               - Do NOT update automatically
+               - Create a GitHub issue: "Dependency Update Available: [package] [current] → [latest]"
+               - Include changelog highlights and any breaking changes
+            
+            Keep the PR focused on safe patches only. Never auto-update major versions.
