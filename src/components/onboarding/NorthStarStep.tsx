@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Loader2, Edit3, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppStore } from '@/lib/store';
 
 interface NorthStarStepProps {
   identityData: {
@@ -30,29 +31,54 @@ export function NorthStarStep({
 }: NorthStarStepProps) {
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState(false);
+  const { settings } = useAppStore();
 
   const handleExtract = async () => {
+    if (!settings?.llm?.apiKey) {
+      toast.error('Please configure your LLM provider in Settings first.');
+      return;
+    }
+
     setExtracting(true);
     try {
+      // Build sources array from identity data
+      const sources: { type: string; content: string }[] = [];
+      const textParts: string[] = [];
+      if (identityData.companyName) textParts.push(`Company: ${identityData.companyName}`);
+      if (identityData.industry) textParts.push(`Industry: ${identityData.industry}`);
+      if (identityData.description) textParts.push(`Description: ${identityData.description}`);
+      if (textParts.length > 0) {
+        sources.push({ type: 'text', content: textParts.join('\n') });
+      }
+      if (identityData.website?.trim()) {
+        sources.push({ type: 'url', content: identityData.website.trim() });
+      }
+
       const res = await fetch('/api/vision/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyName: identityData.companyName,
-          industry: identityData.industry,
-          website: identityData.website,
-          description: identityData.description,
+          sources,
+          llmConfig: {
+            provider: settings.llm.provider,
+            apiKey: settings.llm.apiKey,
+            model: settings.llm.model,
+            apiEndpoint: settings.llm.apiEndpoint,
+          },
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        if (data.northStar) onNorthStarChange(data.northStar);
-        if (data.mission) onMissionChange(data.mission);
+        const ns = data.proposed?.northStar?.statement;
+        const ms = data.proposed?.mission;
+        if (ns) onNorthStarChange(ns);
+        if (ms) onMissionChange(ms);
         setExtracted(true);
         toast.success('Vision extracted! Review and refine below.');
       } else {
-        toast.error('Extraction failed — please fill in manually.');
+        const err = await res.json().catch(() => null);
+        toast.error(err?.error || 'Extraction failed — please fill in manually.');
       }
     } catch {
       toast.error('Failed to extract vision. Please enter manually.');

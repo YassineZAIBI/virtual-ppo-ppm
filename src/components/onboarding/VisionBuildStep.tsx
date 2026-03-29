@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sparkles, Loader2, Plus, X, Target, Users, Package, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppStore } from '@/lib/store';
 
 interface VisionBuildStepProps {
   identityData: {
@@ -38,31 +39,55 @@ export function VisionBuildStep({
   const [newGoal, setNewGoal] = useState('');
   const [newGroup, setNewGroup] = useState('');
   const [newProduct, setNewProduct] = useState('');
+  const { settings } = useAppStore();
 
   const handleGenerate = async () => {
+    if (!settings?.llm?.apiKey) {
+      toast.error('Please configure your LLM provider in Settings first.');
+      return;
+    }
+
     setGenerating(true);
     try {
+      // Build sources from identity data + North Star
+      const textParts: string[] = [];
+      if (identityData.companyName) textParts.push(`Company: ${identityData.companyName}`);
+      if (identityData.industry) textParts.push(`Industry: ${identityData.industry}`);
+      if (identityData.description) textParts.push(`Description: ${identityData.description}`);
+      if (northStar) textParts.push(`North Star: ${northStar}`);
+
+      const sources = [{ type: 'text', content: textParts.join('\n') }];
+
       const res = await fetch('/api/vision/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyName: identityData.companyName,
-          industry: identityData.industry,
-          description: identityData.description,
-          northStar,
-          extractType: 'pyramid',
+          sources,
+          llmConfig: {
+            provider: settings.llm.provider,
+            apiKey: settings.llm.apiKey,
+            model: settings.llm.model,
+            apiEndpoint: settings.llm.apiEndpoint,
+          },
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        if (data.businessGoals?.length) onBusinessGoalsChange(data.businessGoals);
-        if (data.targetGroups?.length) onTargetGroupsChange(data.targetGroups);
-        if (data.products?.length) onProductsChange(data.products);
+        const proposed = data.proposed;
+        // Map structured response to simple string arrays for onboarding
+        if (proposed?.businessGoals?.length) {
+          onBusinessGoalsChange(proposed.businessGoals.map((g: { title: string }) => g.title));
+        }
+        if (proposed?.targetGroups?.length) {
+          onTargetGroupsChange(proposed.targetGroups.map((g: { name: string }) => g.name));
+        }
+        // Products aren't in the extract response — leave empty for user to fill
         setGenerated(true);
         toast.success('Vision pyramid draft generated!');
       } else {
-        toast.error('Generation failed — add items manually.');
+        const err = await res.json().catch(() => null);
+        toast.error(err?.error || 'Generation failed — add items manually.');
       }
     } catch {
       toast.error('Failed to generate pyramid. Add items manually.');

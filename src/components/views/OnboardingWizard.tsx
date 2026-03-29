@@ -192,8 +192,12 @@ export function OnboardingWizard() {
         });
       }
 
-      // Mark onboarding complete (sets visionComplete = true)
-      await fetch('/api/onboarding/complete', { method: 'POST' });
+      // Mark onboarding complete + serialize company brain
+      await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identityData }),
+      });
       await update();
       toast.success('Your Azmyra is ready! Welcome.');
       window.location.href = '/vision';

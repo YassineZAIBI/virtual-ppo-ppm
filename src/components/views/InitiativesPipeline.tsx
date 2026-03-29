@@ -123,18 +123,57 @@ export function InitiativesPipeline() {
     toast.success('Idea added successfully!');
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingInitiative) return;
-    updateInitiative(editingInitiative.id, editingInitiative);
-    setEditingInitiative(null);
-    toast.success('Initiative updated!');
+    try {
+      const res = await fetch(`/api/initiatives/${editingInitiative.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingInitiative),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      updateInitiative(editingInitiative.id, editingInitiative);
+      setEditingInitiative(null);
+      toast.success('Initiative updated!');
+    } catch {
+      toast.error('Failed to save changes. Please try again.');
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!editingInitiative) return;
-    deleteInitiative(editingInitiative.id);
-    setEditingInitiative(null);
-    toast.success('Initiative deleted');
+    try {
+      const res = await fetch(`/api/initiatives/${editingInitiative.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete');
+      deleteInitiative(editingInitiative.id);
+      setEditingInitiative(null);
+      toast.success('Initiative deleted');
+    } catch {
+      toast.error('Failed to delete initiative.');
+    }
+  };
+
+  // Persist status change to DB, then update Zustand
+  const handleMoveInitiative = async (id: string, newStatus: string) => {
+    // Optimistic update
+    moveInitiative(id, newStatus as Initiative['status']);
+    try {
+      const res = await fetch(`/api/initiatives/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+    } catch {
+      // Revert on failure — refetch from DB
+      toast.error('Failed to update status. Reverting.');
+      fetch('/api/initiatives')
+        .then((res) => res.ok ? res.json() : Promise.reject())
+        .then((data) => { if (Array.isArray(data)) setInitiatives(data); })
+        .catch(() => { toast.error('Could not reload initiatives. Please refresh the page.'); });
+    }
   };
 
   const handleOpenDiscovery = (initiativeId: string, e: React.MouseEvent) => {
@@ -715,7 +754,7 @@ export function InitiativesPipeline() {
                             <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={(e) => {
                               e.stopPropagation();
                               const nextStage = stages[stages.findIndex((s) => s.id === stage.id) + 1];
-                              if (nextStage) moveInitiative(initiative.id, nextStage.id as any);
+                              if (nextStage) handleMoveInitiative(initiative.id, nextStage.id);
                             }}>
                               <ArrowRight className="h-3 w-3" />
                             </Button>

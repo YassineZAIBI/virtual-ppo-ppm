@@ -8,14 +8,17 @@ import { CompetitorCard, type Competitor } from '@/components/competitors/Compet
 import { CompetitorFeedTimeline } from '@/components/competitors/CompetitorFeedTimeline';
 import { CompetitorRadarView } from '@/components/competitors/CompetitorRadarView';
 import { CompetitorAddDialog } from '@/components/competitors/CompetitorAddDialog';
-import { Eye, Plus, Radar, Loader2, Users } from 'lucide-react';
+import { Eye, Plus, Radar, Loader2, Users, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppStore } from '@/lib/store';
 
 export function CompetitorsEyeView() {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const { settings } = useAppStore();
 
   const fetchCompetitors = useCallback(async () => {
     setLoading(true);
@@ -87,6 +90,46 @@ export function CompetitorsEyeView() {
     }
   };
 
+  const handleSuggestCompetitors = async () => {
+    if (!settings?.llm?.apiKey) {
+      toast.error('Please configure your LLM provider in Settings first.');
+      return;
+    }
+
+    setSuggesting(true);
+    try {
+      const res = await fetch('/api/competitors/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          llmConfig: {
+            provider: settings.llm.provider,
+            apiKey: settings.llm.apiKey,
+            model: settings.llm.model,
+            apiEndpoint: settings.llm.apiEndpoint,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Suggestion failed');
+      }
+
+      const data = await res.json();
+      if (data.added > 0) {
+        toast.success(`Added ${data.added} suggested competitor(s)!`);
+        await fetchCompetitors();
+      } else {
+        toast.info('No new competitors to suggest. Try adding more context to your North Star.');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to suggest competitors.');
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -112,6 +155,18 @@ export function CompetitorsEyeView() {
                 <Radar className="h-3.5 w-3.5 mr-1.5" />
                 Scan All
               </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSuggestCompetitors}
+            disabled={suggesting}
+          >
+            {suggesting ? (
+              <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Suggesting...</>
+            ) : (
+              <><Sparkles className="h-3.5 w-3.5 mr-1.5" />Suggest Competitors</>
             )}
           </Button>
           <Button size="sm" onClick={() => setShowAddDialog(true)}>
@@ -144,10 +199,23 @@ export function CompetitorsEyeView() {
                 Start by adding your key competitors to monitor their moves, product updates,
                 and strategic shifts.
               </p>
-              <Button className="mt-4" onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Your First Competitor
-              </Button>
+              <div className="flex items-center gap-2 mt-4">
+                <Button
+                  variant="default"
+                  onClick={handleSuggestCompetitors}
+                  disabled={suggesting}
+                >
+                  {suggesting ? (
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Suggesting...</>
+                  ) : (
+                    <><Sparkles className="h-3.5 w-3.5 mr-1.5" />Suggest Competitors with AI</>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add Manually
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

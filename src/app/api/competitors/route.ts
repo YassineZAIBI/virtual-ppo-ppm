@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { parseTags } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,7 +21,13 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(competitors);
+    // Parse tags from JSON string to array for frontend consumption
+    const parsed = competitors.map((c) => ({
+      ...c,
+      tags: parseTags(c.tags),
+    }));
+
+    return NextResponse.json(parsed);
   } catch (error) {
     console.error('[COMPETITORS_GET]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

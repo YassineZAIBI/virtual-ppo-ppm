@@ -1,12 +1,30 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, AlertTriangle, Info, AlertCircle, Check, Loader2 } from 'lucide-react';
 import type { UserAlertData } from '@/lib/types';
+
+// Map alert type → default route, and entityType → specific route
+const ALERT_ROUTE_MAP: Record<string, string> = {
+  competitor_move: '/vision/competitors',
+  alignment_drift: '/vision',
+  market_shift: '/discovery',
+  strategy_risk: '/strategy',
+  action_required: '/chat',
+};
+
+const ENTITY_ROUTE_MAP: Record<string, (id: string) => string> = {
+  competitor: (id) => `/vision/competitors?highlight=${id}`,
+  initiative: (id) => `/initiatives?highlight=${id}`,
+  risk: (id) => `/dashboard?highlight=${id}`,
+  meeting: (id) => `/meetings?highlight=${id}`,
+  research: (id) => `/discovery?highlight=${id}`,
+};
 
 interface AlertPanelProps {
   onClose: () => void;
@@ -21,6 +39,7 @@ const SEVERITY_CONFIG = {
 export function AlertPanel({ onClose }: AlertPanelProps) {
   const { userAlerts, setUserAlerts, markAlertRead, dismissAlert } = useAppStore();
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -65,6 +84,26 @@ export function AlertPanel({ onClose }: AlertPanelProps) {
     }
   };
 
+  const handleAlertClick = async (alert: UserAlertData) => {
+    // Mark as read
+    if (!alert.isRead) {
+      handleMarkRead(alert.id);
+    }
+
+    // Determine route: entity-specific if available, otherwise type-based
+    let route: string | undefined;
+    if (alert.entityType && alert.entityId && ENTITY_ROUTE_MAP[alert.entityType]) {
+      route = ENTITY_ROUTE_MAP[alert.entityType](alert.entityId);
+    } else {
+      route = ALERT_ROUTE_MAP[alert.type];
+    }
+
+    if (route) {
+      onClose();
+      router.push(route);
+    }
+  };
+
   const visibleAlerts = userAlerts.filter((a) => !a.isDismissed);
 
   return (
@@ -93,7 +132,8 @@ export function AlertPanel({ onClose }: AlertPanelProps) {
               return (
                 <div
                   key={alert.id}
-                  className={`rounded-lg border p-3 ${config.bg} ${config.border} ${alert.isRead ? 'opacity-60' : ''}`}
+                  className={`rounded-lg border p-3 cursor-pointer transition-colors hover:brightness-95 ${config.bg} ${config.border} ${alert.isRead ? 'opacity-60' : ''}`}
+                  onClick={() => handleAlertClick(alert)}
                 >
                   <div className="flex items-start gap-2">
                     <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${config.color}`} />
@@ -113,11 +153,11 @@ export function AlertPanel({ onClose }: AlertPanelProps) {
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
                       {!alert.isRead && (
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleMarkRead(alert.id)} title="Mark as read">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleMarkRead(alert.id); }} title="Mark as read">
                           <Check className="h-3 w-3" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => handleDismiss(alert.id)} title="Dismiss">
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={(e) => { e.stopPropagation(); handleDismiss(alert.id); }} title="Dismiss">
                         <X className="h-3 w-3" />
                       </Button>
                     </div>

@@ -430,14 +430,26 @@ export class LLMService {
         body.systemInstruction = { parts: [{ text: systemInstruction }] };
       }
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        }
-      );
+      // Native Google API: key in URL param. Custom endpoint (proxy): key in Authorization header.
+      const useCustomEndpoint = !!this.endpoint;
+      const baseUrl = useCustomEndpoint
+        ? this.endpoint!.replace(/\/+$/, '')
+        : 'https://generativelanguage.googleapis.com/v1beta';
+
+      const url = useCustomEndpoint
+        ? `${baseUrl}/models/${this.model}:generateContent`
+        : `${baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (useCustomEndpoint) {
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
 
       if (!response.ok) {
         const errorBody = await response.text();

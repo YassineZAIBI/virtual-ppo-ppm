@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Star, Target, Users, AlertTriangle, Package, Loader2 } from 'lucide-react';
+import { Plus, Star, Target, Users, AlertTriangle, Package, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppStore } from '@/lib/store';
 import { BusinessGoalCard } from './BusinessGoalCard';
 import { TargetGroupCard } from './TargetGroupCard';
 import { NeedCard } from './NeedCard';
@@ -49,6 +50,47 @@ export function VisionPyramid({
   const [addingProduct, setAddingProduct] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const { settings } = useAppStore();
+
+  const handleGeneratePyramid = async () => {
+    if (!northStar) {
+      toast.error('Set your North Star first before generating the pyramid.');
+      return;
+    }
+    if (!settings?.llm?.apiKey) {
+      toast.error('Please configure your LLM provider in Settings first.');
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/vision/pyramid/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          llmConfig: {
+            provider: settings.llm.provider,
+            apiKey: settings.llm.apiKey,
+            model: settings.llm.model,
+            apiEndpoint: settings.llm.apiEndpoint,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Generation failed');
+      }
+
+      toast.success('Vision Pyramid generated! Review and refine below.');
+      onRefresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate pyramid.');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   if (!northStar) {
     return (
@@ -145,6 +187,32 @@ export function VisionPyramid({
 
   return (
     <div className="space-y-4">
+      {/* AI Generate Button */}
+      {businessGoals.length === 0 && (
+        <Card className="border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20">
+          <CardContent className="pt-4 pb-4 text-center space-y-3">
+            <Sparkles className="h-8 w-8 text-indigo-500 mx-auto" />
+            <div>
+              <p className="text-sm font-medium">Generate your Vision Pyramid with AI</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                AI will propose business goals, target groups, needs, and products based on your North Star.
+              </p>
+            </div>
+            <Button
+              onClick={handleGeneratePyramid}
+              disabled={generating}
+              className="gap-2"
+            >
+              {generating ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</>
+              ) : (
+                <><Sparkles className="h-4 w-4" /> Generate Pyramid</>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Business Goals Level */}
       <Card className="border-teal-500/20">
         <CardHeader className="pb-2">

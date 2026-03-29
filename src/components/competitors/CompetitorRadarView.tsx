@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, parseTags } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +43,7 @@ const TAG_COLORS: Record<string, string> = {
   indirect: '#f59e0b',
   emerging: '#3b82f6',
 };
+
 
 const COMPETITOR_COLORS = [
   '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6',
@@ -464,7 +465,7 @@ export function CompetitorRadarView() {
             {activeComp ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  {activeComp.tags.map((tag) => (
+                  {parseTags(activeComp.tags).map((tag) => (
                     <Badge
                       key={tag}
                       variant="outline"

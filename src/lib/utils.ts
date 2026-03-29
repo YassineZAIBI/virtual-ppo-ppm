@@ -68,6 +68,18 @@ export function parseJSON<T>(json: string, fallback: T): T {
 }
 
 /**
+ * Safely parse a Prisma JSON-string tags field into a string array.
+ * Handles: string[] | JSON string | null | undefined.
+ */
+export function parseTags(tags: string[] | string | null | undefined): string[] {
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === 'string') {
+    try { return JSON.parse(tags); } catch { return []; }
+  }
+  return [];
+}
+
+/**
  * Generates a unique ID using crypto.randomUUID().
  */
 export function generateId(): string {

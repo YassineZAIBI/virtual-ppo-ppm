@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, parseTags } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -126,7 +126,8 @@ export function CompetitorAddDialog({ open, onOpenChange, onAdded }: CompetitorA
     setName(s.name);
     if (s.website) setWebsite(s.website);
     if (s.description) setDescription(s.description);
-    if (s.tags) setTags(s.tags);
+    const parsed = parseTags(s.tags);
+    if (parsed.length > 0) setTags(parsed);
     setSuggestions([]);
   };
 
@@ -176,9 +177,9 @@ export function CompetitorAddDialog({ open, onOpenChange, onAdded }: CompetitorA
                       {s.description}
                     </p>
                   )}
-                  {s.tags && s.tags.length > 0 && (
+                  {parseTags(s.tags).length > 0 && (
                     <div className="flex gap-1 mt-1">
-                      {s.tags.map((tag) => (
+                      {parseTags(s.tags).map((tag) => (
                         <Badge
                           key={tag}
                           variant="secondary"
