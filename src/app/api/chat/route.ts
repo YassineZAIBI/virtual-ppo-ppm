@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { loadCompanyBrain } from '@/lib/services/company-brain';
+import { buildAgentContext } from '@/lib/services/agent-context';
+import { writeAgentMemory } from '@/lib/services/agent-memory-writer';
 
 const AGENT_SERVICE_URL = process.env.AGENT_SERVICE_URL || 'http://localhost:8100';
 
@@ -22,11 +24,13 @@ export async function POST(request: NextRequest) {
 
   // Load company context from DB (auto-generates from vision data if not yet saved)
   let companyBrain = '';
+  let brainContext = '';
   const session = await getServerSession(authOptions);
   if (session?.user) {
     try {
       const userId = (session.user as any).id;
       companyBrain = await loadCompanyBrain(userId);
+      brainContext = await buildAgentContext(userId, agentId || 'strategy');
     } catch (err) {
       console.error('Failed to load company brain:', err);
     }
@@ -49,6 +53,7 @@ export async function POST(request: NextRequest) {
         pending_action_id: pendingActionId || null,
         pending_action_decision: pendingActionDecision || null,
         company_context: companyBrain || null,
+        brain_context: brainContext || null,
       }),
       signal: AbortSignal.timeout(30000),
     });
@@ -62,6 +67,9 @@ export async function POST(request: NextRequest) {
       const hasSuccessfulTool = tools.some((t: any) => t.status === 'executed');
       const hasFailedTools = tools.some((t: any) => t.status === 'failed');
       if (!hasFailedTools || hasSuccessfulTool) {
+        if (session?.user) {
+          writeAgentMemory((session.user as any).id, agentId || 'strategy', message, data.response || '');
+        }
         return NextResponse.json(data);
       }
       console.log('Agent tools all failed, falling through to data-enriched fallback');
@@ -76,7 +84,7 @@ export async function POST(request: NextRequest) {
 
   // Fallback: direct LLM call when Python agent service is unavailable
   try {
-    return await fallbackDirectLLM(message, history, settings, storeData, companyBrain);
+    return await fallbackDirectLLM(message, history, settings, storeData, companyBrain, brainContext, session, agentId);
   } catch (error: any) {
     console.error('Fallback LLM error:', error);
     return NextResponse.json(
@@ -95,7 +103,10 @@ async function fallbackDirectLLM(
   history: any[],
   settings: any,
   storeData: any,
-  companyBrain: string
+  companyBrain: string,
+  brainContext: string,
+  session: any,
+  agentId: string | null
 ): Promise<NextResponse> {
   const { LLMService } = await import('@/lib/services/llm');
   const { TOOL_REGISTRY } = await import('@/lib/tools/registry');
@@ -238,7 +249,7 @@ async function fallbackDirectLLM(
 When the user asks about their initiatives, features, epics, roadmap, risks, or meetings — answer using the ACTUAL DATA provided below. Do NOT say you lack access. The data is right here.
 
 When the user asks you to DO something (create, update, move, break down, etc.) — propose concrete tool calls using the available tools. Be proactive: if the conversation naturally leads to an action, suggest it.
-${companyBrain ? `\n--- COMPANY CONTEXT (from onboarding) ---\n${companyBrain}\n` : ''}${integrationStatus}
+${brainContext ? `\n${brainContext}\n` : (companyBrain ? `\n--- COMPANY CONTEXT (from onboarding) ---\n${companyBrain}\n` : '')}${integrationStatus}
 ${dataContext}
 ${liveJiraContext}
 ${toolPrompt}
@@ -306,6 +317,11 @@ STRICT MARKDOWN FORMATTING RULES (follow these exactly):
       description: tc.reason || `${tc.tool}: ${Object.values(tc.args).filter((v) => typeof v === 'string').slice(0, 2).join(' — ')}`,
       status: 'pending',
     }));
+
+  // Fire-and-forget: save agent memory
+  if (session?.user) {
+    writeAgentMemory((session.user as any).id, agentId || 'strategy', message, cleanText);
+  }
 
   return NextResponse.json({
     response: cleanText,

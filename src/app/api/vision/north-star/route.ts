@@ -57,6 +57,17 @@ export async function POST(req: NextRequest) {
       data: { visionComplete: true },
     });
 
+    // Fire-and-forget: sync to brain graph
+    try {
+      db.brainNode.upsert({
+        where: { userId_type_title: { userId: session.user.id, type: 'vision', title: 'North Star' } },
+        create: { userId: session.user.id, type: 'vision', title: 'North Star', content: statement, summary: context || '', source: 'onboarding', confidence: confidence ?? 1.0 },
+        update: { content: statement, summary: context || '', confidence: confidence ?? 1.0 },
+      }).catch((err: unknown) => console.error('BrainNode upsert failed (north-star):', err));
+    } catch (err) {
+      console.error('BrainNode upsert error (north-star):', err);
+    }
+
     return NextResponse.json(northStar);
   } catch (error) {
     console.error('[VISION_NORTH_STAR_POST]', error);

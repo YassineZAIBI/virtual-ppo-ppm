@@ -60,6 +60,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Fire-and-forget: sync to brain graph
+    try {
+      db.brainNode.upsert({
+        where: { userId_type_title: { userId: session.user.id, type: 'need', title } },
+        create: { userId: session.user.id, type: 'need', title, content: description || title, summary: severity ? `Severity: ${severity}/10` : '', source: 'onboarding', confidence: 1.0 },
+        update: { content: description || title, summary: severity ? `Severity: ${severity}/10` : '' },
+      }).catch((err: unknown) => console.error('BrainNode upsert failed (need):', err));
+    } catch (err) {
+      console.error('BrainNode upsert error (need):', err);
+    }
+
     return NextResponse.json(need, { status: 201 });
   } catch (error) {
     console.error('[VISION_NEEDS_POST]', error);

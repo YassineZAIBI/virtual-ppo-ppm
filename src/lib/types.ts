@@ -655,3 +655,46 @@ export const defaultSettings: UserSettings = {
     theme: 'system',
   },
 };
+
+// ============================================
+// Brain Graph (Big Picture)
+// ============================================
+
+export type BrainNodeType =
+  | 'vision' | 'goal' | 'persona' | 'need' | 'decision'
+  | 'initiative' | 'risk' | 'market_signal' | 'agent_learning';
+
+export type BrainNodeSource =
+  | 'onboarding' | 'notion' | 'slack' | 'jira' | 'agent' | 'manual';
+
+export type BrainRelationType =
+  | 'supports' | 'contradicts' | 'depends_on' | 'created_by' | 'related_to';
+
+export interface BrainNodeData {
+  id: string;
+  userId: string;
+  type: BrainNodeType;
+  title: string;
+  content: string;
+  summary: string;
+  source: BrainNodeSource;
+  sourceUrl: string;
+  sourceId: string;
+  embedding: string; // JSON string — vector for RAG
+  metadata: string;  // JSON string — extra structured data
+  agentType: string;
+  confidence: number;
+  createdAt: Date;
+  updatedAt: Date;
+  relations?: BrainRelationData[];
+  relatedBy?: BrainRelationData[];
+}
+
+export interface BrainRelationData {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  relationType: BrainRelationType;
+  strength: number;
+  createdAt: Date;
+}

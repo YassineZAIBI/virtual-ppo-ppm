@@ -58,6 +58,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Fire-and-forget: sync to brain graph
+    try {
+      db.brainNode.upsert({
+        where: { userId_type_title: { userId: session.user.id, type: 'initiative', title: name } },
+        create: { userId: session.user.id, type: 'initiative', title: name, content: `${type}: ${name}`, summary: type, source: 'onboarding', confidence: 1.0 },
+        update: { content: `${type}: ${name}`, summary: type },
+      }).catch((err: unknown) => console.error('BrainNode upsert failed (product):', err));
+    } catch (err) {
+      console.error('BrainNode upsert error (product):', err);
+    }
+
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
     console.error('[VISION_PRODUCTS_POST]', error);

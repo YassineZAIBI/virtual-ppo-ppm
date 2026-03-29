@@ -67,6 +67,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Fire-and-forget: sync to brain graph
+    try {
+      const parts = [role && `Role: ${role}`, goals && `Goals: ${goals}`, painPoints && `Pain points: ${painPoints}`].filter(Boolean);
+      db.brainNode.upsert({
+        where: { userId_type_title: { userId: session.user.id, type: 'persona', title: name } },
+        create: { userId: session.user.id, type: 'persona', title: name, content: parts.join('. ') || name, summary: role || '', source: 'onboarding', confidence: 1.0 },
+        update: { content: parts.join('. ') || name, summary: role || '' },
+      }).catch((err: unknown) => console.error('BrainNode upsert failed (target-group):', err));
+    } catch (err) {
+      console.error('BrainNode upsert error (target-group):', err);
+    }
+
     return NextResponse.json(targetGroup, { status: 201 });
   } catch (error) {
     console.error('[VISION_TARGET_GROUPS_POST]', error);

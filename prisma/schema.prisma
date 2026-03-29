@@ -60,6 +60,9 @@ model User {
 
   // Session Continuity
   chatSessions     ChatSession[]
+
+  // Brain Graph (Big Picture)
+  brainNodes       BrainNode[]
 }
 
 model Account {
@@ -735,4 +738,60 @@ model ChatSession {
 
   @@index([userId])
   @@index([isActive])
+}
+
+// ============================================
+// BRAIN GRAPH (Big Picture Visual Brain Map)
+// ============================================
+
+model BrainNode {
+  id          String   @id @default(cuid())
+  userId      String
+
+  // What it is
+  type        String   // "vision" | "goal" | "persona" | "need" | "decision" | "initiative" | "risk" | "market_signal" | "agent_learning"
+  title       String
+  content     String   @db.Text   // human-readable, used in Big Picture UI
+  summary     String   @default("") // one-line for map labels
+
+  // Where it came from
+  source      String   // "onboarding" | "notion" | "slack" | "jira" | "agent" | "manual"
+  sourceUrl   String   @default("")
+  sourceId    String   @default("") // external ID if from integration
+
+  // Machine layer
+  embedding   String   @default("[]") // vector as JSON string for RAG
+  metadata    String   @default("{}") // extra structured data as JSON
+
+  // Agent memory layer
+  agentType   String   @default("global") // which agent owns this node
+  confidence  Float    @default(1.0)
+
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relations   BrainRelation[] @relation("fromNode")
+  relatedBy   BrainRelation[] @relation("toNode")
+
+  @@unique([userId, type, title], name: "userId_type_title")
+  @@index([userId, type])
+  @@index([userId, source])
+  @@index([userId, agentType])
+}
+
+model BrainRelation {
+  id           String    @id @default(cuid())
+  fromNodeId   String
+  toNodeId     String
+  relationType String    // "supports" | "contradicts" | "depends_on" | "created_by" | "related_to"
+  strength     Float     @default(1.0)
+  createdAt    DateTime  @default(now())
+
+  fromNode     BrainNode @relation("fromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode       BrainNode @relation("toNode", fields: [toNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([fromNodeId, toNodeId, relationType])
+  @@index([fromNodeId])
+  @@index([toNodeId])
 }
