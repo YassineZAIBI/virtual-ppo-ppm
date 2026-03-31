@@ -199,8 +199,8 @@ registry.register(myAdapter);
 
 | Metric | Count | Action Required |
 |--------|-------|----------------|
-| API routes | 99 | Check existing route before creating |
-| Prisma models | 38 | Check `schema.prisma` before any DB change |
+| API routes | 101 | Check existing route before creating |
+| Prisma models | 39 | Check `schema.prisma` before any DB change |
 | Data adapters | 33 | Check `adapters/index.ts` before adding |
 | AI agents | 6 | Check `meeting-bot/` before agent changes |
 | TypeScript types | 657 lines | Check `types.ts` before creating new types |

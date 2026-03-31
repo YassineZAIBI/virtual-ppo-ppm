@@ -67,6 +67,9 @@ model User {
   // Proactive Intelligence (Sprint 3)
   proactiveInsights ProactiveInsight[]
   watchTopics       WatchTopic[]
+
+  // Agent Collaboration (Sprint 4)
+  agentMessages     AgentMessage[]
 }
 
 model Account {
@@ -834,4 +837,34 @@ model WatchTopic {
   updatedAt     DateTime  @updatedAt
 
   @@index([userId, isActive])
+}
+
+model AgentMessage {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workflowId    String    @default("")  // groups messages in the same workflow run
+  workflowType  String    @default("")  // "initiative_deep_dive" | "market_threat_response"
+  stepIndex     Int       @default(0)   // 0=first agent, 1=second, etc.
+
+  fromAgent     String    // "discovery" | "risk" | "strategy" | "communications" | "advisor" | "thinker"
+  toAgent       String    // same options + "user" for final output
+  messageType   String    // "finding" | "assessment" | "recommendation" | "draft" | "summary"
+
+  payload       String    @default("{}") // JSON stored as string — JSON.parse() on read
+  status        String    @default("pending") // "pending" | "processing" | "completed" | "failed"
+  errorMessage  String    @default("")
+
+  initiativeId  String    @default("") // linked initiative if applicable
+  metadata      String    @default("{}") // JSON stored as string — JSON.parse() on read
+
+  createdAt     DateTime  @default(now())
+  processedAt   DateTime?
+  completedAt   DateTime?
+
+  @@index([userId, workflowId])
+  @@index([userId, toAgent, status])
+  @@index([userId, initiativeId])
+  @@index([workflowId, stepIndex])
 }

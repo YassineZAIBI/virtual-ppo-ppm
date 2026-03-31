@@ -722,3 +722,67 @@ export interface BrainRelationData {
   strength: number;
   createdAt: Date;
 }
+
+// Sprint 4 — Agent Collaboration Protocol
+
+export type AgentType =
+  | 'discovery'
+  | 'risk'
+  | 'strategy'
+  | 'communications'
+  | 'advisor'
+  | 'thinker'
+  | 'orchestrator';
+
+export type WorkflowType =
+  | 'initiative_deep_dive'
+  | 'market_threat_response'
+  | 'risk_escalation'
+  | 'competitive_response';
+
+export type WorkflowStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'paused';
+
+export type MessageType =
+  | 'finding'
+  | 'assessment'
+  | 'recommendation'
+  | 'draft'
+  | 'summary';
+
+export interface AgentMessageData {
+  id: string;
+  userId: string;
+  workflowId: string;
+  workflowType: string;
+  stepIndex: number;
+  fromAgent: string;
+  toAgent: string;
+  messageType: string;
+  payload: string;
+  status: string;
+  errorMessage: string;
+  initiativeId: string;
+  metadata: string;
+  createdAt: Date;
+  processedAt: Date | null;
+  completedAt: Date | null;
+}
+
+export interface WorkflowStep {
+  agent: AgentType;
+  messageType: MessageType;
+  promptTemplate: string;
+  outputKey: string;
+}
+
+export interface WorkflowDefinition {
+  type: WorkflowType;
+  name: string;
+  description: string;
+  steps: WorkflowStep[];
+}

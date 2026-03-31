@@ -27,6 +27,7 @@ import { isSampleData } from '@/lib/sample-data';
 import { ExampleBadge } from '@/components/ui/example-badge';
 import { AlignmentBadge } from '@/components/vision/AlignmentBadge';
 import { VisionGateBanner } from '@/components/layout/VisionGateBanner';
+import { WorkflowLauncher } from '@/components/agents/WorkflowLauncher';
 
 const stages = [
   { id: 'idea', label: 'Ideas', color: 'bg-muted', headerColor: 'bg-accent' },
@@ -582,6 +583,11 @@ export function InitiativesPipeline() {
             <Button variant="destructive" onClick={handleDelete}>
               <Trash2 className="h-4 w-4 mr-2" />Delete
             </Button>
+            <WorkflowLauncher
+              initiativeId={editingInitiative?.id ?? ''}
+              initiativeTitle={editingInitiative?.title ?? ''}
+              initiativeContext={`Status: ${editingInitiative?.status ?? ''}\nDescription: ${editingInitiative?.description ?? ''}`}
+            />
             <Button variant="outline" onClick={() => setEditingInitiative(null)}>Cancel</Button>
             <Button onClick={handleSaveEdit}><Save className="h-4 w-4 mr-2" />Save</Button>
           </DialogFooter>
