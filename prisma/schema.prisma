@@ -63,6 +63,10 @@ model User {
 
   // Brain Graph (Big Picture)
   brainNodes       BrainNode[]
+
+  // Proactive Intelligence (Sprint 3)
+  proactiveInsights ProactiveInsight[]
+  watchTopics       WatchTopic[]
 }
 
 model Account {
@@ -794,4 +798,40 @@ model BrainRelation {
   @@unique([fromNodeId, toNodeId, relationType])
   @@index([fromNodeId])
   @@index([toNodeId])
+}
+
+model ProactiveInsight {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentType   String   // "strategy" | "risk" | "discovery" | "market" | "competitor"
+  title       String
+  content     String   @db.Text
+  summary     String   @default("")
+  priority    String   @default("medium") // "high" | "medium" | "low"
+  status      String   @default("new")    // "new" | "read" | "dismissed" | "actioned"
+  sourceType  String   @default("")       // "drift" | "competitor" | "market" | "risk"
+  sourceId    String   @default("")       // ID of related record if any
+  metadata    String   @default("{}")     // JSON stored as string — JSON.parse() on read
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, priority])
+  @@index([userId, agentType])
+  @@index([userId, createdAt])
+}
+
+model WatchTopic {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  query         String    @default("")
+  isActive      Boolean   @default(true)
+  lastCheckedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, isActive])
 }

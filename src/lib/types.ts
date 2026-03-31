@@ -660,6 +660,30 @@ export const defaultSettings: UserSettings = {
 // Brain Graph (Big Picture)
 // ============================================
 
+// ============================================
+// Proactive Intelligence (Sprint 3)
+// ============================================
+
+export type InsightPriority = 'high' | 'medium' | 'low';
+export type InsightStatus = 'new' | 'read' | 'dismissed' | 'actioned';
+export type InsightSourceType = 'drift' | 'competitor' | 'market' | 'risk' | 'strategy';
+
+export interface ProactiveInsightData {
+  id: string;
+  userId: string;
+  agentType: string;
+  title: string;
+  content: string;
+  summary: string;
+  priority: InsightPriority;
+  status: InsightStatus;
+  sourceType: InsightSourceType | string;
+  sourceId: string;
+  metadata: string; // JSON stored as string — JSON.parse() on read
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export type BrainNodeType =
   | 'vision' | 'goal' | 'persona' | 'need' | 'decision'
   | 'initiative' | 'risk' | 'market_signal' | 'agent_learning';

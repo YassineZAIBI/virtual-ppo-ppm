@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShareButton } from '@/components/share/ShareButton';
+import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { isSampleData } from '@/lib/sample-data';
 import { ExampleBadge } from '@/components/ui/example-badge';
 
@@ -118,6 +119,7 @@ export function DashboardView() {
 
   return (
     <div className="p-6 space-y-6">
+      <InsightsPanel />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Welcome back!</h1>
