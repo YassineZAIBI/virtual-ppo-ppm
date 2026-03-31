@@ -1,7 +1,7 @@
 // Slack Web API Service
 // Provides messaging, channel info, file uploads, and rich Block Kit message formatting.
 
-import type { SlackMessage } from '../types';
+import type { SlackMessage } from '@/lib/types';
 
 const SLACK_API_BASE = 'https://slack.com/api';
 

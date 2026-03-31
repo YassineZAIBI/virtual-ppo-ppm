@@ -31,4 +31,4 @@ import './statista-scrape';
 import './competitor-site';
 import './pricing-page';
 
-export { registry } from '../registry';
+export { registry } from '@/lib/services/data-pipeline/registry';

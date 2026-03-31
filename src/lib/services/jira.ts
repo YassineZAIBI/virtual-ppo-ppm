@@ -1,7 +1,7 @@
 // Jira REST API Service
 // Provides full CRUD operations for Jira issues, projects, transitions, and search.
 
-import type { JiraIssue, JiraProject, JiraProjectSchema } from '../types';
+import type { JiraIssue, JiraProject, JiraProjectSchema } from '@/lib/types';
 
 export class JiraService {
   private baseUrl: string;

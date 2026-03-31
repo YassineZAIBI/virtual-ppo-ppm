@@ -257,6 +257,7 @@ NEXTAUTH_SECRET               # JWT signing secret
 DATABASE_URL                  # PostgreSQL connection string
 CREDENTIALS_ENCRYPTION_KEY    # 64-char hex for AES-256-GCM
 AGENT_SERVICE_URL             # Python FastAPI agent service URL
+CRON_SECRET                   # Secret header for Cloud Scheduler auth
 
 # Optional OAuth
 GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET

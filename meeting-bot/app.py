@@ -14,6 +14,12 @@ import httpx
 
 app = FastAPI(title="Azmyra Meeting Bot", version="1.0.0")
 
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "azmyra-agents"}
+
+
 WHISPER_URL = os.getenv("WHISPER_URL", "http://whisper:9000")
 CALLBACK_URL = os.getenv("CALLBACK_URL", "http://app:3000/api/meetings/bot/transcript-chunk")
 

@@ -3,13 +3,10 @@ import { db } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   try {
-    // Optional cron secret check — if CRON_API_KEY is set, require it
-    const cronApiKey = process.env.CRON_API_KEY;
-    if (cronApiKey) {
-      const headerSecret = req.headers.get('x-cron-secret');
-      if (headerSecret !== cronApiKey) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+    // Validate cron secret — rejects calls not from Cloud Scheduler
+    const cronSecret = req.headers.get('x-cron-secret');
+    if (cronSecret !== process.env.CRON_SECRET) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const now = new Date();

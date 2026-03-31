@@ -1,6 +1,6 @@
 // Tool Executor — executes approved tool calls against JiraService or returns store mutations
 
-import { JiraService } from '../services/jira';
+import { JiraService } from '@/lib/services/jira';
 
 export interface ToolExecutionResult {
   success: boolean;

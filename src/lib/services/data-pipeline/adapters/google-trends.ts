@@ -1,5 +1,5 @@
-import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '../types';
-import { registry } from '../registry';
+import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '@/lib/services/data-pipeline/types';
+import { registry } from '@/lib/services/data-pipeline/registry';
 
 const googleTrends: DataAdapter = {
   key: 'google-trends',

@@ -2,7 +2,7 @@
 // Provides CRUD operations for spaces, pages, and content search.
 // Uses Confluence REST API v2 with fallback to v1 where needed.
 
-import type { ConfluencePage } from '../types';
+import type { ConfluencePage } from '@/lib/types';
 
 export class ConfluenceService {
   private baseUrl: string;

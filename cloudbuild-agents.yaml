@@ -1,5 +1,51 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/theproductowner-8620d/azmyra-agents', '-f', 'Dockerfile.agents', '.']
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/theproductowner-8620d/azmyra-agents:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/theproductowner-8620d/azmyra-agents:latest'
+      - '-f'
+      - 'Dockerfile.agents'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/theproductowner-8620d/azmyra-agents:$COMMIT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/theproductowner-8620d/azmyra-agents:latest'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'azmyra-agents'
+      - '--image'
+      - 'gcr.io/theproductowner-8620d/azmyra-agents:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8080'
+      - '--memory'
+      - '2Gi'
+      - '--cpu'
+      - '2'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '3'
+      - '--timeout'
+      - '300'
+
 images:
-  - 'gcr.io/theproductowner-8620d/azmyra-agents'
+  - 'gcr.io/theproductowner-8620d/azmyra-agents:$COMMIT_SHA'
+  - 'gcr.io/theproductowner-8620d/azmyra-agents:latest'

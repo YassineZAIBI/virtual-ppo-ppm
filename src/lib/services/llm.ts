@@ -2,9 +2,9 @@
 // Provides a unified interface for multiple LLM providers:
 // OpenAI, Anthropic, Azure OpenAI, Gemini, Z-AI, and Ollama.
 
-import type { LLMConfig, LLMProvider } from '../types';
-import { db } from '../db';
-import { decrypt } from '../encryption';
+import type { LLMConfig, LLMProvider } from '@/lib/types';
+import { db } from '@/lib/db';
+import { decrypt } from '@/lib/encryption';
 
 interface ChatMessage {
   role: string;

@@ -8,7 +8,7 @@
  * allowing the AI to decide which tools to call based on user intent.
  */
 
-import { MCPToolCall, MCPToolResult } from '../types';
+import { MCPToolCall, MCPToolResult } from '@/lib/types';
 
 export interface MCPTool {
   name: string;

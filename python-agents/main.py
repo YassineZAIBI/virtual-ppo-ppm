@@ -62,7 +62,7 @@ app.add_middleware(
 async def health():
     return {
         "status": "ok",
-        "service": "agent-service",
+        "service": "azmyra-agents",
         "version": "2.0.0",
         "agents": 6,
         "scheduler": scheduler.get_status(),
@@ -344,5 +344,8 @@ async def check_due_jobs():
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    import os
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=AGENT_SERVICE_PORT, reload=True)
+    # Cloud Run injects PORT=8080; respect it, fallback to configured port
+    port = int(os.environ.get("PORT", AGENT_SERVICE_PORT))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

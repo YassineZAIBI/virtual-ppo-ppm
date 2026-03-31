@@ -1,7 +1,7 @@
 // Prompt Builder — generates the tool+schema section for the LLM system prompt
 
 import type { ToolDefinition } from './registry';
-import type { JiraProjectSchema } from '../types';
+import type { JiraProjectSchema } from '@/lib/types';
 
 export function buildToolSystemPrompt(
   schema: JiraProjectSchema | null,

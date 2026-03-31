@@ -2,7 +2,7 @@ import { JiraService } from './jira';
 import { ConfluenceService } from './confluence';
 import { SlackService } from './slack';
 import { LLMService } from './llm';
-import type { LLMConfig } from '../types';
+import type { LLMConfig } from '@/lib/types';
 
 export interface SyncCredentials {
   jira?: { url: string; email: string; apiToken: string };

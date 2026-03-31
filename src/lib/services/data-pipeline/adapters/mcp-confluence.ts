@@ -1,5 +1,5 @@
-import { DataAdapter, DataResult, FetchOptions } from '../types';
-import { registry } from '../registry';
+import { DataAdapter, DataResult, FetchOptions } from '@/lib/services/data-pipeline/types';
+import { registry } from '@/lib/services/data-pipeline/registry';
 
 /**
  * MCP Confluence adapter — wraps the existing Confluence integration.
