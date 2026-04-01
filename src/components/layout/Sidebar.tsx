@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MessageSquare, Calendar, Map, Lightbulb, Search,
   Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   Zap, LogOut, Eye, Binoculars, Users, Gauge, Hammer, ShieldAlert,
-  UserCog,
+  UserCog, Puzzle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
@@ -64,6 +64,7 @@ const PLATFORM_ITEMS: NavItem[] = [
   { path: '/chat', label: 'AI Assistant', icon: MessageSquare },
   { path: '/meetings', label: 'Meetings', icon: Calendar },
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/integrations', label: 'Integrations', icon: Puzzle },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 

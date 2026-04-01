@@ -786,3 +786,49 @@ export interface WorkflowDefinition {
   description: string;
   steps: WorkflowStep[];
 }
+
+// ─── Integration Hub (Sprint 5) ─────────────────────────────────────────────
+
+export type IntegrationType =
+  | 'notion'
+  | 'linear'
+  | 'github'
+  | 'jira'
+  | 'confluence'
+  | 'slack'
+  | 'mixpanel'
+  | 'amplitude'
+  | 'ga4';
+
+export type IntegrationStatus = 'connected' | 'disconnected' | 'error';
+
+export interface IntegrationConnectionData {
+  id: string;
+  userId: string;
+  integrationType: IntegrationType;
+  status: IntegrationStatus;
+  displayName: string;
+  lastSyncAt: Date | null;
+  errorMessage: string;
+  metadata: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IntegrationConfig {
+  type: IntegrationType;
+  name: string;
+  description: string;
+  icon: string;
+  docsUrl: string;
+  fields: IntegrationField[];
+}
+
+export interface IntegrationField {
+  key: string;
+  label: string;
+  placeholder: string;
+  type: 'text' | 'password' | 'url';
+  required: boolean;
+  helpText?: string;
+}

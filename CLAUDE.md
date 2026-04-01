@@ -199,12 +199,14 @@ registry.register(myAdapter);
 
 | Metric | Count | Action Required |
 |--------|-------|----------------|
-| API routes | 101 | Check existing route before creating |
-| Prisma models | 39 | Check `schema.prisma` before any DB change |
+| API routes | 105 | Check existing route before creating |
+| Prisma models | 40 | Check `schema.prisma` before any DB change |
 | Data adapters | 33 | Check `adapters/index.ts` before adding |
 | AI agents | 6 | Check `meeting-bot/` before agent changes |
-| TypeScript types | 657 lines | Check `types.ts` before creating new types |
+| TypeScript types | 700+ lines | Check `types.ts` before creating new types |
 | shadcn/ui components | 50+ | Check `components/ui/` before adding |
+| Integration services | 3 | `notion.ts`, `linear.ts`, `github.ts` |
+| Integration API routes | 4 | `connect`, `disconnect`, `status`, `notion/ingest` |
 
 ---
 
@@ -219,6 +221,10 @@ registry.register(myAdapter);
 | **LLM config** | Client-side only | Moving to DB would break multi-user isolation |
 | **Prisma JSON strings** | Always `JSON.parse()` | Raw access causes runtime `.map is not a function` crashes |
 | **Standalone Docker output** | Don't remove `/prisma-cli` stage | `start.sh` runs `prisma db push` before server starts; needs Prisma CLI |
+| **GitHub OAuth vs PAT** | GitHub service uses PAT (Personal Access Token) — not OAuth | Users must create PAT manually at github.com/settings/tokens with repo scope |
+| **Notion internal integration** | Notion requires sharing each page/database with the integration manually | Auto-discovery only works for explicitly shared pages |
+| **Linear GraphQL** | Linear API is GraphQL only — no REST fallback | All queries in `linear.ts` use the graphql function |
+| **Analytics read-only** | Mixpanel and Amplitude are read-only | No write operations supported or planned |
 
 ---
 
