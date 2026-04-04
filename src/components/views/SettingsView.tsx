@@ -12,10 +12,10 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bot, Shield, Activity, MessageSquare, FileText, Send, Loader2, CheckCircle2, Zap, RefreshCw, ChevronDown, ChevronRight, GitBranch, Cpu, Database, Video } from 'lucide-react';
+import { Bot, Shield, Loader2, Zap, Cpu, Database, Puzzle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
-import type { JiraProject } from '@/lib/types';
 import { CronDashboard } from '@/components/settings/CronDashboard';
+import { ConnectionStatusSummary } from '@/components/settings/ConnectionStatusSummary';
 import { ConnectorManager } from '@/components/connectors/ConnectorManager';
 
 const modelPlaceholders: Record<string, string> = {
@@ -29,18 +29,9 @@ const modelPlaceholders: Record<string, string> = {
 };
 
 export function SettingsView() {
-  const { settings, updateLLMConfig, updateIntegrations, updatePreferences, initiatives, addInitiative, jiraProjectSchema, setJiraProjectSchema } = useAppStore();
+  const { settings, updateLLMConfig, updatePreferences } = useAppStore();
   const [activeTab, setActiveTab] = useState('llm');
-  const [isTesting, setIsTesting] = useState<string | null>(null);
   const [isTestingLLM, setIsTestingLLM] = useState(false);
-  const [jiraProjects, setJiraProjects] = useState<JiraProject[]>([]);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isDiscoveringSchema, setIsDiscoveringSchema] = useState(false);
-  const [showHierarchy, setShowHierarchy] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem('azmyra-jira-last-sync');
-    return null;
-  });
 
   const testLLMConnection = async () => {
     setIsTestingLLM(true);
@@ -69,136 +60,6 @@ export function SettingsView() {
     }
   };
 
-  const testConnection = async (service: string) => {
-    setIsTesting(service);
-    try {
-      const credentials = (settings.integrations as any)[service];
-      const response = await fetch(`/api/integrations/${service}/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const details = data.projectCount ? ` (${data.projectCount} projects found)` :
-                        data.spaceCount ? ` (${data.spaceCount} spaces found)` :
-                        data.channel ? ` (channel: ${data.channel})` : '';
-        toast.success(`${service} connection successful!${details}`);
-      } else {
-        const data = await response.json();
-        toast.error(`${service} connection failed: ${data.error || 'Unknown error'}`);
-      }
-    } catch {
-      toast.error(`Failed to test ${service} connection`);
-    } finally {
-      setIsTesting(null);
-    }
-  };
-
-  const testJiraAndFetchProjects = async () => {
-    setIsTesting('jira');
-    try {
-      const creds = settings.integrations.jira;
-      const res = await fetch('/api/integrations/jira/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: creds.url, email: creds.email, apiToken: creds.apiToken }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(`Jira connected! ${data.projectCount} projects found`);
-        if (data.projects) setJiraProjects(data.projects);
-        // Fetch full project list
-        const projRes = await fetch(`/api/integrations/jira?action=projects&url=${encodeURIComponent(creds.url)}&email=${encodeURIComponent(creds.email)}&apiToken=${encodeURIComponent(creds.apiToken)}`);
-        if (projRes.ok) {
-          const projData = await projRes.json();
-          if (projData.projects) setJiraProjects(projData.projects);
-        }
-      } else {
-        const data = await res.json();
-        toast.error(`Jira connection failed: ${data.error || 'Unknown error'}`);
-      }
-    } catch {
-      toast.error('Failed to test Jira connection');
-    } finally {
-      setIsTesting(null);
-    }
-  };
-
-  const handleJiraSync = async () => {
-    const creds = settings.integrations.jira;
-    if (!creds.projectKey) {
-      toast.error('Please select a Jira project first');
-      return;
-    }
-    setIsSyncing(true);
-    try {
-      // Fetch only strategic issue types: Initiative, Epic, Portfolio EPIC, Feature(s)
-      // Exclude stories, tasks, bugs, tests, subtasks
-      const strategicTypes = ['Initiative', 'Epic', 'Portfolio EPIC', 'Features', 'Feature'];
-      const typeFilter = strategicTypes.map(t => `"${t}"`).join(', ');
-      const jql = `project = "${creds.projectKey}" AND issuetype in (${typeFilter}) ORDER BY created DESC`;
-
-      const res = await fetch(
-        `/api/integrations/jira?action=issues&projectKey=${encodeURIComponent(creds.projectKey)}&url=${encodeURIComponent(creds.url)}&email=${encodeURIComponent(creds.email)}&apiToken=${encodeURIComponent(creds.apiToken)}&jql=${encodeURIComponent(jql)}`
-      );
-      if (!res.ok) throw new Error('Failed to fetch issues');
-      const data = await res.json();
-      const issues = data.issues || [];
-
-      // Map Jira status to initiative status
-      const statusMap: Record<string, 'idea' | 'discovery' | 'validation' | 'definition' | 'approved'> = {
-        'to do': 'idea', 'open': 'idea', 'backlog': 'idea', 'new': 'idea',
-        'parking lot': 'idea', 'selected for development': 'definition',
-        'in progress': 'discovery', 'in review': 'validation', 'waiting': 'validation',
-        'business case review': 'definition', 'ready for development': 'definition',
-        'done': 'approved', 'closed': 'approved', 'resolved': 'approved',
-        'cancelled': 'approved',
-      };
-
-      // Map Jira issue type to a display label
-      const typeLabel = (t: string) => {
-        const lower = t.toLowerCase();
-        if (lower.includes('initiative')) return 'Initiative';
-        if (lower.includes('epic')) return 'Epic';
-        if (lower.includes('feature')) return 'Feature';
-        return t;
-      };
-
-      let synced = 0;
-      for (const issue of issues) {
-        // Skip if already synced (matching jiraKey)
-        if (initiatives.some((i) => i.jiraKey === issue.key)) continue;
-        const jiraStatus = (issue.status || '').toLowerCase();
-        addInitiative({
-          id: crypto.randomUUID(),
-          title: issue.summary || issue.key,
-          description: issue.description || '',
-          status: statusMap[jiraStatus] || 'idea',
-          businessValue: 'medium',
-          effort: 'medium',
-          stakeholders: issue.assignee ? [issue.assignee] : [],
-          createdAt: new Date(issue.created || Date.now()),
-          updatedAt: new Date(issue.updated || Date.now()),
-          tags: issue.labels || [],
-          risks: [],
-          dependencies: [],
-          jiraKey: issue.key,
-          jiraIssueType: typeLabel(issue.issueType || ''),
-        });
-        synced++;
-      }
-      const now = new Date().toLocaleString();
-      setLastSyncTime(now);
-      localStorage.setItem('azmyra-jira-last-sync', now);
-      toast.success(`Synced ${synced} Epics/Features from ${creds.projectKey} (${issues.length - synced} already existed)`);
-    } catch {
-      toast.error('Failed to sync Jira issues');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const needsEndpoint = ['azure', 'ollama', 'z-ai'].includes(settings.llm.provider);
 
   const endpointConfig: Record<string, { label: string; placeholder: string }> = {
@@ -206,33 +67,6 @@ export function SettingsView() {
     ollama: { label: 'Ollama Endpoint', placeholder: 'http://localhost:11434' },
     'z-ai': { label: 'Z-AI Base URL', placeholder: 'https://api.z-ai.com/v1' },
   };
-
-  const integrationConfigs = [
-    {
-      key: 'slack', title: 'Slack', icon: MessageSquare,
-      fields: [
-        { label: 'Bot Token', key: 'botToken', type: 'password', placeholder: 'xoxb-...' },
-        { label: 'Channel ID', key: 'channelId', placeholder: 'C0123456789' },
-      ],
-    },
-    {
-      key: 'confluence', title: 'Confluence', icon: FileText,
-      fields: [
-        { label: 'URL', key: 'url', placeholder: 'https://your-domain.atlassian.net/wiki' },
-        { label: 'Email', key: 'email', placeholder: 'you@company.com' },
-        { label: 'API Token', key: 'apiToken', type: 'password', placeholder: 'Your Confluence API token' },
-      ],
-    },
-    {
-      key: 'email', title: 'Email (SMTP)', icon: Send,
-      fields: [
-        { label: 'SMTP Host', key: 'smtpHost', placeholder: 'smtp.gmail.com' },
-        { label: 'Port', key: 'smtpPort', type: 'number', placeholder: '587' },
-        { label: 'Username', key: 'username', placeholder: 'your-email@gmail.com' },
-        { label: 'Password', key: 'password', type: 'password', placeholder: 'App password' },
-      ],
-    },
-  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -335,338 +169,27 @@ export function SettingsView() {
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4 mt-4">
-          {/* Dedicated Jira Card */}
           <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Activity className="h-5 w-5" />Jira
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  {settings.integrations.jira?.enabled && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={testJiraAndFetchProjects}
-                      disabled={isTesting === 'jira'}
-                    >
-                      {isTesting === 'jira' ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                      )}
-                      Test
-                    </Button>
-                  )}
-                  <Switch
-                    checked={settings.integrations.jira?.enabled}
-                    onCheckedChange={(checked) => updateIntegrations({
-                      jira: { ...settings.integrations.jira, enabled: checked }
-                    })}
-                  />
-                </div>
-              </div>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Puzzle className="h-4 w-4" />
+                Integrations
+              </CardTitle>
+              <CardDescription>
+                Connect Notion, Linear, GitHub, Jira, Slack and more
+              </CardDescription>
             </CardHeader>
-            {settings.integrations.jira?.enabled && (
-              <CardContent className="space-y-3">
-                <div>
-                  <Label className="text-xs">Jira URL</Label>
-                  <Input
-                    value={settings.integrations.jira?.url}
-                    onChange={(e) => updateIntegrations({ jira: { ...settings.integrations.jira, url: e.target.value } })}
-                    placeholder="https://your-domain.atlassian.net"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Email</Label>
-                  <Input
-                    value={settings.integrations.jira?.email}
-                    onChange={(e) => updateIntegrations({ jira: { ...settings.integrations.jira, email: e.target.value } })}
-                    placeholder="you@company.com"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">API Token</Label>
-                  <Input
-                    type="password"
-                    value={settings.integrations.jira?.apiToken}
-                    onChange={(e) => updateIntegrations({ jira: { ...settings.integrations.jira, apiToken: e.target.value } })}
-                    placeholder="Your Jira API token"
-                  />
-                </div>
-
-                {/* Project Picker */}
-                {jiraProjects.length > 0 && (
-                  <div>
-                    <Label className="text-xs">Project</Label>
-                    <Select
-                      value={settings.integrations.jira?.projectKey || ''}
-                      onValueChange={async (val) => {
-                        updateIntegrations({ jira: { ...settings.integrations.jira, projectKey: val } });
-                        // Auto-discover project schema
-                        setIsDiscoveringSchema(true);
-                        try {
-                          const params = new URLSearchParams({
-                            action: 'schema',
-                            projectKey: val,
-                            url: settings.integrations.jira?.url,
-                            email: settings.integrations.jira?.email,
-                            apiToken: settings.integrations.jira?.apiToken,
-                          });
-                          const resp = await fetch(`/api/integrations/jira?${params}`);
-                          if (resp.ok) {
-                            const data = await resp.json();
-                            setJiraProjectSchema(data.schema);
-                            setShowHierarchy(true);
-                            toast.success(`Discovered ${data.schema.issueTypes?.length || 0} issue types in ${val}`);
-                          }
-                        } catch (err: any) {
-                          console.error('Schema discovery failed:', err);
-                        } finally {
-                          setIsDiscoveringSchema(false);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select a project to sync" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {jiraProjects.map((p) => (
-                          <SelectItem key={p.key} value={p.key}>
-                            {p.key} — {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Project Hierarchy Display */}
-                {jiraProjectSchema && settings.integrations.jira?.projectKey && (
-                  <div className="pt-2 border-t">
-                    <button
-                      onClick={() => setShowHierarchy(!showHierarchy)}
-                      className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-blue-600 transition-colors w-full"
-                    >
-                      {showHierarchy ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                      <GitBranch className="h-3.5 w-3.5" />
-                      Project Hierarchy ({jiraProjectSchema.issueTypes?.length || 0} issue types)
-                      {isDiscoveringSchema && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
-                    </button>
-                    {showHierarchy && jiraProjectSchema.hierarchy && (
-                      <div className="mt-2 ml-5 space-y-1">
-                        {jiraProjectSchema.hierarchy.map((level: any, i: number) => (
-                          <div key={i} className="flex items-center gap-2" style={{ paddingLeft: `${Math.max(0, (2 - level.level)) * 16}px` }}>
-                            <span className="text-xs font-mono text-muted-foreground">L{level.level}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {level.issueTypeNames.join(', ')}
-                            </Badge>
-                            {level.canContain.length > 0 && (
-                              <span className="text-xs text-muted-foreground">→ contains: {level.canContain.join(', ')}</span>
-                            )}
-                          </div>
-                        ))}
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          Discovered: {new Date(jiraProjectSchema.discoveredAt).toLocaleString()}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Sync Button */}
-                {settings.integrations.jira?.projectKey && (
-                  <div className="pt-2 border-t space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium">Sync Issues</p>
-                        {lastSyncTime && (
-                          <p className="text-xs text-muted-foreground">Last synced: {lastSyncTime}</p>
-                        )}
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={handleJiraSync}
-                        disabled={isSyncing}
-                      >
-                        {isSyncing ? (
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        ) : (
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                        )}
-                        Sync Now
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Imports Initiatives, Epics &amp; Features from <strong>{settings.integrations.jira?.projectKey}</strong>. Stories, bugs and tasks are excluded.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            )}
-          </Card>
-
-          {/* Zoom Card */}
-          <Card>
-            <CardHeader className="pb-2">
+            <CardContent>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Video className="h-5 w-5" />Zoom
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  {settings.integrations.zoom?.enabled && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => testConnection('zoom')}
-                      disabled={isTesting === 'zoom'}
-                    >
-                      {isTesting === 'zoom' ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                      )}
-                      Test
-                    </Button>
-                  )}
-                  <Switch
-                    checked={settings.integrations.zoom?.enabled}
-                    onCheckedChange={(checked) => updateIntegrations({
-                      zoom: { ...(settings.integrations.zoom || {}), enabled: checked }
-                    })}
-                  />
-                </div>
+                <ConnectionStatusSummary />
+                <Button variant="outline" size="sm" asChild>
+                  <a href="/integrations">
+                    Manage integrations <ArrowRight className="h-3 w-3 ml-1" />
+                  </a>
+                </Button>
               </div>
-            </CardHeader>
-            {settings.integrations.zoom?.enabled && (
-              <CardContent className="space-y-3">
-                <div>
-                  <Label className="text-xs">Account ID</Label>
-                  <Input
-                    value={settings.integrations.zoom?.accountId}
-                    onChange={(e) => updateIntegrations({ zoom: { ...(settings.integrations.zoom || {}), accountId: e.target.value } })}
-                    placeholder="Your Zoom Account ID"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Client ID</Label>
-                  <Input
-                    value={settings.integrations.zoom?.clientId}
-                    onChange={(e) => updateIntegrations({ zoom: { ...(settings.integrations.zoom || {}), clientId: e.target.value } })}
-                    placeholder="Your Zoom Client ID"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Client Secret</Label>
-                  <Input
-                    type="password"
-                    value={settings.integrations.zoom?.clientSecret}
-                    onChange={(e) => updateIntegrations({ zoom: { ...(settings.integrations.zoom || {}), clientSecret: e.target.value } })}
-                    placeholder="Your Zoom Client Secret"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Get credentials from <strong>marketplace.zoom.us</strong> → Create a Server-to-Server OAuth app.
-                </p>
-              </CardContent>
-            )}
+            </CardContent>
           </Card>
-
-          {/* Teams Card */}
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Shield className="h-5 w-5" />Microsoft Teams
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  {settings.integrations.teams?.enabled && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => testConnection('teams')}
-                      disabled={isTesting === 'teams'}
-                    >
-                      {isTesting === 'teams' ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                      )}
-                      Test
-                    </Button>
-                  )}
-                  <Switch
-                    checked={settings.integrations.teams?.enabled}
-                    onCheckedChange={(checked) => updateIntegrations({
-                      teams: { ...(settings.integrations.teams || {}), enabled: checked }
-                    })}
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            {settings.integrations.teams?.enabled && (
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Teams credentials are configured on the server. No additional setup needed — just paste a Teams meeting link and click Join.
-                </p>
-              </CardContent>
-            )}
-          </Card>
-
-          {integrationConfigs.map((integration) => (
-            <Card key={integration.key}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <integration.icon className="h-5 w-5" />{integration.title}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    {(settings.integrations as any)?.[integration.key]?.enabled && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => testConnection(integration.key)}
-                        disabled={isTesting === integration.key}
-                      >
-                        {isTesting === integration.key ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                        )}
-                        Test
-                      </Button>
-                    )}
-                    <Switch
-                      checked={(settings.integrations as any)?.[integration.key]?.enabled}
-                      onCheckedChange={(checked) => updateIntegrations({
-                        [integration.key]: { ...(settings.integrations as any)[integration.key], enabled: checked }
-                      })}
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              {(settings.integrations as any)?.[integration.key]?.enabled && (
-                <CardContent className="space-y-3">
-                  {integration.fields.map((field) => (
-                    <div key={field.key}>
-                      <Label className="text-xs">{field.label}</Label>
-                      <Input
-                        type={(field as any).type || 'text'}
-                        value={(settings.integrations as any)[integration.key][field.key] || ''}
-                        onChange={(e) => updateIntegrations({
-                          [integration.key]: {
-                            ...(settings.integrations as any)[integration.key],
-                            [field.key]: (field as any).type === 'number' ? parseInt(e.target.value) || 0 : e.target.value,
-                          }
-                        })}
-                        placeholder={field.placeholder}
-                      />
-                    </div>
-                  ))}
-                </CardContent>
-              )}
-            </Card>
-          ))}
         </TabsContent>
 
         <TabsContent value="connectors" className="mt-4">
@@ -723,7 +246,7 @@ export function SettingsView() {
                     return (
                       <div key={tool} className="flex items-center gap-2 text-xs">
                         <span className={`inline-block h-2 w-2 rounded-full ${
-                          blocked ? 'bg-slate-300' :
+                          blocked ? 'bg-muted-foreground/30' :
                           gated ? 'bg-amber-400' :
                           'bg-green-500'
                         }`} />

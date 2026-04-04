@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { northStarId, title, description, metric, target, deadline, priority } = body;
+    const { northStarId, title, description, metric, target, deadline, priority, targetAudiences } = body;
 
     if (!northStarId || !title) {
       return NextResponse.json({ error: 'northStarId and title are required' }, { status: 400 });
@@ -71,6 +71,30 @@ export async function POST(req: NextRequest) {
       }).catch((err: unknown) => console.error('BrainNode upsert failed (business-goal):', err));
     } catch (err) {
       console.error('BrainNode upsert error (business-goal):', err);
+    }
+
+    // Fire-and-forget: sync target audiences to TargetGroup model
+    if (Array.isArray(targetAudiences)) {
+      for (const audience of targetAudiences) {
+        if (!audience?.name) continue;
+        db.targetGroup.upsert({
+          where: { userId_name: { userId: session.user.id, name: audience.name } },
+          create: {
+            userId: session.user.id,
+            businessGoalId: businessGoal.id,
+            name: audience.name,
+            description: audience.description || '',
+            role: audience.role || '',
+            goals: typeof audience.goals === 'string' ? audience.goals : JSON.stringify(audience.goals || []),
+            painPoints: typeof audience.painPoints === 'string' ? audience.painPoints : JSON.stringify(audience.painPoints || []),
+            source: 'ai_generated',
+          },
+          update: {
+            description: audience.description || undefined,
+            businessGoalId: businessGoal.id,
+          },
+        }).catch((err: unknown) => console.error('TargetGroup sync failed:', err));
+      }
     }
 
     return NextResponse.json(businessGoal, { status: 201 });

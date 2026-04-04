@@ -208,7 +208,7 @@ registry.register(myAdapter);
 | Services | 20 | Check `services/` before creating new |
 | Integration services | 4 | `notion.ts`, `linear.ts`, `github.ts`, `jira.ts` |
 | Integration API routes | 4 | `connect`, `disconnect`, `status`, `notion/ingest` |
-| Test files | 18 | See `__tests__/` |
+| Test files | 27 | See `__tests__/` |
 | View components | 18 | See `components/views/` |
 
 ---
@@ -248,7 +248,7 @@ Sprint specs: `docs/sprints/` · Sanity check: `docs/SANITY_CHECK.md` · Archite
 
 **For DB changes:** show the Prisma schema diff before running anything.
 **For new types:** check `types.ts` first — add there, don't create new files.
-**For new features:** check if a parallel feature already exists in the 17 views.
+**For new features:** check if a parallel feature already exists in the 18 views.
 **For bug fixes:** reproduce the issue in one sentence before touching code.
 
 ---

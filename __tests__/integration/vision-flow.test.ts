@@ -93,6 +93,15 @@ vi.mock('@/lib/db', () => ({
         targetGroupStore.push(tg);
         return Promise.resolve(tg);
       }),
+      upsert: vi.fn(({ where, create }: any) => {
+        const existing = targetGroupStore.find(
+          (tg) => tg.userId === where.userId_name?.userId && tg.name === where.userId_name?.name
+        );
+        if (existing) return Promise.resolve(existing);
+        const tg = { id: `tg-${targetGroupStore.length + 1}`, ...create };
+        targetGroupStore.push(tg);
+        return Promise.resolve(tg);
+      }),
     },
     need: {
       findMany: vi.fn(({ where }: any) => {

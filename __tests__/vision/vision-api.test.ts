@@ -30,6 +30,7 @@ vi.mock('@/lib/db', () => ({
     targetGroup: {
       findMany: vi.fn(),
       create: vi.fn(),
+      upsert: vi.fn(),
     },
     productMapping: {
       findMany: vi.fn(),
@@ -433,7 +434,7 @@ describe('POST /api/vision/target-groups', () => {
   it('creates a target group when businessGoal belongs to the user', async () => {
     (db.businessGoal.findFirst as any).mockResolvedValue({ id: 'bg-1', userId: 'user-1' });
     const created = { id: 'tg-new', name: 'Designers', businessGoalId: 'bg-1' };
-    (db.targetGroup.create as any).mockResolvedValue(created);
+    (db.targetGroup.upsert as any).mockResolvedValue(created);
 
     const res = await targetGroupsPOST(
       createRequest('http://localhost/api/vision/target-groups', {
@@ -445,21 +446,18 @@ describe('POST /api/vision/target-groups', () => {
 
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual(created);
-    expect(db.targetGroup.create).toHaveBeenCalledWith({
-      data: {
-        userId: 'user-1',
-        businessGoalId: 'bg-1',
-        name: 'Designers',
-        role: null,
-        demographics: null,
-        behaviors: null,
-        goals: null,
-        painPoints: null,
-      },
-    });
+    expect(db.targetGroup.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId_name: { userId: 'user-1', name: 'Designers' } },
+        create: expect.objectContaining({ userId: 'user-1', name: 'Designers', businessGoalId: 'bg-1' }),
+      }),
+    );
   });
 
-  it('returns 400 when businessGoalId is missing', async () => {
+  it('creates a target group without businessGoalId (standalone)', async () => {
+    const created = { id: 'tg-new', name: 'Designers', businessGoalId: null };
+    (db.targetGroup.upsert as any).mockResolvedValue(created);
+
     const res = await targetGroupsPOST(
       createRequest('http://localhost/api/vision/target-groups', {
         method: 'POST',
@@ -468,8 +466,8 @@ describe('POST /api/vision/target-groups', () => {
       }),
     );
 
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: 'businessGoalId and name are required' });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual(created);
   });
 
   it('returns 400 when name is missing', async () => {
@@ -482,7 +480,7 @@ describe('POST /api/vision/target-groups', () => {
     );
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: 'businessGoalId and name are required' });
+    expect(await res.json()).toEqual({ error: 'name is required' });
   });
 
   it('returns 404 when businessGoal does not belong to the user', async () => {

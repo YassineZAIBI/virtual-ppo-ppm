@@ -40,30 +40,44 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { businessGoalId, name, role, demographics, behaviors, goals, painPoints } = body;
+    const { businessGoalId, name, description, role, demographics, behaviors, goals, painPoints, source } = body;
 
-    if (!businessGoalId || !name) {
-      return NextResponse.json({ error: 'businessGoalId and name are required' }, { status: 400 });
+    if (!name) {
+      return NextResponse.json({ error: 'name is required' }, { status: 400 });
     }
 
-    // Verify the businessGoal belongs to the user
-    const businessGoal = await db.businessGoal.findFirst({
-      where: { id: businessGoalId, userId: session.user.id },
-    });
-    if (!businessGoal) {
-      return NextResponse.json({ error: 'BusinessGoal not found' }, { status: 404 });
+    // If businessGoalId provided, verify it belongs to the user
+    if (businessGoalId) {
+      const businessGoal = await db.businessGoal.findFirst({
+        where: { id: businessGoalId, userId: session.user.id },
+      });
+      if (!businessGoal) {
+        return NextResponse.json({ error: 'BusinessGoal not found' }, { status: 404 });
+      }
     }
 
-    const targetGroup = await db.targetGroup.create({
-      data: {
+    const targetGroup = await db.targetGroup.upsert({
+      where: { userId_name: { userId: session.user.id, name } },
+      create: {
         userId: session.user.id,
-        businessGoalId,
+        businessGoalId: businessGoalId ?? null,
         name,
+        description: description ?? null,
         role: role ?? null,
         demographics: demographics ?? null,
         behaviors: behaviors ?? null,
         goals: goals ?? null,
         painPoints: painPoints ?? null,
+        source: source ?? 'manual',
+      },
+      update: {
+        ...(businessGoalId && { businessGoalId }),
+        ...(description !== undefined && { description }),
+        ...(role !== undefined && { role }),
+        ...(demographics !== undefined && { demographics }),
+        ...(behaviors !== undefined && { behaviors }),
+        ...(goals !== undefined && { goals }),
+        ...(painPoints !== undefined && { painPoints }),
       },
     });
 
