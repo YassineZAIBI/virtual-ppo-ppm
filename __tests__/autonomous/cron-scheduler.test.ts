@@ -34,30 +34,24 @@ function params(id: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.CRON_SECRET = 'test-cron-secret';
 });
 
 // ---------------------------------------------------------------------------
 // /api/cron/jobs  (GET, POST)
 // ---------------------------------------------------------------------------
+import { GET as jobsGET, POST as jobsPOST } from '@/app/api/cron/jobs/route';
+
 describe('/api/cron/jobs', () => {
-  let GET: any, POST: any;
-
-  beforeEach(async () => {
-    const mod = await import('@/app/api/cron/jobs/route');
-    GET = mod.GET;
-    POST = mod.POST;
-  });
-
-  // --- AUTH ---
   it('GET returns 401 when not authenticated', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(null);
-    const res = await GET(createRequest('http://localhost/api/cron/jobs'));
+    const res = await jobsGET(createRequest('http://localhost/api/cron/jobs'));
     expect(res.status).toBe(401);
   });
 
-  it('POST returns 401 when not authenticated', async () => {
-    vi.mocked(getServerSession).mockResolvedValueOnce(null);
-    const res = await POST(
+  it('POST returns 401 when cron secret is missing', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
+    const res = await jobsPOST(
       createRequest('http://localhost/api/cron/jobs', {
         method: 'POST',
         body: JSON.stringify({ jobType: 'competitor_scan', schedule: '0 * * * *' }),
@@ -66,7 +60,6 @@ describe('/api/cron/jobs', () => {
     expect(res.status).toBe(401);
   });
 
-  // --- GET list ---
   it('GET returns a list of cron jobs', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
     const jobs = [
@@ -74,17 +67,16 @@ describe('/api/cron/jobs', () => {
     ];
     mockFindMany.mockResolvedValueOnce(jobs);
 
-    const res = await GET(createRequest('http://localhost/api/cron/jobs'));
+    const res = await jobsGET(createRequest('http://localhost/api/cron/jobs'));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.jobs).toHaveLength(1);
     expect(json.jobs[0].jobType).toBe('competitor_scan');
   });
 
-  // --- POST create ---
   it('POST creates a cron job and returns 201', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
-    mockFindFirst.mockResolvedValueOnce(null); // no duplicate
+    mockFindFirst.mockResolvedValueOnce(null);
     const newJob = {
       id: 'job-2',
       userId: 'user-1',
@@ -94,9 +86,10 @@ describe('/api/cron/jobs', () => {
     };
     mockCreate.mockResolvedValueOnce(newJob);
 
-    const res = await POST(
+    const res = await jobsPOST(
       createRequest('http://localhost/api/cron/jobs', {
         method: 'POST',
+        headers: { 'x-cron-secret': 'test-cron-secret' },
         body: JSON.stringify({ jobType: 'market_pulse', schedule: '0 6 * * *' }),
       }),
     );
@@ -109,11 +102,12 @@ describe('/api/cron/jobs', () => {
 
   it('POST returns 409 when duplicate jobType exists', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
-    mockFindFirst.mockResolvedValueOnce({ id: 'job-existing' }); // duplicate
+    mockFindFirst.mockResolvedValueOnce({ id: 'job-existing' });
 
-    const res = await POST(
+    const res = await jobsPOST(
       createRequest('http://localhost/api/cron/jobs', {
         method: 'POST',
+        headers: { 'x-cron-secret': 'test-cron-secret' },
         body: JSON.stringify({ jobType: 'competitor_scan', schedule: '0 * * * *' }),
       }),
     );
@@ -126,9 +120,10 @@ describe('/api/cron/jobs', () => {
   it('POST returns 400 for invalid jobType', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
 
-    const res = await POST(
+    const res = await jobsPOST(
       createRequest('http://localhost/api/cron/jobs', {
         method: 'POST',
+        headers: { 'x-cron-secret': 'test-cron-secret' },
         body: JSON.stringify({ jobType: 'invalid_type', schedule: '0 * * * *' }),
       }),
     );
@@ -141,9 +136,10 @@ describe('/api/cron/jobs', () => {
   it('POST returns 400 when required fields are missing', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
 
-    const res = await POST(
+    const res = await jobsPOST(
       createRequest('http://localhost/api/cron/jobs', {
         method: 'POST',
+        headers: { 'x-cron-secret': 'test-cron-secret' },
         body: JSON.stringify({}),
       }),
     );
@@ -157,19 +153,19 @@ describe('/api/cron/jobs', () => {
 // ---------------------------------------------------------------------------
 // /api/cron/jobs/[id]  (GET, PATCH, DELETE)
 // ---------------------------------------------------------------------------
-describe('/api/cron/jobs/[id]', () => {
-  let GET: any, PATCH: any, DELETE: any;
+import { GET as jobIdGET, PATCH as jobIdPATCH, DELETE as jobIdDELETE } from '@/app/api/cron/jobs/[id]/route';
 
-  beforeEach(async () => {
-    const mod = await import('@/app/api/cron/jobs/[id]/route');
-    GET = mod.GET;
-    PATCH = mod.PATCH;
-    DELETE = mod.DELETE;
+describe('/api/cron/jobs/[id]', () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+    mockFindFirst.mockReset();
+    mockUpdate.mockReset();
+    mockDelete.mockReset();
   });
 
   it('GET returns 401 when not authenticated', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(null);
-    const res = await GET(createRequest('http://localhost/api/cron/jobs/job-1'), params('job-1'));
+    const res = await jobIdGET(createRequest('http://localhost/api/cron/jobs/job-1'), params('job-1'));
     expect(res.status).toBe(401);
   });
 
@@ -178,7 +174,7 @@ describe('/api/cron/jobs/[id]', () => {
     const job = { id: 'job-1', jobType: 'risk_reassess', schedule: '0 12 * * *', status: 'active' };
     mockFindFirst.mockResolvedValueOnce(job);
 
-    const res = await GET(createRequest('http://localhost/api/cron/jobs/job-1'), params('job-1'));
+    const res = await jobIdGET(createRequest('http://localhost/api/cron/jobs/job-1'), params('job-1'));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.id).toBe('job-1');
@@ -188,7 +184,7 @@ describe('/api/cron/jobs/[id]', () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
     mockFindFirst.mockResolvedValueOnce(null);
 
-    const res = await GET(createRequest('http://localhost/api/cron/jobs/bad'), params('bad'));
+    const res = await jobIdGET(createRequest('http://localhost/api/cron/jobs/bad'), params('bad'));
     expect(res.status).toBe(404);
   });
 
@@ -198,7 +194,7 @@ describe('/api/cron/jobs/[id]', () => {
     const updated = { id: 'job-1', schedule: '30 * * * *', status: 'paused' };
     mockUpdate.mockResolvedValueOnce(updated);
 
-    const res = await PATCH(
+    const res = await jobIdPATCH(
       createRequest('http://localhost/api/cron/jobs/job-1', {
         method: 'PATCH',
         body: JSON.stringify({ schedule: '30 * * * *', status: 'paused' }),
@@ -221,7 +217,7 @@ describe('/api/cron/jobs/[id]', () => {
     mockFindFirst.mockResolvedValueOnce({ id: 'job-1' });
     mockDelete.mockResolvedValueOnce({});
 
-    const res = await DELETE(
+    const res = await jobIdDELETE(
       createRequest('http://localhost/api/cron/jobs/job-1', { method: 'DELETE' }),
       params('job-1'),
     );
@@ -236,7 +232,7 @@ describe('/api/cron/jobs/[id]', () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
     mockFindFirst.mockResolvedValueOnce(null);
 
-    const res = await DELETE(
+    const res = await jobIdDELETE(
       createRequest('http://localhost/api/cron/jobs/bad', { method: 'DELETE' }),
       params('bad'),
     );

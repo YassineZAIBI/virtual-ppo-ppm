@@ -14,6 +14,7 @@ vi.mock('@/lib/db', () => ({
   db: {
     competitor: {
       findMany: (...args: unknown[]) => mockCompetitorFindMany(...args),
+      create: (...args: unknown[]) => mockCompetitorCreate(...args),
     },
     competitorFeed: {
       findMany: (...args: unknown[]) => mockCompetitorFeedFindMany(...args),
@@ -34,6 +35,18 @@ vi.mock('@/lib/services/data-pipeline/pipeline', () => ({
 }));
 
 vi.mock('@/lib/services/data-pipeline/adapters', () => ({}));
+
+// Mock LLM service for suggest endpoint
+const mockLlmChat = vi.fn();
+vi.mock('@/lib/services/llm', () => ({
+  LLMService: {
+    create: vi.fn().mockReturnValue({
+      chat: (...args: unknown[]) => mockLlmChat(...args),
+    }),
+  },
+}));
+
+const mockCompetitorCreate = vi.fn();
 
 const mockSession = { user: { id: 'user-1', name: 'Test', email: 'test@test.com' } };
 
@@ -206,36 +219,52 @@ describe('/api/competitors/suggest', () => {
 
   it('returns 400 when NorthStar is not set', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
+    mockCompetitorFindMany.mockResolvedValueOnce([]); // existing competitors
     mockNorthStarFindUnique.mockResolvedValueOnce(null);
+    mockProductMappingFindMany.mockResolvedValueOnce([]);
 
     const res = await POST(
-      createRequest('http://localhost/api/competitors/suggest', { method: 'POST' }),
+      createRequest('http://localhost/api/competitors/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ llmConfig: { provider: 'openai', apiKey: 'sk-test' } }),
+      }),
     );
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toContain('North Star');
   });
 
-  it('returns suggestions context when NorthStar exists', async () => {
+  it('returns suggestions when NorthStar exists', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(mockSession);
+    mockCompetitorFindMany.mockResolvedValueOnce([]); // existing competitors
     mockNorthStarFindUnique.mockResolvedValueOnce({
       id: 'ns-1',
       userId: 'user-1',
       statement: 'Dominate the SaaS market',
     });
     mockProductMappingFindMany.mockResolvedValueOnce([
-      { id: 'pm-1' },
-      { id: 'pm-2' },
+      { id: 'pm-1', name: 'Product A' },
+      { id: 'pm-2', name: 'Product B' },
     ]);
+    mockLlmChat.mockResolvedValueOnce(JSON.stringify({
+      competitors: [
+        { name: 'Rival Corp', website: 'https://rival.com', description: 'A direct competitor', tags: ['direct'] },
+      ],
+    }));
+    mockCompetitorCreate.mockResolvedValue({ id: 'comp-new' });
 
     const res = await POST(
-      createRequest('http://localhost/api/competitors/suggest', { method: 'POST' }),
+      createRequest('http://localhost/api/competitors/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ llmConfig: { provider: 'openai', apiKey: 'sk-test' } }),
+      }),
     );
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.suggestions).toEqual([]);
-    expect(json.context.northStar).toBe('Dominate the SaaS market');
-    expect(json.context.productCount).toBe(2);
+    expect(json.added).toBe(1);
+    expect(json.suggestions).toContain('Rival Corp');
   });
 });

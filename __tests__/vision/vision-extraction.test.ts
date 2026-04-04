@@ -12,6 +12,15 @@ vi.mock('next-auth', () => ({
 
 vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 
+const mockLlmChat = vi.fn();
+vi.mock('@/lib/services/llm', () => ({
+  LLMService: {
+    create: vi.fn().mockReturnValue({
+      chat: (...args: unknown[]) => mockLlmChat(...args),
+    }),
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
@@ -184,7 +193,14 @@ describe('POST /api/vision/extract', () => {
     expect(await res.json()).toEqual({ error: 'LLM configuration required for vision extraction' });
   });
 
-  it('returns placeholder extraction with valid sources and llmConfig', async () => {
+  it('returns extraction with valid sources and llmConfig', async () => {
+    mockLlmChat.mockResolvedValueOnce(JSON.stringify({
+      northStar: { statement: 'Be the leading PM platform', confidence: 0.9 },
+      mission: 'Empower product managers',
+      businessGoals: [{ title: 'Growth', description: 'Grow user base' }],
+      targetGroups: [{ name: 'PMs', description: 'Product managers', role: 'user' }],
+    }));
+
     const res = await extractPOST(
       createRequest('http://localhost/api/vision/extract', {
         method: 'POST',
@@ -200,18 +216,23 @@ describe('POST /api/vision/extract', () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.status).toBe('placeholder');
+    expect(data.status).toBe('success');
     expect(data.sourceCount).toBe(1);
     expect(data.proposed).toBeDefined();
     expect(data.proposed.northStar).toBeDefined();
     expect(data.proposed.northStar.statement).toBeTruthy();
-    expect(data.proposed.businessGoals).toEqual([]);
-    expect(data.proposed.targetGroups).toEqual([]);
-    expect(data.proposed.needs).toEqual([]);
-    expect(data.proposed.products).toEqual([]);
+    expect(data.proposed.businessGoals).toHaveLength(1);
+    expect(data.proposed.targetGroups).toHaveLength(1);
   });
 
   it('handles multiple sources and reports correct sourceCount', async () => {
+    mockLlmChat.mockResolvedValueOnce(JSON.stringify({
+      northStar: { statement: 'Test', confidence: 0.8 },
+      mission: '',
+      businessGoals: [],
+      targetGroups: [],
+    }));
+
     const res = await extractPOST(
       createRequest('http://localhost/api/vision/extract', {
         method: 'POST',
@@ -235,6 +256,13 @@ describe('POST /api/vision/extract', () => {
 
   it('accepts all valid source types (document, url, text)', async () => {
     for (const sourceType of ['document', 'url', 'text'] as const) {
+      mockLlmChat.mockResolvedValueOnce(JSON.stringify({
+        northStar: { statement: 'Test', confidence: 0.8 },
+        mission: '',
+        businessGoals: [],
+        targetGroups: [],
+      }));
+
       const res = await extractPOST(
         createRequest('http://localhost/api/vision/extract', {
           method: 'POST',

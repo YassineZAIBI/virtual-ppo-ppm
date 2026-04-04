@@ -14,6 +14,10 @@
     "db:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:api": "vitest run __tests__/api-routes.test.ts __tests__/integrations.test.ts",
+    "test:services": "vitest run __tests__/sprint1-services.test.ts __tests__/sprint3-services.test.ts __tests__/sprint4-services.test.ts",
+    "test:security": "vitest run __tests__/security/",
+    "test:ui": "vitest run __tests__/ui-components.test.tsx",
     "postinstall": "prisma generate"
   },
   "dependencies": {
