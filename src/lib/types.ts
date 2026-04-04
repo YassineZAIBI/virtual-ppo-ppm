@@ -453,16 +453,66 @@ export interface BusinessGoalData {
   updatedAt: Date;
 }
 
+export interface TargetGroupPersona {
+  // JTBD
+  jtbdStatement: string;
+  jtbdFunctional: string[];
+  jtbdEmotional: string[];
+  jtbdSocial: string[];
+  // Empathy
+  empathyThinks: string[];
+  empathySays: string[];
+  empathyFeels: string[];
+  empathyDoes: string[];
+  // Behavioral
+  triggers: string[];
+  decisionDrivers: string[];
+  currentWorkarounds: string[];
+  churnRisks: string[];
+  successMetrics: string[];
+  preferredChannels: string[];
+  // Context
+  companyStage: string;
+  teamSize: string;
+  industryContext: string;
+  dayInLife: string;
+  typicalQuote: string;
+}
+
 export interface TargetGroupData {
   id: string;
-  businessGoalId: string;
+  businessGoalId?: string | null;
   name: string;
+  description?: string;
   role?: string;
   demographics?: string;
   behaviors?: string;
   goals?: string;
   painPoints?: string;
+  source?: string;
   needs?: NeedData[];
+  // Persona fields (stored as JSON strings in DB)
+  jtbdStatement?: string;
+  jtbdFunctional?: string;
+  jtbdEmotional?: string;
+  jtbdSocial?: string;
+  empathyThinks?: string;
+  empathySays?: string;
+  empathyFeels?: string;
+  empathyDoes?: string;
+  triggers?: string;
+  decisionDrivers?: string;
+  currentWorkarounds?: string;
+  churnRisks?: string;
+  successMetrics?: string;
+  preferredChannels?: string;
+  companyStage?: string;
+  teamSize?: string;
+  industryContext?: string;
+  dayInLife?: string;
+  typicalQuote?: string;
+  confidence?: number;
+  lastEnrichedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

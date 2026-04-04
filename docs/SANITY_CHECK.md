@@ -26,7 +26,7 @@
 - Sprint Bugfix:       COMPLETE — target group sync, chat scope, integration dedup
 - Sprint Testing:      COMPLETE — 27 test files, 447 tests
 - Sprint UI:           COMPLETE — loading/error/empty states, mobile, dark mode
-- Sprint Persona:      QUEUED
+- Sprint Persona:      COMPLETE — rich personas (JTBD, empathy, behavior), vision preview
 - Sprint Architecture: QUEUED
 - Sprint Intelligence: QUEUED
 - Sprint 6:            PARKED — meeting bot

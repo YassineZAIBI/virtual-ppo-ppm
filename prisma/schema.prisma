@@ -526,6 +526,38 @@ model TargetGroup {
   goals          String?  @db.Text
   painPoints     String?  @db.Text
   source         String   @default("manual") // "manual" | "ai_generated" | "onboarding"
+
+  // JTBD Layer
+  jtbdStatement    String @default("")
+  jtbdFunctional   String @default("[]") // JSON array — JSON.parse() on read
+  jtbdEmotional    String @default("[]") // JSON array — JSON.parse() on read
+  jtbdSocial       String @default("[]") // JSON array — JSON.parse() on read
+
+  // Empathy Map Layer
+  empathyThinks    String @default("[]") // JSON array — JSON.parse() on read
+  empathySays      String @default("[]") // JSON array — JSON.parse() on read
+  empathyFeels     String @default("[]") // JSON array — JSON.parse() on read
+  empathyDoes      String @default("[]") // JSON array — JSON.parse() on read
+
+  // Behavioral Layer
+  triggers           String @default("[]") // JSON array — JSON.parse() on read
+  decisionDrivers    String @default("[]") // JSON array — JSON.parse() on read
+  currentWorkarounds String @default("[]") // JSON array — JSON.parse() on read
+  churnRisks         String @default("[]") // JSON array — JSON.parse() on read
+  successMetrics     String @default("[]") // JSON array — JSON.parse() on read
+  preferredChannels  String @default("[]") // JSON array — JSON.parse() on read
+
+  // Context Layer
+  companyStage    String @default("")
+  teamSize        String @default("")
+  industryContext String @default("")
+  dayInLife       String @default("") // prose paragraph
+  typicalQuote    String @default("")
+
+  // Metadata
+  confidence       Float     @default(0.8)
+  lastEnrichedAt   DateTime?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

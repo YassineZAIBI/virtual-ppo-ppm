@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { NorthStarComposer } from './NorthStarComposer';
 import { VisionPyramid } from './VisionPyramid';
+import { VisionPreviewModal } from './VisionPreviewModal';
 import { AlignmentBadge } from './AlignmentBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Eye, Target, Users, AlertTriangle, Package, RefreshCw, Loader2 } from 'lucide-react';
+import { Eye, Target, Users, AlertTriangle, Package, RefreshCw, Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import type {
   NorthStarData,
   BusinessGoalData,
@@ -32,6 +34,11 @@ export function VisionBoardView() {
   } = useAppStore();
 
   const [error, setError] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const { settings } = useAppStore();
 
   const fetchPyramid = useCallback(async () => {
     setVisionLoading(true);
@@ -94,6 +101,95 @@ export function VisionBoardView() {
   const completedSteps = steps.filter(Boolean).length;
   const progressPct = Math.round((completedSteps / steps.length) * 100);
 
+  const handleGeneratePreview = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/vision/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: 'Generate a product vision',
+          company: '',
+          llmConfig: {
+            provider: settings.llm.provider,
+            apiKey: settings.llm.apiKey,
+            model: settings.llm.model,
+            apiEndpoint: settings.llm.apiEndpoint,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to generate preview');
+      }
+      const { preview } = await res.json();
+      setPreviewData(preview);
+      setShowPreview(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate vision preview');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleConfirmPreview = async (edited: any) => {
+    setConfirming(true);
+    try {
+      // 1. Save North Star
+      const nsRes = await fetch('/api/vision/north-star', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statement: edited.northStar }),
+      });
+      if (!nsRes.ok) throw new Error('Failed to save North Star');
+      const savedNS = await nsRes.json();
+
+      // 2. Save Business Goals
+      for (const goal of edited.goals) {
+        if (!goal.title?.trim()) continue;
+        await fetch('/api/vision/business-goals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            northStarId: savedNS.id,
+            title: goal.title,
+            description: goal.description || '',
+            metric: goal.metric || '',
+            targetAudiences: edited.targetGroups?.map((g: any) => ({
+              name: g.name,
+              description: g.description,
+              role: g.role,
+            })),
+          }),
+        });
+      }
+
+      // 3. Save Target Groups (if not already created via business-goals sync)
+      for (const group of edited.targetGroups) {
+        if (!group.name?.trim()) continue;
+        await fetch('/api/vision/target-groups', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: group.name,
+            description: group.description || '',
+            role: group.role || '',
+            source: 'ai_generated',
+          }),
+        });
+      }
+
+      setShowPreview(false);
+      setPreviewData(null);
+      toast.success('Vision Board generated!');
+      fetchPyramid();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save vision');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   if (visionLoading && !northStar) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -120,6 +216,12 @@ export function VisionBoardView() {
             <Badge variant="outline" className="text-green-500 border-green-500/30">
               Vision Complete
             </Badge>
+          )}
+          {!northStar && (
+            <Button size="sm" onClick={handleGeneratePreview} disabled={generating}>
+              {generating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
+              Generate with AI
+            </Button>
           )}
           <Button variant="outline" size="sm" onClick={fetchPyramid} disabled={visionLoading}>
             {visionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -200,6 +302,17 @@ export function VisionBoardView() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Vision Preview Modal */}
+      {showPreview && previewData && (
+        <VisionPreviewModal
+          open={showPreview}
+          onClose={() => { setShowPreview(false); setPreviewData(null); }}
+          preview={previewData}
+          onConfirm={handleConfirmPreview}
+          confirming={confirming}
+        />
       )}
     </div>
   );
