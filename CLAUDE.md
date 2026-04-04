@@ -202,11 +202,14 @@ registry.register(myAdapter);
 | API routes | 105 | Check existing route before creating |
 | Prisma models | 40 | Check `schema.prisma` before any DB change |
 | Data adapters | 33 | Check `adapters/index.ts` before adding |
-| AI agents | 6 | Check `meeting-bot/` before agent changes |
+| Python agents | 6 | See `python-agents/` directory |
 | TypeScript types | 700+ lines | Check `types.ts` before creating new types |
 | shadcn/ui components | 50+ | Check `components/ui/` before adding |
-| Integration services | 3 | `notion.ts`, `linear.ts`, `github.ts` |
+| Services | 20 | Check `services/` before creating new |
+| Integration services | 4 | `notion.ts`, `linear.ts`, `github.ts`, `jira.ts` |
 | Integration API routes | 4 | `connect`, `disconnect`, `status`, `notion/ingest` |
+| Test files | 18 | See `__tests__/` |
+| View components | 18 | See `components/views/` |
 
 ---
 
@@ -217,7 +220,7 @@ registry.register(myAdapter);
 | **Cron jobs** | Never trigger from within the app | Cloud Run scales to zero — needs Cloud Scheduler or VM |
 | **Python agent service** | Not on Cloud Run | Runs locally via `docker-compose` only. Never assume reachable in production |
 | **Teams bot** | Do not attempt Graph API fixes | Requires M365 Business/Enterprise + same-tenant. Personal accounts unsupported by design |
-| **Meeting bot** | Zoom SDK only currently | Cross-platform Playwright approach is planned (Phase 1) but not built |
+| **Meeting bot** | Uses Playwright for cross-platform meeting join | See `meeting-bot/app.py` — no Zoom SDK |
 | **LLM config** | Client-side only | Moving to DB would break multi-user isolation |
 | **Prisma JSON strings** | Always `JSON.parse()` | Raw access causes runtime `.map is not a function` crashes |
 | **Standalone Docker output** | Don't remove `/prisma-cli` stage | `start.sh` runs `prisma db push` before server starts; needs Prisma CLI |
@@ -225,6 +228,12 @@ registry.register(myAdapter);
 | **Notion internal integration** | Notion requires sharing each page/database with the integration manually | Auto-discovery only works for explicitly shared pages |
 | **Linear GraphQL** | Linear API is GraphQL only — no REST fallback | All queries in `linear.ts` use the graphql function |
 | **Analytics read-only** | Mixpanel and Amplitude are read-only | No write operations supported or planned |
+
+---
+
+## Documentation
+
+Sprint specs: `docs/sprints/` · Sanity check: `docs/SANITY_CHECK.md` · Architecture: `docs/ARCHITECTURE.md`
 
 ---
 
