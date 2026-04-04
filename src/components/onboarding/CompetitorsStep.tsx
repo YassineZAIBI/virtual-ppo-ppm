@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sparkles, Loader2, Plus, X, Binoculars, CheckCircle2, Globe } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 
 interface CompetitorEntry {
@@ -101,18 +102,31 @@ export function CompetitorsStep({
           <p className="text-sm text-muted-foreground mb-3">
             Let AI discover competitors in your space.
           </p>
-          <Button
-            onClick={handleSuggest}
-            disabled={suggesting || !identityData.companyName.trim()}
-            variant="outline"
-            className="gap-2"
-          >
-            {suggesting ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Searching...</>
-            ) : (
-              <><Sparkles className="h-4 w-4" /> Suggest Competitors</>
-            )}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={!identityData.companyName.trim() ? 0 : undefined}>
+                  <Button
+                    onClick={handleSuggest}
+                    disabled={suggesting || !identityData.companyName.trim()}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    {suggesting ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Searching...</>
+                    ) : (
+                      <><Sparkles className="h-4 w-4" /> Suggest Competitors</>
+                    )}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!identityData.companyName.trim() && (
+                <TooltipContent>
+                  <p>Complete your Identity step first (company name required)</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )}
 

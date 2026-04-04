@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,7 @@ function scoreTextColor(score: number): string {
 
 export function RiskCenterView() {
   const { risks, setRisks, addRisk, updateRisk, removeRisk, settings } = useAppStore();
+  const [riskLoading, setRiskLoading] = useState(true);
   const [showNewRisk, setShowNewRisk] = useState(false);
   const [newRisk, setNewRisk] = useState({
     title: '',
@@ -95,7 +97,8 @@ export function RiskCenterView() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setRiskLoading(false));
   }, [setRisks]);
 
   // ── handlers ────────────────────────────────────────────────────────
@@ -258,6 +261,14 @@ export function RiskCenterView() {
   }
 
   // ── render ──────────────────────────────────────────────────────────
+
+  if (riskLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

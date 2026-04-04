@@ -148,8 +148,9 @@ export function VisionBoardView() {
       {/* Error */}
       {error && (
         <Card className="border-destructive/50">
-          <CardContent className="pt-4">
+          <CardContent className="pt-4 flex items-center justify-between">
             <p className="text-sm text-destructive">{error}</p>
+            <Button variant="outline" size="sm" onClick={fetchPyramid}>Try again</Button>
           </CardContent>
         </Card>
       )}
@@ -169,7 +170,7 @@ export function VisionBoardView() {
 
       {/* Quick Stats */}
       {northStar && (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Card>
             <CardContent className="pt-3 pb-3 text-center">
               <Target className="h-5 w-5 mx-auto text-teal-500 mb-1" />

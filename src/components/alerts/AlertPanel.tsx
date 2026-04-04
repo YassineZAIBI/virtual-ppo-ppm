@@ -16,6 +16,8 @@ const ALERT_ROUTE_MAP: Record<string, string> = {
   market_shift: '/discovery',
   strategy_risk: '/strategy',
   action_required: '/chat',
+  risk_escalation: '/strategy/risks',
+  workflow_complete: '/initiatives',
 };
 
 const ENTITY_ROUTE_MAP: Record<string, (id: string) => string> = {

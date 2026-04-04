@@ -13,34 +13,36 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Trash2, Info, Link2, X, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { isSampleData } from '@/lib/sample-data';
 import { ExampleBadge } from '@/components/ui/example-badge';
 
 export function UserJourneyView() {
   const { personas, addPersona, updatePersona, deletePersona, initiatives, updateInitiative, setPersonas, setInitiatives } = useAppStore();
   const [showAddPersona, setShowAddPersona] = useState(false);
+  const [journeyLoading, setJourneyLoading] = useState(true);
 
-  // Fetch target groups from API and map to personas format
+  // Fetch target groups and initiatives in parallel
   useEffect(() => {
-    fetch('/api/vision/target-groups')
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped = data.map((tg: any) => ({
-            id: tg.id,
-            name: tg.name,
-            role: tg.role || '',
-            goals: tg.goals ? (typeof tg.goals === 'string' ? JSON.parse(tg.goals) : tg.goals) : [],
-            painPoints: tg.painPoints ? (typeof tg.painPoints === 'string' ? JSON.parse(tg.painPoints) : tg.painPoints) : [],
-          }));
-          setPersonas(mapped);
-        }
-      })
-      .catch(() => {});
-    fetch('/api/initiatives')
-      .then(r => r.ok ? r.json() : [])
-      .then(d => { if (Array.isArray(d)) setInitiatives(d); })
-      .catch(() => {});
+    Promise.all([
+      fetch('/api/vision/target-groups')
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            const mapped = data.map((tg: any) => ({
+              id: tg.id,
+              name: tg.name,
+              role: tg.role || '',
+              goals: tg.goals ? (typeof tg.goals === 'string' ? JSON.parse(tg.goals) : tg.goals) : [],
+              painPoints: tg.painPoints ? (typeof tg.painPoints === 'string' ? JSON.parse(tg.painPoints) : tg.painPoints) : [],
+            }));
+            setPersonas(mapped);
+          }
+        }),
+      fetch('/api/initiatives')
+        .then(r => r.ok ? r.json() : [])
+        .then(d => { if (Array.isArray(d)) setInitiatives(d); }),
+    ]).catch(() => {}).finally(() => setJourneyLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [linkingPersonaId, setLinkingPersonaId] = useState<string | null>(null);
   const [newPersona, setNewPersona] = useState({ name: '', role: '', goals: '', painPoints: '' });
@@ -106,6 +108,14 @@ export function UserJourneyView() {
     'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-300',
   ];
 
+  if (journeyLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -113,11 +123,11 @@ export function UserJourneyView() {
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-2xl font-bold text-foreground">User Personas</h1>
-            <p className="text-slate-500">Define target users and link them to initiatives</p>
+            <p className="text-muted-foreground">Define target users and link them to initiatives</p>
           </div>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-blue-500">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-500">
                 <Info className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
@@ -147,7 +157,7 @@ export function UserJourneyView() {
         <Card className="border-dashed">
           <CardContent className="py-12 text-center">
             <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-slate-500 mb-3">No personas yet. Create your first persona to start mapping user needs to initiatives.</p>
+            <p className="text-muted-foreground mb-3">No personas yet. Create your first persona to start mapping user needs to initiatives.</p>
             <Button variant="outline" onClick={() => setShowAddPersona(true)}>
               <Plus className="h-4 w-4 mr-2" />Create Persona
             </Button>
@@ -177,14 +187,14 @@ export function UserJourneyView() {
                         <CardTitle className="text-base">{persona.name}</CardTitle>
                         {isSampleData(persona.id) && <ExampleBadge />}
                       </div>
-                      <p className="text-sm text-slate-500">{persona.role}</p>
+                      <p className="text-sm text-muted-foreground">{persona.role}</p>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDeletePersona(persona.id)}
-                    className="h-7 w-7 p-0 text-slate-400 hover:text-red-500"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-red-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -241,7 +251,7 @@ export function UserJourneyView() {
                       </Badge>
                     ))}
                     {linked.length === 0 && (
-                      <span className="text-xs text-slate-400 italic">No initiatives linked</span>
+                      <span className="text-xs text-muted-foreground italic">No initiatives linked</span>
                     )}
 
                     {/* Link button */}
@@ -262,7 +272,7 @@ export function UserJourneyView() {
                                   onClick={() => handleLinkInitiative(persona.id, init.id)}
                                 >
                                   <span className="font-medium">{init.title}</span>
-                                  <span className="block text-xs text-slate-500 capitalize">{init.status}</span>
+                                  <span className="block text-xs text-muted-foreground capitalize">{init.status}</span>
                                 </button>
                               ))}
                             </div>

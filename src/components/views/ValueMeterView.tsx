@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -65,9 +66,10 @@ function getScoreLabel(score: number): string {
 
 export function ValueMeterView() {
   const { initiatives, settings, setInitiatives } = useAppStore();
+  const [vmLoading, setVmLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/initiatives').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d) && d.length > 0) setInitiatives(d); }).catch(() => {});
+    fetch('/api/initiatives').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d) && d.length > 0) setInitiatives(d); }).catch(() => {}).finally(() => setVmLoading(false));
   }, []);
   const [assessments, setAssessments] = useState<Record<string, ValueAssessment>>(() => {
     if (typeof window !== 'undefined') {
@@ -212,6 +214,15 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
   const avgScore = assessedCount > 0
     ? Math.round(activeInitiatives.reduce((sum, i) => sum + (assessments[i.id]?.overallScore || 0), 0) / assessedCount)
     : 0;
+
+  if (vmLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

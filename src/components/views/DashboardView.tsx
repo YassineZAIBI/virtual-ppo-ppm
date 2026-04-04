@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Briefcase, Clock, AlertTriangle, Calendar, Plus, FileText, Users,
   Target, Workflow, ArrowRight, BookOpen, X, Eye, Binoculars,
@@ -42,16 +43,19 @@ export function DashboardView() {
   const [newInitiative, setNewInitiative] = useState({ title: '', description: '', businessValue: 'medium' as const, effort: 'medium' as const });
   const [alertCount, setAlertCount] = useState(0);
   const [vasAvg, setVasAvg] = useState<number | null>(null);
+  const [dashLoading, setDashLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/initiatives').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setInitiatives(d); }).catch(() => {});
-    fetch('/api/meetings').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setMeetings(d); }).catch(() => {});
-    fetch('/api/risks').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setRisks(d); }).catch(() => {});
-    fetch('/api/vision').then(r => r.ok ? r.json() : null).then(d => setVisionData(d)).catch(() => {});
-    fetch('/api/competitors/feed?limit=1').then(r => r.ok ? r.json() : { pagination: { total: 0 } }).then(d => setAlertCount(d.pagination?.total || 0)).catch(() => {});
-    fetch('/api/strategy/portfolio').then(r => r.ok ? r.json() : null).then(d => {
-      if (d?.summary?.avgAlignment != null) setVasAvg(d.summary.avgAlignment);
-    }).catch(() => {});
+    Promise.all([
+      fetch('/api/initiatives').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setInitiatives(d); }),
+      fetch('/api/meetings').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setMeetings(d); }),
+      fetch('/api/risks').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setRisks(d); }),
+      fetch('/api/vision').then(r => r.ok ? r.json() : null).then(d => setVisionData(d)),
+      fetch('/api/competitors/feed?limit=1').then(r => r.ok ? r.json() : { pagination: { total: 0 } }).then(d => setAlertCount(d.pagination?.total || 0)),
+      fetch('/api/strategy/portfolio').then(r => r.ok ? r.json() : null).then(d => {
+        if (d?.summary?.avgAlignment != null) setVasAvg(d.summary.avgAlignment);
+      }),
+    ]).catch(() => {}).finally(() => setDashLoading(false));
   }, []);
 
   const activeInitiatives = initiatives.filter((i) => i.status !== 'idea').length;
@@ -116,6 +120,24 @@ export function DashboardView() {
     toast.success(`Opening AI Assistant for "${action}"...`);
     router.push('/chat');
   };
+
+  if (dashLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div><Skeleton className="h-8 w-48 mb-2" /><Skeleton className="h-4 w-64" /></div>
+          <Skeleton className="h-10 w-36" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
+        </div>
+        <Skeleton className="h-40 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -311,6 +333,17 @@ export function DashboardView() {
         )}
 
         {/* Top Initiatives */}
+        {initiatives.length === 0 && (
+          <Card className="mt-3">
+            <CardContent className="py-8 text-center">
+              <Briefcase className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground mb-3">No initiatives yet</p>
+              <Button size="sm" onClick={() => setShowNewInitiative(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Create your first initiative
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         {initiatives.length > 0 && (
           <Card className="mt-3">
             <CardHeader className="pb-2">

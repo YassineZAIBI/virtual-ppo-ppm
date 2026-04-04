@@ -79,10 +79,20 @@ export function OnboardingWizard() {
   const [syncResults, setSyncResults] = useState<any>(null);
 
   useEffect(() => {
+    // Restore from localStorage as immediate fallback
+    try {
+      const saved = localStorage.getItem('azmyra-onboarding-step');
+      if (saved) {
+        const step = parseInt(saved, 10);
+        if (step > 0 && step < STEPS.length) setCurrentStep(step);
+      }
+    } catch { /* localStorage unavailable */ }
+
     fetch('/api/onboarding/status')
       .then(res => res.json())
       .then(data => {
         if (data.completed) {
+          localStorage.removeItem('azmyra-onboarding-step');
           router.push('/');
           return;
         }
@@ -95,11 +105,16 @@ export function OnboardingWizard() {
           slack: data.slackConnected || false,
         });
       })
-      .catch(() => {})
+      .catch(() => {
+        // Server unavailable — still let user start onboarding
+      })
       .finally(() => setIsLoading(false));
   }, [router]);
 
   const saveProgress = async (step: number, extra?: Record<string, any>) => {
+    try {
+      localStorage.setItem('azmyra-onboarding-step', String(step));
+    } catch { /* localStorage unavailable */ }
     try {
       await fetch('/api/onboarding/status', {
         method: 'PUT',
@@ -107,7 +122,7 @@ export function OnboardingWizard() {
         body: JSON.stringify({ currentStep: step, ...extra }),
       });
     } catch {
-      // Non-critical
+      // Non-critical — localStorage is the fallback
     }
   };
 
@@ -193,16 +208,22 @@ export function OnboardingWizard() {
       }
 
       // Mark onboarding complete + serialize company brain
-      await fetch('/api/onboarding/complete', {
+      const completeRes = await fetch('/api/onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identityData }),
       });
+
+      if (!completeRes.ok) {
+        // Brain write failed — warn but don't block
+        toast.warning('Company brain setup will retry in background. You can continue.');
+      }
+
       await update();
       toast.success('Your Azmyra is ready! Welcome.');
       window.location.href = '/vision';
     } catch {
-      toast.error('Failed to complete setup');
+      toast.error('Failed to complete setup. Please try again.');
     }
   };
 

@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Plus, ArrowRight, Save, Trash2, Search, DollarSign,
   AlertTriangle, Clock, HelpCircle, ExternalLink,
@@ -54,12 +55,15 @@ export function InitiativesPipeline() {
   const { initiatives, setInitiatives, moveInitiative, addInitiative, updateInitiative, deleteInitiative, personas } = useAppStore();
   const router = useRouter();
 
+  const [pipelineLoading, setPipelineLoading] = useState(true);
+
   // Load initiatives from API on mount (replaces demo data with real DB data)
   useEffect(() => {
     fetch('/api/initiatives')
       .then((res) => res.ok ? res.json() : Promise.reject())
       .then((data) => { if (Array.isArray(data)) setInitiatives(data); })
-      .catch(() => {}); // keep store data as fallback
+      .catch(() => {}) // keep store data as fallback
+      .finally(() => setPipelineLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showNewIdea, setShowNewIdea] = useState(false);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
@@ -595,7 +599,18 @@ export function InitiativesPipeline() {
       </Dialog>
 
       {/* Kanban Board */}
-      <div className="grid grid-cols-5 gap-4 min-h-[500px]">
+      {pipelineLoading && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-32 w-full rounded-lg" />
+              <Skeleton className="h-32 w-full rounded-lg" />
+            </div>
+          ))}
+        </div>
+      )}
+      <div className={cn("grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 min-h-[500px]", pipelineLoading && "hidden")}>
         {stages.map((stage) => {
           const stageInitiatives = filteredInitiatives.filter((i) => i.status === stage.id);
           return (
@@ -613,6 +628,11 @@ export function InitiativesPipeline() {
                 <Badge variant="secondary" className="ml-1">{stageInitiatives.length}</Badge>
               </div>
               <div className="bg-background rounded-b-lg p-2 space-y-2 min-h-[400px]">
+                {stageInitiatives.length === 0 && (
+                  <div className="flex items-center justify-center h-24 text-xs text-muted-foreground border border-dashed rounded-lg">
+                    Drop initiatives here
+                  </div>
+                )}
                 {stageInitiatives.map((initiative) => (
                   <Card
                     key={initiative.id}
@@ -670,7 +690,7 @@ export function InitiativesPipeline() {
                           })}
                         </div>
                       )}
-                      <p className="text-xs text-slate-500 line-clamp-2 mb-2">{initiative.description}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{initiative.description}</p>
 
                       {/* Business case indicators */}
                       <div className="space-y-1 mb-2">

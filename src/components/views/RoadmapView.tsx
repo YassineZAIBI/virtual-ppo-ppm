@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -48,14 +49,15 @@ const STATUS_CONFIG: Record<string, { color: string; bgColor: string; icon: type
   definition: { color: 'text-purple-700 dark:text-purple-400', bgColor: 'bg-purple-500', icon: Target, label: 'Definition' },
   validation: { color: 'text-amber-700 dark:text-amber-400', bgColor: 'bg-amber-500', icon: Clock, label: 'Validating' },
   discovery: { color: 'text-sky-700 dark:text-sky-400', bgColor: 'bg-sky-500', icon: Map, label: 'Discovery' },
-  idea: { color: 'text-muted-foreground', bgColor: 'bg-slate-400', icon: Target, label: 'Idea' },
+  idea: { color: 'text-muted-foreground', bgColor: 'bg-muted-foreground', icon: Target, label: 'Idea' },
 };
 
 export function RoadmapView() {
   const { initiatives, addInitiative, setInitiatives } = useAppStore();
+  const [roadmapLoading, setRoadmapLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/initiatives').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setInitiatives(d); }).catch(() => {});
+    fetch('/api/initiatives').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setInitiatives(d); }).catch(() => {}).finally(() => setRoadmapLoading(false));
   }, []);
   const currentYear = new Date().getFullYear();
   const currentQuarter = (`Q${Math.ceil((new Date().getMonth() + 1) / 3)}`) as Quarter;
@@ -188,6 +190,17 @@ export function RoadmapView() {
     ).length,
   }), [roadmapInitiatives, quarterAssignments, selectedYear]);
 
+  if (roadmapLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-40 w-full rounded-lg" />)}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <TooltipProvider>
       <div className="p-6 space-y-6">
@@ -196,7 +209,7 @@ export function RoadmapView() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Product Roadmap</h1>
-            <p className="text-slate-500">Plan and visualize your product initiatives across quarters</p>
+            <p className="text-muted-foreground">Plan and visualize your product initiatives across quarters</p>
           </div>
           <div className="flex items-center gap-2">
             {/* Level toggle */}
@@ -238,7 +251,7 @@ export function RoadmapView() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-xs text-slate-500">Total</p>
+                <p className="text-xs text-muted-foreground">Total</p>
               </div>
             </CardContent>
           </Card>
@@ -249,7 +262,7 @@ export function RoadmapView() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-                <p className="text-xs text-slate-500">Approved</p>
+                <p className="text-xs text-muted-foreground">Approved</p>
               </div>
             </CardContent>
           </Card>
@@ -260,7 +273,7 @@ export function RoadmapView() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-purple-600">{stats.inProgress}</p>
-                <p className="text-xs text-slate-500">In Progress</p>
+                <p className="text-xs text-muted-foreground">In Progress</p>
               </div>
             </CardContent>
           </Card>
@@ -271,7 +284,7 @@ export function RoadmapView() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-red-600">{stats.atRisk}</p>
-                <p className="text-xs text-slate-500">At Risk</p>
+                <p className="text-xs text-muted-foreground">At Risk</p>
               </div>
             </CardContent>
           </Card>
@@ -282,7 +295,7 @@ export function RoadmapView() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-600">{stats.assigned}</p>
-                <p className="text-xs text-slate-500">Assigned</p>
+                <p className="text-xs text-muted-foreground">Assigned</p>
               </div>
             </CardContent>
           </Card>
@@ -301,7 +314,7 @@ export function RoadmapView() {
                 className={cn(
                   'border-2 transition-all min-h-[300px]',
                   colors.border,
-                  isCurrent && 'ring-2 ring-blue-400 ring-offset-2 dark:ring-offset-slate-950'
+                  isCurrent && 'ring-2 ring-blue-400 ring-offset-2 dark:ring-offset-background'
                 )}
               >
                 {/* Quarter Header */}
@@ -323,7 +336,7 @@ export function RoadmapView() {
                 {/* Quarter Body */}
                 <CardContent className={cn('p-3 space-y-2', colors.bg)}>
                   {items.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
+                    <div className="text-center py-8 text-muted-foreground">
                       <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p className="text-xs">No items planned</p>
                       <p className="text-xs mt-1">Assign initiatives below</p>
@@ -363,11 +376,11 @@ export function RoadmapView() {
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-xs text-slate-500 line-clamp-2">{item.description || 'No description'}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{item.description || 'No description'}</p>
                             </div>
                             <button
                               onClick={(e) => { e.stopPropagation(); removeFromQuarter(item.id); }}
-                              className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all text-xs"
+                              className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-all text-xs"
                               title="Remove from quarter"
                             >
                               x
@@ -383,7 +396,7 @@ export function RoadmapView() {
                               'text-[10px] px-1.5 py-0',
                               (item.level || 'idea') === 'solution' && 'border-green-500/30 text-green-700 dark:text-green-400',
                               (item.level || 'idea') === 'epic' && 'border-purple-500/30 text-purple-700 dark:text-purple-400',
-                              (item.level || 'idea') === 'idea' && 'border-slate-500/30 text-slate-600 dark:text-slate-400',
+                              (item.level || 'idea') === 'idea' && 'border-muted-foreground/30 text-muted-foreground',
                             )}>
                               {(item.level || 'idea').charAt(0).toUpperCase() + (item.level || 'idea').slice(1)}
                             </Badge>
@@ -392,7 +405,7 @@ export function RoadmapView() {
                               'text-[10px] px-1.5 py-0',
                               item.businessValue === 'high' && 'border-green-500 text-green-600',
                               item.businessValue === 'medium' && 'border-amber-500 text-amber-600',
-                              item.businessValue === 'low' && 'border-slate-400 text-slate-500',
+                              item.businessValue === 'low' && 'border-muted-foreground/50 text-muted-foreground',
                             )}>
                               {item.businessValue} value
                             </Badge>
@@ -412,7 +425,7 @@ export function RoadmapView() {
                           {selectedItem?.id === item.id && (
                             <div className="mt-3 pt-2 border-t border-border space-y-1.5 text-xs">
                               {item.stakeholders.length > 0 && (
-                                <p className="text-slate-500"><span className="font-medium">Stakeholders:</span> {item.stakeholders.join(', ')}</p>
+                                <p className="text-muted-foreground"><span className="font-medium">Stakeholders:</span> {item.stakeholders.join(', ')}</p>
                               )}
                               {item.dependencies.length > 0 && (
                                 <p className="text-blue-600"><span className="font-medium">Dependencies:</span> {item.dependencies.join(', ')}</p>
@@ -424,7 +437,7 @@ export function RoadmapView() {
                                   ))}
                                 </div>
                               )}
-                              <p className="text-slate-400">Effort: {item.effort}</p>
+                              <p className="text-muted-foreground">Effort: {item.effort}</p>
                             </div>
                           )}
                         </div>
@@ -488,8 +501,8 @@ export function RoadmapView() {
         {roadmapInitiatives.length === 0 && (
           <Card>
             <CardContent className="py-16">
-              <div className="text-center text-slate-500">
-                <Map className="h-16 w-16 mx-auto mb-4 text-slate-300" />
+              <div className="text-center text-muted-foreground">
+                <Map className="h-16 w-16 mx-auto mb-4 opacity-30" />
                 <h3 className="text-lg font-medium mb-2">No Roadmap Items Yet</h3>
                 <p className="text-sm mb-4">Add initiatives or move items through the pipeline to populate your roadmap.</p>
                 <Button onClick={() => setShowAddItem(true)}>

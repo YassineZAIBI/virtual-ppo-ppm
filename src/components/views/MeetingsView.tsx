@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { Meeting } from '@/lib/types';
 import { ShareButton } from '@/components/share/ShareButton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { isSampleData } from '@/lib/sample-data';
 import { ExampleBadge } from '@/components/ui/example-badge';
 
@@ -42,9 +43,10 @@ function PlatformBadge({ url }: { url: string }) {
 
 export function MeetingsView() {
   const { meetings, addMeeting, updateMeeting, setMeetings, settings } = useAppStore();
+  const [meetingsLoading, setMeetingsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/meetings').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setMeetings(d); }).catch(() => {});
+    fetch('/api/meetings').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setMeetings(d); }).catch(() => {}).finally(() => setMeetingsLoading(false));
   }, []);
 
   const [showUpload, setShowUpload] = useState(false);
@@ -229,12 +231,20 @@ export function MeetingsView() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  if (meetingsLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Meetings</h1>
-          <p className="text-slate-500">AI-powered meeting management & autonomous attendance</p>
+          <p className="text-muted-foreground">AI-powered meeting management & autonomous attendance</p>
         </div>
         <div className="flex gap-2">
           <ShareButton resourceType="meetings" />
@@ -316,7 +326,7 @@ export function MeetingsView() {
                     </div>
                     <div className="max-h-[200px] overflow-y-auto text-sm text-muted-foreground whitespace-pre-wrap font-mono">
                       {liveTranscript || (
-                        <span className="italic text-slate-400">
+                        <span className="italic text-muted-foreground">
                           {detectPlatform(meetingUrl) === 'zoom'
                             ? 'Waiting for speech...'
                             : 'Teams transcript will be fetched when the meeting ends.'}
@@ -398,8 +408,8 @@ export function MeetingsView() {
       <div className="space-y-4">
         {meetings.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center text-slate-500">
-              <Calendar className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+            <CardContent className="py-12 text-center text-muted-foreground">
+              <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <p>No meetings yet. Add a meeting or use the AI Agent!</p>
             </CardContent>
           </Card>
@@ -438,7 +448,7 @@ export function MeetingsView() {
                         )}
                         {isSampleData(meeting.id) && <ExampleBadge />}
                       </div>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-muted-foreground">
                         {new Date(meeting.date).toLocaleDateString()} &bull; {meeting.duration} min
                       </p>
                       {meeting.summary && (
@@ -455,7 +465,7 @@ export function MeetingsView() {
                     )}>
                       {meeting.status}
                     </Badge>
-                    <ArrowRight className={cn('h-4 w-4 transition-transform text-slate-400', selectedMeeting?.id === meeting.id && 'rotate-90')} />
+                    <ArrowRight className={cn('h-4 w-4 transition-transform text-muted-foreground', selectedMeeting?.id === meeting.id && 'rotate-90')} />
                   </div>
                 </div>
 
@@ -468,7 +478,7 @@ export function MeetingsView() {
                         <div className="space-y-2">
                           {(typeof meeting.actionItems === 'string' ? JSON.parse(meeting.actionItems) : meeting.actionItems).map((item: any) => (
                             <div key={item.id} className="flex items-center gap-2 text-sm bg-card p-2 rounded">
-                              <CheckCircle2 className="h-4 w-4 text-slate-400 shrink-0" />
+                              <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0" />
                               <span className="flex-1">{item.description}</span>
                               {item.assignee && <Badge variant="secondary" className="text-xs">{item.assignee}</Badge>}
                             </div>

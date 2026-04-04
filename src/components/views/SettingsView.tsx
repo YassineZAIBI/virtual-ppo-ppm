@@ -238,11 +238,11 @@ export function SettingsView() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-        <p className="text-slate-500">Configure your AI assistant and integrations</p>
+        <p className="text-muted-foreground">Configure your AI assistant and integrations</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
           <TabsTrigger value="llm">LLM Provider</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="connectors">
@@ -321,7 +321,7 @@ export function SettingsView() {
                   onChange={(e) => updateLLMConfig({ model: e.target.value })}
                   placeholder={modelPlaceholders[settings.llm.provider] || 'gpt-4'}
                 />
-                <p className="text-xs text-slate-500">Leave empty to use the default model for the selected provider</p>
+                <p className="text-xs text-muted-foreground">Leave empty to use the default model for the selected provider</p>
               </div>
 
               <Alert>
@@ -457,16 +457,16 @@ export function SettingsView() {
                       <div className="mt-2 ml-5 space-y-1">
                         {jiraProjectSchema.hierarchy.map((level: any, i: number) => (
                           <div key={i} className="flex items-center gap-2" style={{ paddingLeft: `${Math.max(0, (2 - level.level)) * 16}px` }}>
-                            <span className="text-xs font-mono text-slate-400">L{level.level}</span>
+                            <span className="text-xs font-mono text-muted-foreground">L{level.level}</span>
                             <Badge variant="outline" className="text-xs">
                               {level.issueTypeNames.join(', ')}
                             </Badge>
                             {level.canContain.length > 0 && (
-                              <span className="text-xs text-slate-400">→ contains: {level.canContain.join(', ')}</span>
+                              <span className="text-xs text-muted-foreground">→ contains: {level.canContain.join(', ')}</span>
                             )}
                           </div>
                         ))}
-                        <p className="text-[10px] text-slate-400 mt-1">
+                        <p className="text-[10px] text-muted-foreground mt-1">
                           Discovered: {new Date(jiraProjectSchema.discoveredAt).toLocaleString()}
                         </p>
                       </div>
@@ -481,7 +481,7 @@ export function SettingsView() {
                       <div>
                         <p className="text-sm font-medium">Sync Issues</p>
                         {lastSyncTime && (
-                          <p className="text-xs text-slate-500">Last synced: {lastSyncTime}</p>
+                          <p className="text-xs text-muted-foreground">Last synced: {lastSyncTime}</p>
                         )}
                       </div>
                       <Button
@@ -497,7 +497,7 @@ export function SettingsView() {
                         Sync Now
                       </Button>
                     </div>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       Imports Initiatives, Epics &amp; Features from <strong>{settings.integrations.jira?.projectKey}</strong>. Stories, bugs and tasks are excluded.
                     </p>
                   </div>
@@ -695,7 +695,7 @@ export function SettingsView() {
                     <SelectItem value="manual">Manual - AI only assists on request</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {settings.preferences.autonomyLevel === 'full' && 'Agents will automatically execute all tool actions without asking for approval.'}
                   {settings.preferences.autonomyLevel === 'oversight' && 'Agents will analyze and propose actions, but wait for your approval before executing write operations.'}
                   {settings.preferences.autonomyLevel === 'advisory' && 'Agents will suggest what actions could be taken, but will not execute any tools.'}
@@ -705,7 +705,7 @@ export function SettingsView() {
 
               {/* Tool gating indicator */}
               <div className="rounded-lg border p-3 space-y-2">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Tool Access at Current Level</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tool Access at Current Level</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { tool: 'Jira Search', readOnly: true },
@@ -747,7 +747,7 @@ export function SettingsView() {
                   <div key={pref.key} className="flex items-center justify-between">
                     <div>
                       <Label>{pref.label}</Label>
-                      <p className="text-xs text-slate-500">{pref.desc}</p>
+                      <p className="text-xs text-muted-foreground">{pref.desc}</p>
                     </div>
                     <Switch
                       checked={settings.preferences[pref.key]}
