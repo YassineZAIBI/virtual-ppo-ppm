@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { LLMService } from '@/lib/services/llm';
+import { extractLLMJSON } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -105,15 +106,14 @@ Generate a complete Vision Pyramid for this product.`;
       }>;
     };
 
-    try {
-      const cleaned = response.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-      parsed = JSON.parse(cleaned);
-    } catch {
+    const extracted = extractLLMJSON<typeof parsed>(response);
+    if (!extracted) {
       return NextResponse.json(
         { error: 'AI returned an invalid response. Please try again.' },
-        { status: 500 }
+        { status: 502 }
       );
     }
+    parsed = extracted;
 
     if (!parsed.businessGoals || !Array.isArray(parsed.businessGoals)) {
       return NextResponse.json(
@@ -141,13 +141,24 @@ Generate a complete Vision Pyramid for this product.`;
       if (!goalData.targetGroups) continue;
 
       for (const groupData of goalData.targetGroups) {
-        const group = await db.targetGroup.create({
-          data: {
+        // Use upsert to avoid unique constraint crash on re-generation
+        const group = await db.targetGroup.upsert({
+          where: {
+            userId_name: { userId, name: groupData.name },
+          },
+          create: {
             userId,
             businessGoalId: goal.id,
             name: groupData.name,
             role: groupData.role || '',
             goals: groupData.description || '',
+            source: 'ai_generated',
+          },
+          update: {
+            businessGoalId: goal.id,
+            role: groupData.role || undefined,
+            goals: groupData.description || undefined,
+            updatedAt: new Date(),
           },
         });
 
@@ -183,8 +194,11 @@ Generate a complete Vision Pyramid for this product.`;
 
     return NextResponse.json({ status: 'success', goalsCreated: parsed.businessGoals.length });
   } catch (error) {
-    console.error('[VISION_PYRAMID_GENERATE]', error);
-    const message = error instanceof Error ? error.message : 'Internal server error';
+    console.error('[VISION_PYRAMID_GENERATE]', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
+    });
+    const message = error instanceof Error ? error.message : 'Failed to generate vision pyramid';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

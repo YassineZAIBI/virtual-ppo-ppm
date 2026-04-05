@@ -51,7 +51,8 @@ export async function middleware(request: NextRequest) {
 
   // If user hasn't completed onboarding, redirect to /onboarding
   // (except if they're already on /onboarding)
-  if (token.onboardingCompleted === false && !pathname.startsWith('/onboarding')) {
+  // Use ! instead of === false — new users may have undefined, not false
+  if (!token.onboardingCompleted && !pathname.startsWith('/onboarding')) {
     return NextResponse.redirect(new URL('/onboarding', request.url));
   }
 

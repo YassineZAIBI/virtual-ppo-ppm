@@ -104,12 +104,15 @@ export function VisionBoardView() {
   const handleGeneratePreview = async () => {
     setGenerating(true);
     try {
+      // Use North Star statement as context — company name not in Zustand store
+      const northStarText = visionPyramid.northStar?.statement || '';
+
       const res = await fetch('/api/vision/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: 'Generate a product vision',
-          company: '',
+          prompt: northStarText || 'Generate a product vision',
+          company: northStarText,
           llmConfig: {
             provider: settings.llm.provider,
             apiKey: settings.llm.apiKey,

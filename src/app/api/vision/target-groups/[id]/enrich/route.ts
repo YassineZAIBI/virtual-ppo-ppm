@@ -67,7 +67,11 @@ export async function POST(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('[VISION_TARGET_GROUP_ENRICH]', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('[VISION_TARGET_GROUP_ENRICH]', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
+    });
+    const message = error instanceof Error ? error.message : 'Enrichment failed';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

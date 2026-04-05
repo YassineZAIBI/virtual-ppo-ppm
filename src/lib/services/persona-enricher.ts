@@ -1,6 +1,6 @@
 import { LLMService } from '@/lib/services/llm';
-import type { LLMConfig } from '@/lib/services/llm';
-import type { TargetGroupPersona } from '@/lib/types';
+import type { LLMConfig, TargetGroupPersona } from '@/lib/types';
+import { extractLLMJSON } from '@/lib/utils';
 
 const PERSONA_PROMPT = `You are a senior product researcher generating a rich, actionable user persona.
 Given the target group information, generate a complete persona using the Jobs-to-be-Done framework,
@@ -50,13 +50,12 @@ export async function enrichPersona(
       .replace('{industry}', context.industry || '');
 
     const llm = LLMService.create(llmConfig);
-    const response = await llm.complete([
+    const response = await llm.chat([
       { role: 'system', content: 'You are a senior product researcher. Return only valid JSON.' },
       { role: 'user', content: prompt },
-    ]);
+    ], { temperature: 0.4 });
 
-    const clean = response.replace(/```json\n?|\n?```/g, '').trim();
-    return JSON.parse(clean);
+    return extractLLMJSON<Partial<TargetGroupPersona>>(response) ?? {};
   } catch (err) {
     console.error('[persona-enricher] Failed to enrich persona:', err);
     return {};

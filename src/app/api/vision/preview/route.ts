@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { LLMService } from '@/lib/services/llm';
+import { extractLLMJSON } from '@/lib/utils';
 
 /**
  * POST /api/vision/preview
@@ -21,8 +22,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'llmConfig with provider is required' }, { status: 400 });
     }
 
+    // Use whichever has content — never fail on empty company
+    const companyContext = company?.trim() || prompt?.trim() || '';
+    if (!companyContext) {
+      return NextResponse.json(
+        { error: 'Please enter your company name or description to generate a vision.' },
+        { status: 400 }
+      );
+    }
+
     const llm = LLMService.create(llmConfig);
-    const response = await llm.complete([
+    const response = await llm.chat([
       {
         role: 'system',
         content: 'You are a senior product strategist generating a vision framework. Return only valid JSON.',
@@ -30,7 +40,8 @@ export async function POST(req: NextRequest) {
       {
         role: 'user',
         content: `Generate a complete product vision framework for:
-Company: ${company || prompt || 'a technology company'}
+Company: ${companyContext}
+${company && prompt && company !== prompt ? `Additional context: ${prompt}` : ''}
 
 Return JSON with:
 {
@@ -48,15 +59,21 @@ Return JSON with:
 }
 Return 3-5 goals, 3-4 target groups, 4-6 core needs. Make it specific and actionable.`,
       },
-    ]);
+    ], { temperature: 0.5 });
 
-    const clean = response.replace(/```json\n?|\n?```/g, '').trim();
-    const preview = JSON.parse(clean);
+    const preview = extractLLMJSON(response);
+    if (!preview) {
+      return NextResponse.json(
+        { error: 'AI returned an unexpected response. Please try again.' },
+        { status: 502 }
+      );
+    }
 
     // Do NOT save — return preview only
     return NextResponse.json({ preview });
   } catch (error) {
-    console.error('[VISION_PREVIEW]', error);
-    return NextResponse.json({ error: 'Failed to generate preview' }, { status: 500 });
+    console.error('[VISION_PREVIEW]', error instanceof Error ? error.message : error);
+    const message = error instanceof Error ? error.message : 'Failed to generate preview';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

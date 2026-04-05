@@ -486,6 +486,9 @@ export interface BusinessGoalData {
   priority: number;
   createdAt: Date;
   updatedAt: Date;
+  // Expanded relations (present when fetched via /api/vision/pyramid)
+  targetGroups?: TargetGroupData[];
+  targetAudiences?: Array<{ name: string; description?: string; role?: string }>;
 }
 
 export interface TargetGroupPersona {

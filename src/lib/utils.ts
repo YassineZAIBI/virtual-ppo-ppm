@@ -68,6 +68,38 @@ export function parseJSON<T>(json: string, fallback: T): T {
 }
 
 /**
+ * Extract JSON from an LLM response that may include markdown code fences.
+ * Handles: ```json ... ```, ``` ... ```, raw JSON, and leading/trailing text.
+ * Returns null if no valid JSON can be extracted.
+ */
+export function extractLLMJSON<T = unknown>(raw: string): T | null {
+  if (!raw) return null;
+  // Strip code fences (```json ... ``` or ``` ... ```)
+  let cleaned = raw
+    .replace(/^```json\s*/im, '')
+    .replace(/^```\s*/im, '')
+    .replace(/\s*```\s*$/im, '')
+    .trim();
+  // Try direct parse first
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    // Try to find JSON object or array in the string
+    const objectMatch = cleaned.match(/\{[\s\S]*\}/);
+    const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+    const match = objectMatch || arrayMatch;
+    if (match) {
+      try {
+        return JSON.parse(match[0]) as T;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+/**
  * Safely parse a Prisma JSON-string tags field into a string array.
  * Handles: string[] | JSON string | null | undefined.
  */

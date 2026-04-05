@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { LLMService } from '@/lib/services/llm';
+import { extractLLMJSON } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     const existingNames = existingVerticals.map((v) => v.name);
 
     const llm = LLMService.create(llmConfig);
-    const response = await llm.complete([
+    const response = await llm.chat([
       {
         role: 'system',
         content: 'You are a senior product strategist. Return only valid JSON.',
@@ -64,12 +65,18 @@ Make verticals strategic — not just grouping by feature area. Think product li
       },
     ]);
 
-    const clean = response.replace(/```json\n?|\n?```/g, '').trim();
-    const suggestions = JSON.parse(clean);
+    const suggestions = extractLLMJSON<unknown[]>(response);
+    if (!suggestions || !Array.isArray(suggestions)) {
+      return NextResponse.json(
+        { error: 'AI returned an unexpected response. Please try again.' },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({ suggestions });
   } catch (error) {
-    console.error('[VERTICALS_SUGGEST]', error);
-    return NextResponse.json({ error: 'Failed to generate suggestions' }, { status: 500 });
+    console.error('[VERTICALS_SUGGEST]', error instanceof Error ? error.message : error);
+    const message = error instanceof Error ? error.message : 'Failed to generate suggestions';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
