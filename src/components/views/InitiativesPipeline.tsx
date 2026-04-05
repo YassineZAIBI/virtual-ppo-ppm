@@ -92,6 +92,7 @@ export function InitiativesPipeline() {
     whatIfNot: '',
     expectedValue: '',
     expectedTimeToMarket: '',
+    verticalId: '' as string,
   });
 
   const handleAddIdea = async () => {
@@ -106,6 +107,7 @@ export function InitiativesPipeline() {
       whatIfNot: newIdea.whatIfNot,
       expectedValue: newIdea.expectedValue,
       expectedTimeToMarket: newIdea.expectedTimeToMarket,
+      ...(newIdea.verticalId && { verticalId: newIdea.verticalId }),
     };
     try {
       const res = await fetch('/api/initiatives', {
@@ -421,6 +423,22 @@ export function InitiativesPipeline() {
                 </div>
               </div>
 
+              {/* Product Vertical */}
+              {verticals.length > 0 && (
+                <div>
+                  <Label className="flex items-center gap-1"><Boxes className="h-3.5 w-3.5" /> Product Vertical</Label>
+                  <Select value={newIdea.verticalId || '_none'} onValueChange={(v) => setNewIdea({ ...newIdea, verticalId: v === '_none' ? '' : v })}>
+                    <SelectTrigger><SelectValue placeholder="Assign to a vertical..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">No vertical</SelectItem>
+                      {verticals.map(v => (
+                        <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Business Case Questions */}
               <div className="border-t pt-4 mt-4">
                 <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
@@ -577,6 +595,25 @@ export function InitiativesPipeline() {
                           .map((p) => (
                             <SelectItem key={p.id} value={p.id}>{p.name} — {p.role}</SelectItem>
                           ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Product Vertical */}
+                {verticals.length > 0 && (
+                  <div>
+                    <Label className="flex items-center gap-1"><Boxes className="h-3.5 w-3.5" /> Product Vertical</Label>
+                    <Select
+                      value={editingInitiative.verticalId || '_none'}
+                      onValueChange={(v) => setEditingInitiative({ ...editingInitiative, verticalId: v === '_none' ? null : v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Assign to a vertical..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">No vertical</SelectItem>
+                        {verticals.map(v => (
+                          <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

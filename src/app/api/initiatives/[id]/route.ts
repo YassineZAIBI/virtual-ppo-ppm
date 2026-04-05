@@ -121,6 +121,15 @@ export async function PATCH(
         ...(body.discovery !== undefined && {
           discovery: typeof body.discovery === 'string' ? body.discovery : JSON.stringify(body.discovery),
         }),
+        ...(body.verticalId !== undefined && { verticalId: body.verticalId || null }),
+        ...(body.granularity !== undefined && { granularity: body.granularity }),
+        ...(body.whyNeeded !== undefined && { whyNeeded: body.whyNeeded }),
+        ...(body.whatIfNot !== undefined && { whatIfNot: body.whatIfNot }),
+        ...(body.expectedValue !== undefined && { expectedValue: body.expectedValue }),
+        ...(body.expectedTimeToMarket !== undefined && { expectedTimeToMarket: body.expectedTimeToMarket }),
+        ...(body.personaIds !== undefined && {
+          personaIds: typeof body.personaIds === 'string' ? body.personaIds : JSON.stringify(body.personaIds),
+        }),
       },
     });
 

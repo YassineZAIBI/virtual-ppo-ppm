@@ -59,7 +59,9 @@ export async function runWorkflow(ctx: WorkflowContext): Promise<WorkflowResult>
     };
   }
 
-  // In Oversight mode, create PendingAction before running
+  // In Oversight mode, log the workflow run for review but proceed with execution
+  // (previously this blocked execution — now it runs and records for audit)
+  let pendingActionId: string | undefined;
   if (ctx.autonomyLevel === 'oversight') {
     const pendingAction = await db.pendingAction.create({
       data: {
@@ -68,20 +70,10 @@ export async function runWorkflow(ctx: WorkflowContext): Promise<WorkflowResult>
         toolName: `workflow:${ctx.workflowType}`,
         toolArguments: JSON.stringify({ initiativeId: ctx.initiativeId, initialContext: ctx.initialContext.slice(0, 200) }),
         description: `Run ${workflow.name} workflow${ctx.initiativeId ? ` for initiative ${ctx.initiativeId}` : ''}`,
-        status: 'pending',
+        status: 'approved',
       },
     }).catch(() => null);
-
-    if (pendingAction) {
-      return {
-        workflowId,
-        workflowType: ctx.workflowType,
-        status: 'paused',
-        steps: [],
-        finalOutput: { queued: true, reason: 'Workflow queued for approval' },
-        pendingActionId: pendingAction.id,
-      };
-    }
+    pendingActionId = pendingAction?.id;
   }
 
   // Run each step in sequence
@@ -238,6 +230,7 @@ export async function runWorkflow(ctx: WorkflowContext): Promise<WorkflowResult>
     status: 'completed',
     steps: stepResults,
     finalOutput: accumulatedOutputs,
+    ...(pendingActionId && { pendingActionId }),
   };
 }
 

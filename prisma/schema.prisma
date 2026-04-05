@@ -211,6 +211,13 @@ model Initiative {
   vertical      ProductVertical? @relation(fields: [verticalId], references: [id])
   granularity   String @default("initiative") // "vertical" | "initiative" | "idea"
 
+  // Business case fields
+  whyNeeded             String?  @db.Text
+  whatIfNot             String?  @db.Text
+  expectedValue         String?
+  expectedTimeToMarket  String?
+  personaIds            String   @default("[]") // JSON array of target group IDs
+
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

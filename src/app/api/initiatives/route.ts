@@ -112,6 +112,11 @@ export async function POST(req: NextRequest) {
         pillar: pillar ?? 'strategy',
         ...(verticalId && { verticalId }),
         ...(granularity && { granularity }),
+        ...(whyNeeded && { whyNeeded }),
+        ...(whatIfNot && { whatIfNot }),
+        ...(expectedValue && { expectedValue }),
+        ...(expectedTimeToMarket && { expectedTimeToMarket }),
+        ...(personaIds && { personaIds: typeof personaIds === 'string' ? personaIds : JSON.stringify(personaIds) }),
       },
     });
 
