@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { JiraDiscoveryModal } from '@/components/settings/JiraDiscoveryModal';
 import type { IntegrationConnectionData, IntegrationConfig } from '@/lib/types';
 
 const INTEGRATION_CONFIGS: IntegrationConfig[] = [
@@ -148,6 +149,11 @@ export function IntegrationsHubView() {
   const [activeForm, setActiveForm] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [discoveryModal, setDiscoveryModal] = useState<{
+    open: boolean;
+    type: 'jira' | 'linear';
+    suggestions: any[];
+  } | null>(null);
 
   useEffect(() => {
     fetchConnections();
@@ -204,6 +210,25 @@ export function IntegrationsHubView() {
           body: JSON.stringify({ query: '' }),
         }).catch(console.error);
         toast.info('Importing Notion pages into company brain...');
+      }
+
+      // Auto-discover projects/teams for Jira and Linear
+      if (config.type === 'jira' || config.type === 'linear') {
+        fetch(`/api/integrations/${config.type}/discover`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => {
+            if (data?.suggestions?.length > 0) {
+              setDiscoveryModal({
+                open: true,
+                type: config.type as 'jira' | 'linear',
+                suggestions: data.suggestions,
+              });
+            }
+          })
+          .catch(console.error);
       }
 
       setActiveForm(null);
@@ -354,6 +379,16 @@ export function IntegrationsHubView() {
           );
         })}
       </div>
+
+      {/* Discovery Modal (Jira/Linear) */}
+      {discoveryModal?.open && (
+        <JiraDiscoveryModal
+          open={discoveryModal.open}
+          onClose={() => setDiscoveryModal(null)}
+          type={discoveryModal.type}
+          suggestions={discoveryModal.suggestions}
+        />
+      )}
     </div>
   );
 }

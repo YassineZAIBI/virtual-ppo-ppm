@@ -199,8 +199,8 @@ registry.register(myAdapter);
 
 | Metric | Count | Action Required |
 |--------|-------|----------------|
-| API routes | 105 | Check existing route before creating |
-| Prisma models | 40 | Check `schema.prisma` before any DB change |
+| API routes | 112 | Check existing route before creating |
+| Prisma models | 41 | Check `schema.prisma` before any DB change |
 | Data adapters | 33 | Check `adapters/index.ts` before adding |
 | Python agents | 6 | See `python-agents/` directory |
 | TypeScript types | 700+ lines | Check `types.ts` before creating new types |
@@ -209,7 +209,7 @@ registry.register(myAdapter);
 | Integration services | 4 | `notion.ts`, `linear.ts`, `github.ts`, `jira.ts` |
 | Integration API routes | 4 | `connect`, `disconnect`, `status`, `notion/ingest` |
 | Test files | 27 | See `__tests__/` |
-| View components | 18 | See `components/views/` |
+| View components | 19 | See `components/views/` |
 
 ---
 

@@ -43,10 +43,13 @@ export async function GET(req: NextRequest) {
     const level = searchParams.get('level');
     const pillar = searchParams.get('pillar');
 
+    const verticalId = searchParams.get('verticalId');
+
     const where: Record<string, unknown> = { userId: session.user.id };
     if (status) where.status = status;
     if (level) where.level = level;
     if (pillar) where.pillar = pillar;
+    if (verticalId) where.verticalId = verticalId;
 
     const initiatives = await db.initiative.findMany({
       where,
@@ -85,6 +88,8 @@ export async function POST(req: NextRequest) {
       expectedValue,
       expectedTimeToMarket,
       personaIds,
+      verticalId,
+      granularity,
     } = body;
 
     if (!title) {
@@ -105,6 +110,8 @@ export async function POST(req: NextRequest) {
         dependencies: typeof dependencies === 'string' ? dependencies : JSON.stringify(dependencies ?? []),
         level: level ?? 'idea',
         pillar: pillar ?? 'strategy',
+        ...(verticalId && { verticalId }),
+        ...(granularity && { granularity }),
       },
     });
 

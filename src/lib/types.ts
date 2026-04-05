@@ -50,6 +50,14 @@ export interface IntegrationCredentials {
   };
 }
 
+export type PortfolioGranularity = 'verticals' | 'initiatives' | 'ideas' | 'all';
+
+export interface PortfolioTerminology {
+  vertical: string;
+  initiative: string;
+  idea: string;
+}
+
 export interface UserSettings {
   llm: LLMConfig;
   integrations: IntegrationCredentials;
@@ -59,7 +67,31 @@ export interface UserSettings {
     autoSendEmails: boolean;
     autoCreateJiraStories: boolean;
     theme: 'light' | 'dark' | 'system';
+    portfolioGranularity: PortfolioGranularity;
+    portfolioTerminology: PortfolioTerminology;
   };
+}
+
+export type VerticalStatus = 'active' | 'paused' | 'archived';
+export type GranularityLevel = 'vertical' | 'initiative' | 'idea';
+
+export interface ProductVerticalData {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  strategy: string;
+  color: string;
+  icon: string;
+  status: VerticalStatus;
+  sortOrder: number;
+  productMappingId: string;
+  brainNodeId: string;
+  metadata: string;
+  createdAt: string;
+  updatedAt: string;
+  initiatives?: Initiative[];
+  _count?: { initiatives: number };
 }
 
 export interface Initiative {
@@ -92,6 +124,9 @@ export interface Initiative {
   alignmentScore?: number;
   businessImpactId?: string;
   competitiveRank?: number;
+  // Product Vertical grouping (Sprint Architecture)
+  verticalId?: string | null;
+  granularity?: GranularityLevel;
 }
 
 export interface Persona {
@@ -703,6 +738,8 @@ export const defaultSettings: UserSettings = {
     autoSendEmails: false,
     autoCreateJiraStories: true,
     theme: 'system',
+    portfolioGranularity: 'all',
+    portfolioTerminology: { vertical: 'Product Vertical', initiative: 'Initiative', idea: 'Idea' },
   },
 };
 

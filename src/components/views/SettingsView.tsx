@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bot, Shield, Loader2, Zap, Cpu, Database, Puzzle, ArrowRight } from 'lucide-react';
+import { Bot, Shield, Loader2, Zap, Cpu, Database, Puzzle, ArrowRight, Boxes } from 'lucide-react';
 import { toast } from 'sonner';
 import { CronDashboard } from '@/components/settings/CronDashboard';
 import { ConnectionStatusSummary } from '@/components/settings/ConnectionStatusSummary';
@@ -278,6 +278,82 @@ export function SettingsView() {
                     />
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Portfolio Preferences */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Boxes className="h-4 w-4" /> Portfolio Structure
+              </CardTitle>
+              <CardDescription>How do you structure your work?</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Granularity</Label>
+                <Select
+                  value={settings.preferences.portfolioGranularity || 'all'}
+                  onValueChange={(v) => updatePreferences({ portfolioGranularity: v as any })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Verticals → Initiatives → Ideas (full)</SelectItem>
+                    <SelectItem value="verticals">Verticals → Initiatives (skip ideas)</SelectItem>
+                    <SelectItem value="initiatives">Initiatives → Ideas (skip verticals)</SelectItem>
+                    <SelectItem value="ideas">Just Ideas (flat list)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <Label>Terminology</Label>
+                <p className="text-xs text-muted-foreground">Customize what you call each level</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Level 1</Label>
+                    <Input
+                      value={settings.preferences.portfolioTerminology?.vertical || 'Product Vertical'}
+                      onChange={(e) => updatePreferences({
+                        portfolioTerminology: {
+                          ...(settings.preferences.portfolioTerminology || { vertical: 'Product Vertical', initiative: 'Initiative', idea: 'Idea' }),
+                          vertical: e.target.value,
+                        },
+                      })}
+                      placeholder="Product Vertical"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Level 2</Label>
+                    <Input
+                      value={settings.preferences.portfolioTerminology?.initiative || 'Initiative'}
+                      onChange={(e) => updatePreferences({
+                        portfolioTerminology: {
+                          ...(settings.preferences.portfolioTerminology || { vertical: 'Product Vertical', initiative: 'Initiative', idea: 'Idea' }),
+                          initiative: e.target.value,
+                        },
+                      })}
+                      placeholder="Initiative"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Level 3</Label>
+                    <Input
+                      value={settings.preferences.portfolioTerminology?.idea || 'Idea'}
+                      onChange={(e) => updatePreferences({
+                        portfolioTerminology: {
+                          ...(settings.preferences.portfolioTerminology || { vertical: 'Product Vertical', initiative: 'Initiative', idea: 'Idea' }),
+                          idea: e.target.value,
+                        },
+                      })}
+                      placeholder="Idea"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

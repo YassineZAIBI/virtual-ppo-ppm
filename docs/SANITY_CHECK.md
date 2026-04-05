@@ -27,7 +27,7 @@
 - Sprint Testing:      COMPLETE — 27 test files, 447 tests
 - Sprint UI:           COMPLETE — loading/error/empty states, mobile, dark mode
 - Sprint Persona:      COMPLETE — rich personas (JTBD, empathy, behavior), vision preview
-- Sprint Architecture: QUEUED
+- Sprint Architecture: COMPLETE — product verticals, vision-portfolio sync, Jira/Linear discovery
 - Sprint Intelligence: QUEUED
 - Sprint 6:            PARKED — meeting bot
 - Sprint 7:            PARKED — self-hosted LLM

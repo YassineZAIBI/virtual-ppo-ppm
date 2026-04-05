@@ -36,6 +36,9 @@ vi.mock('@/lib/db', () => ({
       findMany: vi.fn(),
       create: vi.fn(),
     },
+    productVertical: {
+      upsert: vi.fn().mockResolvedValue({}),
+    },
     need: {
       findFirst: vi.fn(),
     },

@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MessageSquare, Calendar, Map, Lightbulb, Search,
   Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   Zap, LogOut, Eye, Binoculars, Users, Gauge, Hammer, ShieldAlert,
-  UserCog, Puzzle,
+  UserCog, Puzzle, Boxes,
 } from 'lucide-react';
 import { useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
@@ -43,6 +43,7 @@ const PILLAR_SECTIONS: NavSection[] = [
     color: 'text-teal-500 dark:text-teal-400',
     borderColor: 'border-teal-500',
     items: [
+      { path: '/verticals', label: 'Product Verticals', icon: Boxes },
       { path: '/strategy', label: 'Portfolio', icon: Lightbulb },
       { path: '/strategy/roadmap', label: 'Roadmap', icon: Map },
       { path: '/strategy/discovery', label: 'Discovery', icon: Search },

@@ -73,6 +73,9 @@ model User {
 
   // Integration Connections (Sprint 5)
   integrationConnections IntegrationConnection[]
+
+  // Product Verticals (Sprint Architecture)
+  productVerticals ProductVertical[]
 }
 
 model Account {
@@ -203,8 +206,15 @@ model Initiative {
   competitiveRank  Int?    // 1-N rank vs competitors
   discovery       String   @default("{}") // JSON: { notes, aiAnalysis, status, lastUpdated }
 
+  // Product Vertical grouping (Sprint Architecture)
+  verticalId    String?
+  vertical      ProductVertical? @relation(fields: [verticalId], references: [id])
+  granularity   String @default("initiative") // "vertical" | "initiative" | "idea"
+
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([verticalId])
 }
 
 // ============ Meetings ============
@@ -940,4 +950,36 @@ model IntegrationConnection {
 
   @@unique([userId, integrationType])
   @@index([userId])
+}
+
+// ============ Product Verticals (Sprint Architecture) ============
+model ProductVertical {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String   @default("")
+  strategy    String   @default("")    // strategic rationale
+  color       String   @default("#6366F1") // for visual coding
+  icon        String   @default("")    // lucide icon name
+  status      String   @default("active")  // "active" | "paused" | "archived"
+  sortOrder   Int      @default(0)
+
+  // Links to vision layer
+  productMappingId String @default("") // link to Vision ProductMapping
+
+  // Children
+  initiatives  Initiative[]
+
+  // Brain graph
+  brainNodeId  String @default("")
+
+  metadata    String   @default("{}") // JSON string — JSON.parse() on read
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, name], name: "userId_name_vertical")
+  @@index([userId])
+  @@index([userId, status])
 }

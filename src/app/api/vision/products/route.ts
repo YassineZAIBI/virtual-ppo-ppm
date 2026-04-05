@@ -69,6 +69,22 @@ export async function POST(req: NextRequest) {
       console.error('BrainNode upsert error (product):', err);
     }
 
+    // Fire-and-forget: sync to ProductVertical (Vision → Portfolio bridge)
+    db.productVertical.upsert({
+      where: { userId_name_vertical: { userId: session.user.id, name } },
+      create: {
+        userId: session.user.id,
+        name,
+        description: body.description || '',
+        strategy: body.rationale || '',
+        productMappingId: product.id,
+      },
+      update: {
+        description: body.description || '',
+        updatedAt: new Date(),
+      },
+    }).catch((err: unknown) => console.error('ProductVertical sync failed:', err));
+
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
     console.error('[VISION_PRODUCTS_POST]', error);

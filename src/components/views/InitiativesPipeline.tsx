@@ -18,10 +18,10 @@ import {
   Plus, ArrowRight, Save, Trash2, Search, DollarSign,
   AlertTriangle, Clock, HelpCircle, ExternalLink,
   CheckSquare, Square, X, Target, Loader2, BarChart3,
-  Layers,
+  Layers, Boxes,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Initiative } from '@/lib/types';
+import { Initiative, ProductVerticalData } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ShareButton } from '@/components/share/ShareButton';
 import { isSampleData } from '@/lib/sample-data';
@@ -56,13 +56,24 @@ export function InitiativesPipeline() {
   const router = useRouter();
 
   const [pipelineLoading, setPipelineLoading] = useState(true);
+  const [verticals, setVerticals] = useState<ProductVerticalData[]>([]);
+  const [verticalFilter, setVerticalFilter] = useState<string>('all');
 
-  // Load initiatives from API on mount (replaces demo data with real DB data)
+  // Load initiatives and verticals from API on mount
   useEffect(() => {
-    fetch('/api/initiatives')
-      .then((res) => res.ok ? res.json() : Promise.reject())
-      .then((data) => { if (Array.isArray(data)) setInitiatives(data); })
-      .catch(() => {}) // keep store data as fallback
+    Promise.all([
+      fetch('/api/initiatives').then((r) => r.ok ? r.json() : []),
+      fetch('/api/verticals').then((r) => r.ok ? r.json() : []),
+    ])
+      .then(([initData, vertData]) => {
+        if (Array.isArray(initData)) setInitiatives(initData);
+        if (Array.isArray(vertData)) setVerticals(vertData);
+        // Check URL for vertical filter param
+        const params = new URLSearchParams(window.location.search);
+        const vId = params.get('vertical');
+        if (vId) setVerticalFilter(vId);
+      })
+      .catch(() => {})
       .finally(() => setPipelineLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showNewIdea, setShowNewIdea] = useState(false);
@@ -272,10 +283,15 @@ export function InitiativesPipeline() {
     }
   };
 
-  // Filter initiatives by level
-  const filteredInitiatives = levelFilter === 'all'
-    ? initiatives
-    : initiatives.filter((i) => (i.level || 'idea') === levelFilter);
+  // Filter initiatives by level and vertical
+  const filteredInitiatives = initiatives.filter((i) => {
+    if (levelFilter !== 'all' && (i.level || 'idea') !== levelFilter) return false;
+    if (verticalFilter !== 'all') {
+      if (verticalFilter === 'unassigned') return !i.verticalId;
+      return i.verticalId === verticalFilter;
+    }
+    return true;
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -303,6 +319,46 @@ export function InitiativesPipeline() {
                 )}
               </Button>
             ))}
+            {verticals.length > 0 && (
+              <>
+                <span className="mx-1 text-muted-foreground/30">|</span>
+                <Boxes className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+                <Button
+                  variant={verticalFilter === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setVerticalFilter('all')}
+                >
+                  All Verticals
+                </Button>
+                {verticals.map((v) => (
+                  <Button
+                    key={v.id}
+                    variant={verticalFilter === v.id ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setVerticalFilter(v.id)}
+                  >
+                    <div className="h-2 w-2 rounded-full mr-1" style={{ backgroundColor: v.color }} />
+                    {v.name}
+                    <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
+                      {initiatives.filter((i) => i.verticalId === v.id).length}
+                    </Badge>
+                  </Button>
+                ))}
+                <Button
+                  variant={verticalFilter === 'unassigned' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => setVerticalFilter('unassigned')}
+                >
+                  Unassigned
+                  <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
+                    {initiatives.filter((i) => !i.verticalId).length}
+                  </Badge>
+                </Button>
+              </>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
