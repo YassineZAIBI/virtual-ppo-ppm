@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Star, Target, Users, AlertTriangle, Package, Loader2, Sparkles } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Plus, Star, Target, Users, AlertTriangle, Package, Loader2, Sparkles, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/lib/store';
 import { BusinessGoalCard } from './BusinessGoalCard';
@@ -51,8 +52,18 @@ export function VisionPyramid({
   const [newTitle, setNewTitle] = useState('');
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [pyramidPreview, setPyramidPreview] = useState<Record<string, unknown> | null>(null);
   const { settings } = useAppStore();
 
+  const llmConfig = {
+    provider: settings.llm.provider,
+    apiKey: settings.llm.apiKey,
+    model: settings.llm.model,
+    apiEndpoint: settings.llm.apiEndpoint,
+  };
+
+  // Step 1: Generate preview (no DB save)
   const handleGeneratePyramid = async () => {
     if (!northStar) {
       toast.error('Set your North Star first before generating the pyramid.');
@@ -68,14 +79,7 @@ export function VisionPyramid({
       const res = await fetch('/api/vision/pyramid/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          llmConfig: {
-            provider: settings.llm.provider,
-            apiKey: settings.llm.apiKey,
-            model: settings.llm.model,
-            apiEndpoint: settings.llm.apiEndpoint,
-          },
-        }),
+        body: JSON.stringify({ llmConfig, preview: true }),
       });
 
       if (!res.ok) {
@@ -83,12 +87,37 @@ export function VisionPyramid({
         throw new Error(err?.error || 'Generation failed');
       }
 
-      toast.success('Vision Pyramid generated! Review and refine below.');
-      onRefresh();
+      const data = await res.json();
+      setPyramidPreview(data.pyramid);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to generate pyramid.');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // Step 2: User confirms → save to DB
+  const handleConfirmPyramid = async () => {
+    setConfirming(true);
+    try {
+      const res = await fetch('/api/vision/pyramid/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ llmConfig }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Save failed');
+      }
+
+      setPyramidPreview(null);
+      toast.success('Vision Pyramid saved! Review and refine below.');
+      onRefresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save pyramid.');
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -380,6 +409,72 @@ export function VisionPyramid({
           </CardContent>
         )}
       </Card>
+
+      {/* AI Preview Confirmation Dialog */}
+      <Dialog open={!!pyramidPreview} onOpenChange={(open) => { if (!open) setPyramidPreview(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" style={{ display: 'flex', flexDirection: 'column' }}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-indigo-500" />
+              Review Generated Pyramid
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">Review the AI-generated pyramid below. Confirm to save, or discard to start over.</p>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {(pyramidPreview as { businessGoals?: Array<{ title: string; description?: string; targetGroups?: Array<{ name: string; role?: string; description?: string; needs?: Array<{ title: string; description?: string; severity?: string; product?: { name: string; type?: string } }> }> }> })?.businessGoals?.map((goal, gi) => (
+              <div key={gi} className="rounded-lg border border-teal-500/30 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-teal-500" />
+                  <span className="font-medium text-sm">{goal.title}</span>
+                </div>
+                {goal.description && <p className="text-xs text-muted-foreground ml-6">{goal.description}</p>}
+
+                {goal.targetGroups?.map((group, ti) => (
+                  <div key={ti} className="ml-4 rounded-md border border-purple-500/20 p-2 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5 text-purple-500" />
+                      <span className="text-sm font-medium">{group.name}</span>
+                      {group.role && <Badge variant="outline" className="text-[10px]">{group.role}</Badge>}
+                    </div>
+
+                    {group.needs?.map((need, ni) => (
+                      <div key={ni} className="ml-4 flex items-start gap-2 text-xs">
+                        <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+                        <div>
+                          <span className="font-medium">{need.title}</span>
+                          {need.severity && (
+                            <Badge variant="outline" className="ml-1 text-[9px]">{need.severity}</Badge>
+                          )}
+                          {need.product && (
+                            <span className="text-muted-foreground ml-1">
+                              &rarr; <Package className="h-3 w-3 inline text-blue-500" /> {need.product.name}
+                              <Badge variant="outline" className="ml-1 text-[9px]">{need.product.type}</Badge>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setPyramidPreview(null)} disabled={confirming}>
+              <X className="h-4 w-4 mr-1" /> Discard
+            </Button>
+            <Button onClick={handleConfirmPyramid} disabled={confirming} className="gap-2">
+              {confirming ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</>
+              ) : (
+                <><Check className="h-4 w-4" /> Looks Good — Save</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

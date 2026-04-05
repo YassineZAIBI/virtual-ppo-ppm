@@ -29,13 +29,25 @@ export function UserJourneyView() {
         .then(r => r.ok ? r.json() : [])
         .then(data => {
           if (Array.isArray(data) && data.length > 0) {
-            const mapped = data.map((tg: any) => ({
-              id: tg.id,
-              name: tg.name,
-              role: tg.role || '',
-              goals: tg.goals ? (typeof tg.goals === 'string' ? JSON.parse(tg.goals) : tg.goals) : [],
-              painPoints: tg.painPoints ? (typeof tg.painPoints === 'string' ? JSON.parse(tg.painPoints) : tg.painPoints) : [],
-            }));
+            const mapped = data.map((tg: any) => {
+              let goals: string[] = [];
+              if (tg.goals) {
+                if (Array.isArray(tg.goals)) goals = tg.goals;
+                else if (typeof tg.goals === 'string') {
+                  try { const parsed = JSON.parse(tg.goals); goals = Array.isArray(parsed) ? parsed : [tg.goals]; }
+                  catch { goals = [tg.goals]; }
+                }
+              }
+              let painPoints: string[] = [];
+              if (tg.painPoints) {
+                if (Array.isArray(tg.painPoints)) painPoints = tg.painPoints;
+                else if (typeof tg.painPoints === 'string') {
+                  try { const parsed = JSON.parse(tg.painPoints); painPoints = Array.isArray(parsed) ? parsed : [tg.painPoints]; }
+                  catch { painPoints = [tg.painPoints]; }
+                }
+              }
+              return { id: tg.id, name: tg.name, role: tg.role || '', goals, painPoints };
+            });
             setPersonas(mapped);
           }
         }),

@@ -33,20 +33,21 @@ export async function POST(
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    // Get company context from brain
-    const northStarNode = await db.brainNode.findFirst({
-      where: { userId: session.user.id, type: 'vision' },
-      select: { content: true },
-    });
-
-    const settings = await db.userSettingsRecord.findUnique({
-      where: { userId: session.user.id },
-      select: { companyName: true, industry: true },
-    });
+    // Get company context from brain graph
+    const [northStarNode, companyNode] = await Promise.all([
+      db.brainNode.findFirst({
+        where: { userId: session.user.id, type: 'vision' },
+        select: { content: true },
+      }),
+      db.brainNode.findFirst({
+        where: { userId: session.user.id, type: 'company' },
+        select: { content: true, summary: true },
+      }),
+    ]);
 
     const enriched = await enrichPersona(
       { name: group.name, role: group.role || '', description: group.description || '' },
-      { northStar: northStarNode?.content || '', industry: settings?.industry || '' },
+      { northStar: northStarNode?.content || '', industry: companyNode?.summary || companyNode?.content || '' },
       llmConfig
     );
 

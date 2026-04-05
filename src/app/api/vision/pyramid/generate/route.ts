@@ -13,8 +13,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { llmConfig } = body as {
+    const { llmConfig, preview } = body as {
       llmConfig?: { provider: string; apiKey: string; model?: string; apiEndpoint?: string };
+      preview?: boolean;
     };
 
     if (!llmConfig || !llmConfig.provider || !llmConfig.apiKey) {
@@ -118,8 +119,16 @@ Generate a complete Vision Pyramid for this product.`;
     if (!parsed.businessGoals || !Array.isArray(parsed.businessGoals)) {
       return NextResponse.json(
         { error: 'AI response missing businessGoals. Please try again.' },
-        { status: 500 }
+        { status: 502 }
       );
+    }
+
+    // Preview mode: return generated data without saving to DB
+    if (preview) {
+      return NextResponse.json({
+        status: 'preview',
+        pyramid: parsed,
+      });
     }
 
     // Save the generated pyramid to the database
