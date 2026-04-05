@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { writeInsight } from '@/lib/services/insight-writer';
+import { calculateFreshness } from '@/lib/services/data-pipeline/freshness';
 
 // Threat scores by feed item type
 const THREAT_SCORES: Record<string, number> = {
@@ -28,6 +29,10 @@ interface ScoredFeedItem {
   shouldEscalate: boolean;
 }
 
+/**
+ * Score a feed item incorporating freshness, source quality, and change detection.
+ * Items older than 30 days are downranked; detected changes get a bonus.
+ */
 export function scoreFeedItem(item: {
   id: string;
   type: string;
@@ -35,8 +40,21 @@ export function scoreFeedItem(item: {
   content: string;
   competitorId: string;
   competitor?: { name: string } | null;
+  publishedAt?: Date | null;
+  freshnessScore?: number | null;
+  sourceQuality?: number | null;
+  isNew?: boolean | null;
 }): ScoredFeedItem {
-  const score = THREAT_SCORES[item.type] ?? 2;
+  const baseScore = THREAT_SCORES[item.type] ?? 2;
+
+  // Use provided freshnessScore or calculate from publishedAt
+  const freshness = item.freshnessScore ?? calculateFreshness(item.publishedAt ?? undefined);
+  const quality = item.sourceQuality ?? 0.5;
+  const changeBonus = item.isNew ? 1.5 : 0;
+
+  // Weighted score: base threat * freshness * quality + change bonus, capped at 5
+  const score = Math.min(5, Math.round(((baseScore * freshness * quality) + changeBonus) * 10) / 10);
+
   return {
     id: item.id,
     competitorId: item.competitorId,
@@ -73,14 +91,26 @@ export async function processCompetitorFeed(userId: string): Promise<{
 
     if (feedItems.length === 0) return { processed: 0, escalated: 0 };
 
-    const scored = feedItems.map((item) => scoreFeedItem({
-      id: item.id,
-      type: item.type,
-      title: item.title,
-      content: item.summary || item.title,
-      competitorId: item.competitorId,
-      competitor: item.competitor,
-    }));
+    const scored = feedItems.map((item) => {
+      // Parse metadata for freshness/change signals if available
+      const meta = typeof item.raw === 'string' ? (() => { try { return JSON.parse(item.raw); } catch { return {}; } })() : {};
+
+      return scoreFeedItem({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        content: item.summary || item.title,
+        competitorId: item.competitorId,
+        competitor: item.competitor,
+        publishedAt: item.publishedAt,
+        freshnessScore: meta.freshnessScore ?? null,
+        sourceQuality: meta.sourceQuality ?? null,
+        isNew: meta.isNew ?? null,
+      });
+    });
+
+    // Sort by score descending so highest-threat items are processed first
+    scored.sort((a, b) => b.score - a.score);
     const toEscalate = scored.filter((item) => item.shouldEscalate);
 
     // Create UserAlerts and ProactiveInsights for high-threat items

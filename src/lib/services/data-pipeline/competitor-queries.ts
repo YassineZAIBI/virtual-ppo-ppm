@@ -21,25 +21,26 @@ interface CompetitorQueryInput {
 export function buildCompetitorQueries(competitor: CompetitorQueryInput): string[] {
   const queries: string[] = [];
   const name = competitor.name;
+  const currentYear = new Date().getFullYear();
 
   // For single-word names that are common English words, add "software" context
   const isSingleWord = !name.includes(' ');
   const qualifier = isSingleWord ? ' software' : '';
 
-  // General news
-  queries.push(`"${name}"${qualifier} news`);
+  // General news — year-qualified to eliminate old results
+  queries.push(`"${name}"${qualifier} news ${currentYear}`);
 
   // Product launches and updates
-  queries.push(`"${name}"${qualifier} product launch OR update OR release`);
+  queries.push(`"${name}"${qualifier} product launch OR update OR release ${currentYear}`);
 
   // Funding, M&A, partnerships
-  queries.push(`"${name}" funding OR acquisition OR partnership`);
+  queries.push(`"${name}" funding OR acquisition OR partnership ${currentYear}`);
 
-  // Pricing changes
+  // Pricing changes (no year — pricing pages are evergreen)
   queries.push(`"${name}"${qualifier} pricing OR plans`);
 
   // Hiring signals (growth indicator)
-  queries.push(`"${name}" hiring OR jobs OR careers`);
+  queries.push(`"${name}" hiring OR jobs OR careers ${currentYear}`);
 
   // Site-specific if website is known
   if (competitor.website) {
@@ -48,6 +49,9 @@ export function buildCompetitorQueries(competitor: CompetitorQueryInput): string
       .replace(/\/.*$/, '');
     queries.push(`site:${domain} changelog OR "what's new"`);
   }
+
+  // Review sites for customer sentiment
+  queries.push(`"${name}" review site:g2.com OR site:capterra.com`);
 
   return queries;
 }

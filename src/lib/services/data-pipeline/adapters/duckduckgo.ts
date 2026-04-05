@@ -1,5 +1,13 @@
 import { DataAdapter, DataResult, FetchOptions, resilientFetch } from '@/lib/services/data-pipeline/types';
 import { registry } from '@/lib/services/data-pipeline/registry';
+import { calculateFreshness, SOURCE_QUALITY_TIERS, calculateCompositeScore } from '@/lib/services/data-pipeline/freshness';
+
+const DATE_RANGE_MAP: Record<string, string> = {
+  day: 'd',
+  week: 'w',
+  month: 'm',
+  year: 'y',
+};
 
 const duckduckgo: DataAdapter = {
   key: 'duckduckgo',
@@ -18,7 +26,12 @@ const duckduckgo: DataAdapter = {
     const maxResults = options?.maxResults ?? 10;
 
     try {
-      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+      // Date range filtering: df=d/w/m/y
+      const dateRange = options?.dateRange ?? 'any';
+      const dfParam = dateRange !== 'any' && DATE_RANGE_MAP[dateRange]
+        ? `&df=${DATE_RANGE_MAP[dateRange]}`
+        : '';
+      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}${dfParam}`;
       const res = await resilientFetch(url, {
         adapterKey: 'duckduckgo',
         method: 'POST',
@@ -63,6 +76,13 @@ const duckduckgo: DataAdapter = {
 
         if (!rawTitle) continue;
 
+        // Try to extract date from snippet (DuckDuckGo sometimes includes dates)
+        const dateMatch = snippet.match(/(\w+ \d{1,2}, \d{4})/);
+        const publishedAt = dateMatch ? new Date(dateMatch[1]) : undefined;
+        const validPublished = publishedAt && !isNaN(publishedAt.getTime()) ? publishedAt : undefined;
+        const freshnessScore = calculateFreshness(validPublished);
+        const sourceQuality = SOURCE_QUALITY_TIERS['duckduckgo'];
+
         results.push({
           sourceKey: 'duckduckgo',
           sourceUrl: href,
@@ -70,8 +90,13 @@ const duckduckgo: DataAdapter = {
           title: rawTitle,
           content: snippet || rawTitle,
           contentType: 'article',
+          publishedAt: validPublished,
           fetchedAt: now,
-          metadata: { rank: i + 1 },
+          scrapedAt: now,
+          freshnessScore,
+          sourceQuality,
+          compositeScore: calculateCompositeScore(0.5, validPublished, 'duckduckgo'),
+          metadata: { rank: i + 1, dateRange },
         });
       }
 

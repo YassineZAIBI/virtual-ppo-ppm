@@ -143,6 +143,7 @@ describe('/api/competitors/scan', () => {
         content: 'Linear software startup raises Series B funding for its issue tracker.',
         contentType: 'article' as const,
         fetchedAt: new Date(),
+        metadata: {},
         relevanceHint: 0.8,
       },
       {
@@ -153,6 +154,7 @@ describe('/api/competitors/scan', () => {
         content: 'Having trouble with the linear rendering pipeline in the game.',
         contentType: 'post' as const,
         fetchedAt: new Date(),
+        metadata: {},
         relevanceHint: 0.5,
       },
     ]);

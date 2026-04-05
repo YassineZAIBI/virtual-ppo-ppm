@@ -40,6 +40,16 @@ export async function GET(req: NextRequest) {
       where.sentiment = { in: sentiments };
     }
 
+    // Date range filter
+    const dateRange = searchParams.get('dateRange');
+    if (dateRange === 'week') {
+      where.createdAt = { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
+    } else if (dateRange === 'month') {
+      where.createdAt = { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) };
+    } else if (dateRange === 'quarter') {
+      where.createdAt = { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) };
+    }
+
     const [items, total] = await Promise.all([
       db.competitorFeed.findMany({
         where,

@@ -30,12 +30,23 @@ export interface DataResult {
   fetchedAt: Date;
   metadata: Record<string, any>;
   relevanceHint?: number;
+
+  // Freshness + quality metadata (Sprint Intelligence)
+  scrapedAt?: Date;
+  freshnessScore?: number;  // 0-1: how recent this data point is
+  sourceQuality?: number;   // 0-1: authority of the source
+  compositeScore?: number;  // 0-1: combined relevance x freshness x quality
+
+  // Change detection
+  isNew?: boolean;
+  changeType?: 'new' | 'updated' | 'removed';
 }
 
 export interface FetchOptions {
   maxResults?: number;
   config?: Record<string, any>;
   signal?: AbortSignal;
+  dateRange?: 'day' | 'week' | 'month' | 'year' | 'any';
 }
 
 // ============ Zod Schemas ============

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CompetitorFeedItem, type FeedItem } from './CompetitorFeedItem';
-import { Loader2, Inbox } from 'lucide-react';
+import { Loader2, Inbox, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CompetitorFeedTimelineProps {
@@ -34,15 +34,24 @@ const SENTIMENT_OPTIONS = [
   { value: 'neutral', label: 'Neutral' },
 ] as const;
 
+const DATE_RANGE_OPTIONS = [
+  { value: 'week', label: 'Last week' },
+  { value: 'month', label: 'Last month' },
+  { value: 'quarter', label: 'Last quarter' },
+  { value: 'all', label: 'All time' },
+] as const;
+
 const PAGE_SIZE = 20;
 
 export function CompetitorFeedTimeline({ competitorId }: CompetitorFeedTimelineProps) {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
   const [relevanceFilter, setRelevanceFilter] = useState('all');
   const [sentimentFilters, setSentimentFilters] = useState<string[]>([]);
+  const [dateFilter, setDateFilter] = useState('month');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
@@ -51,6 +60,7 @@ export function CompetitorFeedTimeline({ competitorId }: CompetitorFeedTimelineP
     type: string,
     relevance: string,
     sentiments: string[],
+    dateRange: string,
     append: boolean,
   ) => {
     const isInitial = !append;
@@ -66,6 +76,7 @@ export function CompetitorFeedTimeline({ competitorId }: CompetitorFeedTimelineP
       if (competitorId) params.set('competitorId', competitorId);
       if (relevance !== 'all') params.set('relevance', relevance);
       if (sentiments.length > 0) params.set('sentiment', sentiments.join(','));
+      if (dateRange !== 'all') params.set('dateRange', dateRange);
 
       const res = await fetch(`/api/competitors/feed?${params}`);
       if (!res.ok) throw new Error('Failed to fetch feed');
@@ -91,13 +102,30 @@ export function CompetitorFeedTimeline({ competitorId }: CompetitorFeedTimelineP
 
   useEffect(() => {
     setPage(1);
-    fetchFeed(1, typeFilter, relevanceFilter, sentimentFilters, false);
-  }, [typeFilter, relevanceFilter, sentimentFilters, fetchFeed]);
+    fetchFeed(1, typeFilter, relevanceFilter, sentimentFilters, dateFilter, false);
+  }, [typeFilter, relevanceFilter, sentimentFilters, dateFilter, fetchFeed]);
+
+  const handleRefresh = async () => {
+    if (!competitorId) return;
+    setRefreshing(true);
+    try {
+      const res = await fetch(`/api/competitors/${competitorId}/scan`, { method: 'POST' });
+      if (!res.ok) throw new Error('Scan failed');
+      toast.success('Scan triggered — refreshing feed');
+      // Reload feed after scan
+      setPage(1);
+      await fetchFeed(1, typeFilter, relevanceFilter, sentimentFilters, dateFilter, false);
+    } catch {
+      toast.error('Could not trigger scan');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
-    fetchFeed(nextPage, typeFilter, relevanceFilter, sentimentFilters, true);
+    fetchFeed(nextPage, typeFilter, relevanceFilter, sentimentFilters, dateFilter, true);
   };
 
   const toggleSentiment = (value: string) => {
@@ -112,19 +140,33 @@ export function CompetitorFeedTimeline({ competitorId }: CompetitorFeedTimelineP
     <div className="space-y-4">
       {/* Filters */}
       <div className="space-y-3">
-        {/* Type filter buttons */}
-        <div className="flex flex-wrap gap-2">
-          {FEED_TYPES.map((ft) => (
+        {/* Top row: type filters + refresh */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-2">
+            {FEED_TYPES.map((ft) => (
+              <Button
+                key={ft.value}
+                variant={typeFilter === ft.value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTypeFilter(ft.value)}
+                className="text-xs"
+              >
+                {ft.label}
+              </Button>
+            ))}
+          </div>
+          {competitorId && (
             <Button
-              key={ft.value}
-              variant={typeFilter === ft.value ? 'default' : 'outline'}
+              variant="outline"
               size="sm"
-              onClick={() => setTypeFilter(ft.value)}
-              className="text-xs"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="text-xs shrink-0"
             >
-              {ft.label}
+              <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', refreshing && 'animate-spin')} />
+              {refreshing ? 'Scanning...' : 'Refresh'}
             </Button>
-          ))}
+          )}
         </div>
 
         {/* Relevance & Impact filters */}
@@ -170,6 +212,24 @@ export function CompetitorFeedTimeline({ competitorId }: CompetitorFeedTimelineP
                   )}
                 >
                   {so.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Date range filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium shrink-0">Period:</span>
+            <div className="flex gap-1">
+              {DATE_RANGE_OPTIONS.map((dr) => (
+                <Button
+                  key={dr.value}
+                  variant={dateFilter === dr.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDateFilter(dr.value)}
+                  className="text-xs"
+                >
+                  {dr.label}
                 </Button>
               ))}
             </div>

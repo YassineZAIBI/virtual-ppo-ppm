@@ -15,6 +15,10 @@ export interface FeedItem {
   publishedAt?: string;
   competitor?: { name: string };
   createdAt: string;
+  freshnessScore?: number;
+  isNew?: boolean;
+  changeType?: 'new' | 'updated' | 'removed';
+  compositeScore?: number;
 }
 
 interface CompetitorFeedItemProps {
@@ -51,10 +55,21 @@ function formatDate(dateStr?: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function getFreshnessBadge(publishedAt?: string): { label: string; className: string } | null {
+  if (!publishedAt) return null;
+  const ageMs = Date.now() - new Date(publishedAt).getTime();
+  const ageDays = ageMs / (1000 * 60 * 60 * 24);
+
+  if (ageDays <= 7) return { label: 'This week', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
+  if (ageDays <= 30) return { label: 'This month', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' };
+  return { label: 'Older', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' };
+}
+
 export function CompetitorFeedItem({ item }: CompetitorFeedItemProps) {
   const dotColor = typeColorMap[item.type] || 'bg-gray-400';
   const typeLabel = typeLabelMap[item.type] || item.type;
   const displayDate = formatDate(item.publishedAt) || formatDate(item.createdAt);
+  const freshness = getFreshnessBadge(item.publishedAt || item.createdAt);
 
   return (
     <div className="flex gap-3 p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow">
@@ -67,7 +82,14 @@ export function CompetitorFeedItem({ item }: CompetitorFeedItemProps) {
         {/* Header row */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h4 className="text-sm font-medium leading-snug">{item.title}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-medium leading-snug">{item.title}</h4>
+              {item.isNew && (
+                <Badge variant="secondary" className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 shrink-0">
+                  Change detected
+                </Badge>
+              )}
+            </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs text-muted-foreground">{typeLabel}</span>
               {item.competitor && (
@@ -82,6 +104,14 @@ export function CompetitorFeedItem({ item }: CompetitorFeedItemProps) {
                 <>
                   <span className="text-xs text-muted-foreground">·</span>
                   <span className="text-xs text-muted-foreground">{displayDate}</span>
+                </>
+              )}
+              {freshness && (
+                <>
+                  <span className="text-xs text-muted-foreground">·</span>
+                  <Badge variant="secondary" className={cn('text-[10px] shrink-0', freshness.className)}>
+                    {freshness.label}
+                  </Badge>
                 </>
               )}
             </div>
