@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CompetitorCard, type Competitor } from '@/components/competitors/CompetitorCard';
 import { CompetitorFeedTimeline } from '@/components/competitors/CompetitorFeedTimeline';
 import { CompetitorRadarView } from '@/components/competitors/CompetitorRadarView';
+import { CompetitorAlertFeed } from '@/components/competitors/CompetitorAlertFeed';
 import { CompetitorAddDialog } from '@/components/competitors/CompetitorAddDialog';
-import { Eye, Plus, Radar, Loader2, Users, Sparkles } from 'lucide-react';
+import { Eye, Plus, Radar, Loader2, Users, Sparkles, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/lib/store';
 
@@ -18,6 +19,7 @@ export function CompetitorsEyeView() {
   const [scanning, setScanning] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedCompetitorId, setSelectedCompetitorId] = useState<string | null>(null);
   const { settings } = useAppStore();
 
   const fetchCompetitors = useCallback(async () => {
@@ -180,6 +182,7 @@ export function CompetitorsEyeView() {
       <Tabs defaultValue="competitors" className="space-y-4">
         <TabsList>
           <TabsTrigger value="competitors">Competitors</TabsTrigger>
+          <TabsTrigger value="intelligence">Intelligence</TabsTrigger>
           <TabsTrigger value="feed">Feed Timeline</TabsTrigger>
           <TabsTrigger value="radar">Radar</TabsTrigger>
         </TabsList>
@@ -229,6 +232,37 @@ export function CompetitorsEyeView() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Intelligence tab */}
+        <TabsContent value="intelligence">
+          <div className="space-y-4">
+            {competitors.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant={selectedCompetitorId === null ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCompetitorId(null)}
+                >
+                  All
+                </Button>
+                {competitors.map(c => (
+                  <Button
+                    key={c.id}
+                    variant={selectedCompetitorId === c.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedCompetitorId(c.id)}
+                  >
+                    {c.name}
+                  </Button>
+                ))}
+              </div>
+            )}
+            <CompetitorAlertFeed
+              key={selectedCompetitorId ?? 'all'}
+              competitorId={selectedCompetitorId ?? undefined}
+            />
+          </div>
         </TabsContent>
 
         {/* Feed Timeline tab */}

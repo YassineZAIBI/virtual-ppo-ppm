@@ -615,6 +615,43 @@ export interface CompetitorFeedItem {
   createdAt: Date;
 }
 
+// ============ Competitor Intelligence ============
+
+export type CompetitorAlertType =
+  | 'pricing_change' | 'new_feature' | 'funding' | 'website_change'
+  | 'job_signal' | 'product_launch' | 'partnership' | 'reputation';
+
+export interface CompetitorMonitorData {
+  id: string;
+  competitorId: string;
+  domain: string;
+  monitoredPaths: string[]; // parsed from JSON
+  lastScannedAt?: Date | null;
+  contentHashes: Record<string, string>; // parsed from JSON
+  scanFrequency: string;
+  isActive: boolean;
+}
+
+export interface CompetitorAlertData {
+  id: string;
+  competitorId: string;
+  userId: string;
+  alertType: CompetitorAlertType;
+  title: string;
+  summary: string;
+  evidence: string; // JSON stored as string
+  significance: number;
+  strategicNote: string;
+  sourceUrls: string; // JSON stored as string
+  publishedAt?: Date | null;
+  scrapedAt: Date;
+  status: 'new' | 'read' | 'dismissed' | 'actioned';
+  dismissed: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  competitor?: { name: string; website?: string | null };
+}
+
 // ============ Alignment & Impact ============
 
 export interface AlignmentScoreData {

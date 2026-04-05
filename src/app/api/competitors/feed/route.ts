@@ -40,15 +40,26 @@ export async function GET(req: NextRequest) {
       where.sentiment = { in: sentiments };
     }
 
-    // Date range filter
+    // Date range filter — uses publishedAt when available, falls back to createdAt
+    // Hard cap: never show items with publishedAt older than 90 days
     const dateRange = searchParams.get('dateRange');
+    const MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
     if (dateRange === 'week') {
       where.createdAt = { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
     } else if (dateRange === 'month') {
       where.createdAt = { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) };
     } else if (dateRange === 'quarter') {
-      where.createdAt = { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) };
+      where.createdAt = { gte: new Date(Date.now() - MAX_AGE_MS) };
+    } else {
+      // "All time" still caps at 90 days — no stale data
+      where.createdAt = { gte: new Date(Date.now() - MAX_AGE_MS) };
     }
+
+    // Also exclude items with publishedAt older than 90 days
+    where.OR = [
+      { publishedAt: null },
+      { publishedAt: { gte: new Date(Date.now() - MAX_AGE_MS) } },
+    ];
 
     const [items, total] = await Promise.all([
       db.competitorFeed.findMany({

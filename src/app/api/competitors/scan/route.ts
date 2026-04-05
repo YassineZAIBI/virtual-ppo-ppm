@@ -171,9 +171,15 @@ export async function POST(req: NextRequest) {
           });
           const existingSet = new Set(existingTitles.map(e => e.title.toLowerCase()));
 
-          const newResults = relevant.filter(
-            r => !existingSet.has((r.title || '').toLowerCase())
-          );
+          // Filter: dedup + reject items older than 90 days
+          const maxAgeMs = 90 * 24 * 60 * 60 * 1000;
+          const cutoff = new Date(Date.now() - maxAgeMs);
+          const newResults = relevant.filter(r => {
+            if (existingSet.has((r.title || '').toLowerCase())) return false;
+            // Reject items with a known publishedAt older than 90 days
+            if (r.publishedAt && new Date(r.publishedAt) < cutoff) return false;
+            return true;
+          });
 
           if (newResults.length === 0) continue;
 

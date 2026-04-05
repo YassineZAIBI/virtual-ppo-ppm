@@ -639,8 +639,10 @@ model Competitor {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  feeds CompetitorFeed[]
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feeds    CompetitorFeed[]
+  monitors CompetitorMonitor[]
+  alerts   CompetitorAlert[]
 
   @@index([userId])
 }
@@ -667,6 +669,57 @@ model CompetitorFeed {
   @@index([competitorId])
   @@index([createdAt])
   @@index([type])
+}
+
+model CompetitorMonitor {
+  id              String    @id @default(cuid())
+  competitorId    String
+  competitor      Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  userId          String
+
+  domain          String   // e.g. "notion.so"
+  monitoredPaths  String   @default("[]") // JSON: ["/pricing", "/blog", "/changelog"]
+  lastScannedAt   DateTime?
+
+  // Change detection state — JSON map: path -> contentHash
+  contentHashes   String   @default("{}")
+
+  scanFrequency   String   @default("daily") // "hourly" | "daily" | "weekly"
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([competitorId, domain])
+  @@index([userId, isActive])
+}
+
+model CompetitorAlert {
+  id              String    @id @default(cuid())
+  competitorId    String
+  competitor      Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  userId          String
+
+  alertType       String   // "pricing_change" | "new_feature" | "funding" | "website_change" | "job_signal" | "product_launch" | "partnership" | "reputation"
+  title           String
+  summary         String   @db.Text
+  evidence        String   @default("[]") // JSON: [{url, snippet, publishedAt}]
+  significance    Float    @default(0.5)  // 0-1: how strategically important
+  strategicNote   String   @default("")   // LLM-generated "what this means for you"
+
+  sourceUrls      String   @default("[]") // JSON array of source URLs
+  publishedAt     DateTime?
+  scrapedAt       DateTime @default(now())
+
+  status          String   @default("new") // "new" | "read" | "dismissed" | "actioned"
+  dismissed       Boolean  @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([competitorId, alertType])
+  @@index([userId, createdAt])
 }
 
 // ============================================

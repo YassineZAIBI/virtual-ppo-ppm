@@ -200,12 +200,13 @@ registry.register(myAdapter);
 | Metric | Count | Action Required |
 |--------|-------|----------------|
 | API routes | 112 | Check existing route before creating |
-| Prisma models | 41 | Check `schema.prisma` before any DB change |
+| Prisma models | 43 | Check `schema.prisma` before any DB change |
 | Data adapters | 33 | Check `adapters/index.ts` before adding |
 | Python agents | 6 | See `python-agents/` directory |
 | TypeScript types | 700+ lines | Check `types.ts` before creating new types |
 | shadcn/ui components | 50+ | Check `components/ui/` before adding |
 | Services | 20 | Check `services/` before creating new |
+| Competitor monitor services | 4 | `website-detector.ts`, `news-fetcher.ts`, `intelligence-synthesizer.ts`, `scanner.ts` |
 | Integration services | 4 | `notion.ts`, `linear.ts`, `github.ts`, `jira.ts` |
 | Integration API routes | 4 | `connect`, `disconnect`, `status`, `notion/ingest` |
 | Test files | 27 | See `__tests__/` |
@@ -228,6 +229,8 @@ registry.register(myAdapter);
 | **Notion internal integration** | Notion requires sharing each page/database with the integration manually | Auto-discovery only works for explicitly shared pages |
 | **Linear GraphQL** | Linear API is GraphQL only — no REST fallback | All queries in `linear.ts` use the graphql function |
 | **Analytics read-only** | Mixpanel and Amplitude are read-only | No write operations supported or planned |
+| **Competitor scan cron** | Runs website detection only (no LLM synthesis) | Cron has no user llmConfig. LLM synthesis runs on manual "Scan now" in UI |
+| **CompetitorMonitor domain** | Extracted from competitor.website field | If website is blank, competitor is skipped during monitoring |
 
 ---
 
