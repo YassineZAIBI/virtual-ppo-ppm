@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, parseJSON } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -231,22 +232,13 @@ export function MeetingsView() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  if (meetingsLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Meetings</h1>
-          <p className="text-muted-foreground">AI-powered meeting management & autonomous attendance</p>
-        </div>
-        <div className="flex gap-2">
+    <ViewShell
+      title="Meetings"
+      description="AI-powered meeting management & autonomous attendance"
+      loading={meetingsLoading}
+      actions={
+        <>
           <ShareButton resourceType="meetings" />
           <Button variant="outline" onClick={() => setShowAgent(true)}>
             <Bot className="h-4 w-4 mr-2" />AI Agent
@@ -254,8 +246,9 @@ export function MeetingsView() {
           <Button onClick={() => setShowUpload(true)}>
             <Plus className="h-4 w-4 mr-2" />Add Meeting
           </Button>
-        </div>
-      </div>
+        </>
+      }
+    >
 
       {/* AI Agent Meeting Attendance */}
       {showAgent && (
@@ -472,11 +465,11 @@ export function MeetingsView() {
                 {/* Expanded Details */}
                 {selectedMeeting?.id === meeting.id && (
                   <div className="mt-4 pt-4 border-t space-y-4">
-                    {meeting.actionItems && meeting.actionItems.length > 0 && (
+                    {parseJSON(meeting.actionItems, []).length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium text-muted-foreground mb-2">Action Items</h4>
                         <div className="space-y-2">
-                          {(typeof meeting.actionItems === 'string' ? JSON.parse(meeting.actionItems) : meeting.actionItems).map((item: any) => (
+                          {parseJSON(meeting.actionItems, []).map((item: any) => (
                             <div key={item.id} className="flex items-center gap-2 text-sm bg-card p-2 rounded">
                               <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0" />
                               <span className="flex-1">{item.description}</span>
@@ -486,19 +479,19 @@ export function MeetingsView() {
                         </div>
                       </div>
                     )}
-                    {meeting.decisions && meeting.decisions.length > 0 && (
+                    {parseJSON(meeting.decisions, []).length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium text-muted-foreground mb-2">Decisions</h4>
                         <ul className="list-disc list-inside text-sm text-muted-foreground">
-                          {(typeof meeting.decisions === 'string' ? JSON.parse(meeting.decisions) : meeting.decisions).map((d: string, i: number) => <li key={i}>{d}</li>)}
+                          {parseJSON(meeting.decisions, []).map((d: string, i: number) => <li key={i}>{d}</li>)}
                         </ul>
                       </div>
                     )}
-                    {meeting.challenges && meeting.challenges.length > 0 && (
+                    {parseJSON(meeting.challenges, []).length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium text-muted-foreground mb-2">Challenges</h4>
                         <ul className="list-disc list-inside text-sm text-muted-foreground">
-                          {(typeof meeting.challenges === 'string' ? JSON.parse(meeting.challenges) : meeting.challenges).map((c: string, i: number) => <li key={i}>{c}</li>)}
+                          {parseJSON(meeting.challenges, []).map((c: string, i: number) => <li key={i}>{c}</li>)}
                         </ul>
                       </div>
                     )}
@@ -509,6 +502,6 @@ export function MeetingsView() {
           ))
         )}
       </div>
-    </div>
+    </ViewShell>
   );
 }

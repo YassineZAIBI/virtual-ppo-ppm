@@ -4,11 +4,9 @@ import { getToken } from 'next-auth/jwt';
 
 // Route redirects: old paths → new pillar-based paths
 const REDIRECTS: Record<string, string> = {
-  '/initiatives': '/strategy',
-  '/roadmap': '/strategy/roadmap',
-  '/discovery': '/strategy/discovery',
+  '/initiatives': '/portfolio',
+  '/discovery': '/landscape',
   '/user-journey': '/vision/audiences',
-  '/value-meter': '/vision',
 };
 
 export async function middleware(request: NextRequest) {
@@ -23,15 +21,13 @@ export async function middleware(request: NextRequest) {
   // Public paths that don't require authentication
   const publicPaths = ['/auth/signin', '/api/auth', '/api', '/share', '/onboarding'];
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
-  const isRootPath = pathname === '/';
 
   // Allow public assets and Next.js internals
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
     pathname.includes('.') ||
-    isPublicPath ||
-    isRootPath
+    isPublicPath
   ) {
     return NextResponse.next();
   }
@@ -42,8 +38,9 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  // Redirect to sign-in if not authenticated
+  // Unauthenticated: allow root path (shows landing page), redirect others to sign-in
   if (!token) {
+    if (pathname === '/') return NextResponse.next();
     const signInUrl = new URL('/auth/signin', request.url);
     signInUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(signInUrl);

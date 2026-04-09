@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,6 +22,7 @@ import { Initiative } from '@/lib/types';
 import { ShareButton } from '@/components/share/ShareButton';
 import { AlignmentBadge } from '@/components/vision/AlignmentBadge';
 import { VisionGateBanner } from '@/components/layout/VisionGateBanner';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 
 type Quarter = 'Q1' | 'Q2' | 'Q3' | 'Q4';
 
@@ -190,28 +190,14 @@ export function RoadmapView() {
     ).length,
   }), [roadmapInitiatives, quarterAssignments, selectedYear]);
 
-  if (roadmapLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-40 w-full rounded-lg" />)}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <TooltipProvider>
-      <div className="p-6 space-y-6">
-        <VisionGateBanner />
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Product Roadmap</h1>
-            <p className="text-muted-foreground">Plan and visualize your product initiatives across quarters</p>
-          </div>
-          <div className="flex items-center gap-2">
+      <ViewShell
+        title="Product Roadmap"
+        description="Plan and visualize your product initiatives across quarters"
+        loading={roadmapLoading}
+        actions={
+          <>
             {/* Level toggle */}
             <Button
               variant={showIdeas ? 'default' : 'outline'}
@@ -239,8 +225,10 @@ export function RoadmapView() {
             <Button onClick={() => setShowAddItem(true)}>
               <Plus className="h-4 w-4 mr-2" />Add Item
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      >
+        <VisionGateBanner />
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -547,7 +535,7 @@ export function RoadmapView() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </ViewShell>
     </TooltipProvider>
   );
 }

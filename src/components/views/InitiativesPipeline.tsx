@@ -13,10 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Plus, ArrowRight, Save, Trash2, Search, DollarSign,
-  AlertTriangle, Clock, HelpCircle, ExternalLink,
+  AlertTriangle, Clock, HelpCircle, ExternalLink, FileText,
   CheckSquare, Square, X, Target, Loader2, BarChart3,
   Layers, Boxes,
 } from 'lucide-react';
@@ -29,6 +28,7 @@ import { ExampleBadge } from '@/components/ui/example-badge';
 import { AlignmentBadge } from '@/components/vision/AlignmentBadge';
 import { VisionGateBanner } from '@/components/layout/VisionGateBanner';
 import { WorkflowLauncher } from '@/components/agents/WorkflowLauncher';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 
 const stages = [
   { id: 'idea', label: 'Ideas', color: 'bg-muted', headerColor: 'bg-accent' },
@@ -51,23 +51,35 @@ const LEVEL_BADGE_COLORS: Record<string, string> = {
   idea: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30',
 };
 
-export function InitiativesPipeline() {
+export function InitiativesPipeline({ embedded = false, initialVertical }: { embedded?: boolean; initialVertical?: string | null }) {
   const { initiatives, setInitiatives, moveInitiative, addInitiative, updateInitiative, deleteInitiative, personas } = useAppStore();
   const router = useRouter();
 
   const [pipelineLoading, setPipelineLoading] = useState(true);
   const [verticals, setVerticals] = useState<ProductVerticalData[]>([]);
-  const [verticalFilter, setVerticalFilter] = useState<string>('all');
+  const [verticalFilter, setVerticalFilter] = useState<string>(initialVertical || 'all');
+  const [riskCounts, setRiskCounts] = useState<Record<string, number>>({});
 
-  // Load initiatives and verticals from API on mount
+  // Load initiatives, verticals, and risk counts from API on mount
   useEffect(() => {
     Promise.all([
       fetch('/api/initiatives').then((r) => r.ok ? r.json() : []),
       fetch('/api/verticals').then((r) => r.ok ? r.json() : []),
+      fetch('/api/risks').then((r) => r.ok ? r.json() : []),
     ])
-      .then(([initData, vertData]) => {
+      .then(([initData, vertData, riskData]) => {
         if (Array.isArray(initData)) setInitiatives(initData);
         if (Array.isArray(vertData)) setVerticals(vertData);
+        // Compute risk counts per initiative
+        if (Array.isArray(riskData)) {
+          const counts: Record<string, number> = {};
+          for (const risk of riskData) {
+            if (risk.initiativeId) {
+              counts[risk.initiativeId] = (counts[risk.initiativeId] || 0) + 1;
+            }
+          }
+          setRiskCounts(counts);
+        }
         // Check URL for vertical filter param
         const params = new URLSearchParams(window.location.search);
         const vId = params.get('vertical');
@@ -76,8 +88,19 @@ export function InitiativesPipeline() {
       .catch(() => {})
       .finally(() => setPipelineLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [showNewIdea, setShowNewIdea] = useState(false);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
+  const [linkedResearch, setLinkedResearch] = useState<{ id: string; title: string; status: string }[]>([]);
+
+  // Fetch linked research when editing an initiative
+  useEffect(() => {
+    if (!editingInitiative) { setLinkedResearch([]); return; }
+    fetch(`/api/market-research?initiativeId=${editingInitiative.id}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setLinkedResearch(Array.isArray(d) ? d.slice(0, 5) : []))
+      .catch(() => setLinkedResearch([]));
+  }, [editingInitiative?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [levelFilter, setLevelFilter] = useState<string>('all');
@@ -118,6 +141,20 @@ export function InitiativesPipeline() {
       if (res.ok) {
         const saved = await res.json();
         addInitiative({ ...saved, stakeholders: [], tags: [], risks: [], dependencies: [] });
+        // Fire-and-forget: auto-compute alignment if vision exists
+        fetch('/api/vision').then(r => r.ok ? r.json() : null).then(v => {
+          if (v?.northStar) {
+            fetch('/api/vision/alignment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ entityType: 'initiative', entityId: saved.id }),
+            }).then(r => r.ok ? r.json() : null).then(data => {
+              if (data?.overallScore != null) {
+                updateInitiative(saved.id, { alignmentScore: data.overallScore });
+              }
+            }).catch(() => {});
+          }
+        }).catch(() => {});
       } else {
         // Fallback to local-only
         addInitiative({
@@ -136,6 +173,7 @@ export function InitiativesPipeline() {
     setNewIdea({
       title: '', description: '', businessValue: 'medium', effort: 'medium',
       whyNeeded: '', whatIfNot: '', expectedValue: '', expectedTimeToMarket: '',
+      verticalId: '',
     });
     setShowNewIdea(false);
     toast.success('Idea added successfully!');
@@ -196,7 +234,7 @@ export function InitiativesPipeline() {
 
   const handleOpenDiscovery = (initiativeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/discovery?id=${initiativeId}`);
+    router.push(`/assessment?tab=discovery&id=${initiativeId}`);
   };
 
   const toggleSelection = (id: string, e: React.MouseEvent) => {
@@ -295,101 +333,99 @@ export function InitiativesPipeline() {
     return true;
   });
 
-  return (
-    <div className="p-6 space-y-6">
+  const actionButtons = (
+    <>
+      <ShareButton resourceType="initiatives" />
+      {selectionMode ? (
+        <>
+          <span className="text-sm text-slate-500">{selectedIds.size} selected</span>
+          <Button variant="outline" size="sm" onClick={selectAll}>Select All</Button>
+          <Button variant="outline" size="sm" onClick={deselectAll}>Deselect All</Button>
+          <Button variant="destructive" size="sm" disabled={selectedIds.size === 0} onClick={handleBulkDelete}>
+            <Trash2 className="h-4 w-4 mr-1" />Delete ({selectedIds.size})
+          </Button>
+          <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
+            <X className="h-4 w-4 mr-1" />Cancel
+          </Button>
+        </>
+      ) : (
+        <>
+          {initiatives.length > 0 && (
+            <Button variant="outline" onClick={() => setSelectionMode(true)}>
+              <CheckSquare className="h-4 w-4 mr-2" />Select
+            </Button>
+          )}
+          <Button onClick={() => setShowNewIdea(true)}>
+            <Plus className="h-4 w-4 mr-2" />New Idea
+          </Button>
+        </>
+      )}
+    </>
+  );
+
+  const pipelineContent = (
+    <>
       <VisionGateBanner />
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Initiatives Pipeline</h1>
-          <p className="text-slate-500">Manage ideas from conception to approval</p>
-          {/* Level Filter */}
-          <div className="flex items-center gap-1 mt-2">
-            <Layers className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-            {LEVEL_OPTIONS.map((opt) => (
+
+      {/* Level & Vertical Filters */}
+      <div className="flex items-center gap-1">
+        <Layers className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+        {LEVEL_OPTIONS.map((opt) => (
+          <Button
+            key={opt.id}
+            variant={levelFilter === opt.id ? 'default' : 'ghost'}
+            size="sm"
+            className={cn('h-7 text-xs', levelFilter !== opt.id && opt.color)}
+            onClick={() => setLevelFilter(opt.id)}
+          >
+            {opt.label}
+            {opt.id !== 'all' && (
+              <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
+                {initiatives.filter((i) => (i.level || 'idea') === opt.id).length}
+              </Badge>
+            )}
+          </Button>
+        ))}
+        {verticals.length > 0 && (
+          <>
+            <span className="mx-1 text-muted-foreground/30">|</span>
+            <Boxes className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+            <Button
+              variant={verticalFilter === 'all' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setVerticalFilter('all')}
+            >
+              All Verticals
+            </Button>
+            {verticals.map((v) => (
               <Button
-                key={opt.id}
-                variant={levelFilter === opt.id ? 'default' : 'ghost'}
+                key={v.id}
+                variant={verticalFilter === v.id ? 'default' : 'ghost'}
                 size="sm"
-                className={cn('h-7 text-xs', levelFilter !== opt.id && opt.color)}
-                onClick={() => setLevelFilter(opt.id)}
+                className="h-7 text-xs"
+                onClick={() => setVerticalFilter(v.id)}
               >
-                {opt.label}
-                {opt.id !== 'all' && (
-                  <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
-                    {initiatives.filter((i) => (i.level || 'idea') === opt.id).length}
-                  </Badge>
-                )}
+                <div className="h-2 w-2 rounded-full mr-1" style={{ backgroundColor: v.color }} />
+                {v.name}
+                <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
+                  {initiatives.filter((i) => i.verticalId === v.id).length}
+                </Badge>
               </Button>
             ))}
-            {verticals.length > 0 && (
-              <>
-                <span className="mx-1 text-muted-foreground/30">|</span>
-                <Boxes className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-                <Button
-                  variant={verticalFilter === 'all' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setVerticalFilter('all')}
-                >
-                  All Verticals
-                </Button>
-                {verticals.map((v) => (
-                  <Button
-                    key={v.id}
-                    variant={verticalFilter === v.id ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => setVerticalFilter(v.id)}
-                  >
-                    <div className="h-2 w-2 rounded-full mr-1" style={{ backgroundColor: v.color }} />
-                    {v.name}
-                    <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
-                      {initiatives.filter((i) => i.verticalId === v.id).length}
-                    </Badge>
-                  </Button>
-                ))}
-                <Button
-                  variant={verticalFilter === 'unassigned' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-7 text-xs text-muted-foreground"
-                  onClick={() => setVerticalFilter('unassigned')}
-                >
-                  Unassigned
-                  <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
-                    {initiatives.filter((i) => !i.verticalId).length}
-                  </Badge>
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <ShareButton resourceType="initiatives" />
-          {selectionMode ? (
-            <>
-              <span className="text-sm text-slate-500">{selectedIds.size} selected</span>
-              <Button variant="outline" size="sm" onClick={selectAll}>Select All</Button>
-              <Button variant="outline" size="sm" onClick={deselectAll}>Deselect All</Button>
-              <Button variant="destructive" size="sm" disabled={selectedIds.size === 0} onClick={handleBulkDelete}>
-                <Trash2 className="h-4 w-4 mr-1" />Delete ({selectedIds.size})
-              </Button>
-              <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
-                <X className="h-4 w-4 mr-1" />Cancel
-              </Button>
-            </>
-          ) : (
-            <>
-              {initiatives.length > 0 && (
-                <Button variant="outline" onClick={() => setSelectionMode(true)}>
-                  <CheckSquare className="h-4 w-4 mr-2" />Select
-                </Button>
-              )}
-              <Button onClick={() => setShowNewIdea(true)}>
-                <Plus className="h-4 w-4 mr-2" />New Idea
-              </Button>
-            </>
-          )}
-        </div>
+            <Button
+              variant={verticalFilter === 'unassigned' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 text-xs text-muted-foreground"
+              onClick={() => setVerticalFilter('unassigned')}
+            >
+              Unassigned
+              <Badge variant="secondary" className="ml-1 text-[9px] px-1 py-0">
+                {initiatives.filter((i) => !i.verticalId).length}
+              </Badge>
+            </Button>
+          </>
+        )}
       </div>
 
       {/* New Idea Dialog */}
@@ -423,21 +459,23 @@ export function InitiativesPipeline() {
                 </div>
               </div>
 
-              {/* Product Vertical */}
-              {verticals.length > 0 && (
-                <div>
-                  <Label className="flex items-center gap-1"><Boxes className="h-3.5 w-3.5" /> Product Vertical</Label>
+              {/* Product Vertical — prominent placement */}
+              <div>
+                <Label className="flex items-center gap-1"><Boxes className="h-3.5 w-3.5" /> Product Vertical</Label>
+                {verticals.length > 0 ? (
                   <Select value={newIdea.verticalId || '_none'} onValueChange={(v) => setNewIdea({ ...newIdea, verticalId: v === '_none' ? '' : v })}>
                     <SelectTrigger><SelectValue placeholder="Assign to a vertical..." /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="_none">No vertical</SelectItem>
+                      <SelectItem value="_none">Unclassified</SelectItem>
                       {verticals.map(v => (
                         <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              )}
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">Create verticals in Portfolio first to organize initiatives.</p>
+                )}
+              </div>
 
               {/* Business Case Questions */}
               <div className="border-t pt-4 mt-4">
@@ -619,6 +657,43 @@ export function InitiativesPipeline() {
                   </div>
                 )}
 
+                {/* Vision Alignment */}
+                <div className="border-t pt-4 mt-2">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                    <Target className="h-4 w-4 text-amber-500" />
+                    Vision Alignment
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <AlignmentBadge score={editingInitiative.alignmentScore ?? null} size="md" showLabel />
+                    {!editingInitiative.alignmentScore && (
+                      <p className="text-xs text-muted-foreground">No vision alignment scored yet. Use the &quot;Score Alignment&quot; button on the card.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Linked Research */}
+                <div className="border-t pt-4 mt-2">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-blue-500" />
+                    Linked Research
+                  </h3>
+                  {linkedResearch.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {linkedResearch.map(r => (
+                        <div key={r.id} className="flex items-center gap-2 text-sm">
+                          <Badge variant="outline" className="text-[10px]">{r.status}</Badge>
+                          <span className="truncate">{r.title}</span>
+                          <Button variant="ghost" size="sm" className="ml-auto h-6 px-2 text-xs" onClick={() => router.push(`/landscape`)}>
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No research linked. Start a research from Discovery to link it to this initiative.</p>
+                  )}
+                </div>
+
                 {/* Business Case Questions */}
                 <div className="border-t pt-4 mt-2">
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
@@ -692,18 +767,7 @@ export function InitiativesPipeline() {
       </Dialog>
 
       {/* Kanban Board */}
-      {pipelineLoading && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="space-y-2">
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-32 w-full rounded-lg" />
-              <Skeleton className="h-32 w-full rounded-lg" />
-            </div>
-          ))}
-        </div>
-      )}
-      <div className={cn("grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 min-h-[500px]", pipelineLoading && "hidden")}>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 min-h-[500px]">
         {stages.map((stage) => {
           const stageInitiatives = filteredInitiatives.filter((i) => i.status === stage.id);
           return (
@@ -818,10 +882,15 @@ export function InitiativesPipeline() {
                         <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', LEVEL_BADGE_COLORS[(initiative.level || 'idea')])}>
                           {(initiative.level || 'idea').charAt(0).toUpperCase() + (initiative.level || 'idea').slice(1)}
                         </Badge>
-                        <AlignmentBadge score={initiative.alignmentScore ?? null} />
+                        <AlignmentBadge score={initiative.alignmentScore ?? null} href="/vision" />
                         {initiative.competitiveRank != null && (
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
                             #{initiative.competitiveRank}
+                          </Badge>
+                        )}
+                        {riskCounts[initiative.id] > 0 && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-red-500/30 text-red-600 dark:text-red-400">
+                            {riskCounts[initiative.id]} risk{riskCounts[initiative.id] > 1 ? 's' : ''}
                           </Badge>
                         )}
                       </div>
@@ -895,6 +964,26 @@ export function InitiativesPipeline() {
           );
         })}
       </div>
-    </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 flex-wrap">{actionButtons}</div>
+        {pipelineContent}
+      </div>
+    );
+  }
+
+  return (
+    <ViewShell
+      title="Initiatives Pipeline"
+      description="Manage ideas from conception to approval"
+      loading={pipelineLoading}
+      actions={actionButtons}
+    >
+      {pipelineContent}
+    </ViewShell>
   );
 }

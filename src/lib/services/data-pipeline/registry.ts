@@ -22,6 +22,10 @@ class DataAdapterRegistry {
     return Array.from(this.adapters.values());
   }
 
+  listEnabled(): DataAdapter[] {
+    return this.list().filter(a => !a.disabled);
+  }
+
   listByCategory(category: AdapterCategory): DataAdapter[] {
     return this.list().filter(a => a.metadata.category === category);
   }

@@ -58,8 +58,13 @@ export function formatRelativeTime(date: Date | string): string {
 
 /**
  * Safely parses a JSON string, returning the fallback value if parsing fails.
+ * Also handles already-parsed values (non-strings pass through).
+ * Use for Prisma JSON-string fields: parseJSON(field, []) or parseJSON(field, {})
  */
-export function parseJSON<T>(json: string, fallback: T): T {
+export function parseJSON<T>(json: unknown, fallback: T): T {
+  if (typeof json !== 'string') {
+    return (json as T) ?? fallback
+  }
   try {
     return JSON.parse(json) as T
   } catch {

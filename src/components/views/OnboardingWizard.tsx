@@ -5,25 +5,28 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, SkipForward, Eye, Sparkles, Target, Binoculars, Link2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ArrowLeft, ArrowRight, SkipForward } from 'lucide-react';
 import { toast } from 'sonner';
+import { getJourney, getStepLabel } from '@/lib/onboarding-journeys';
+import type { OnboardingRole } from '@/lib/types';
+
+// Step components
+import { RoleSelectionStep } from '@/components/onboarding/RoleSelectionStep';
+import { FirstProductStep } from '@/components/onboarding/FirstProductStep';
+import { AIBackfillStep } from '@/components/onboarding/AIBackfillStep';
+import { AIOrganizeStep } from '@/components/onboarding/AIOrganizeStep';
+import { QuickTourStep } from '@/components/onboarding/QuickTourStep';
+import { CompletionStep } from '@/components/onboarding/CompletionStep';
+import { PersonasStep } from '@/components/onboarding/PersonasStep';
+import { VerticalsStep } from '@/components/onboarding/VerticalsStep';
 import { IdentityStep } from '@/components/onboarding/IdentityStep';
 import { NorthStarStep } from '@/components/onboarding/NorthStarStep';
-import { VisionBuildStep } from '@/components/onboarding/VisionBuildStep';
 import { CompetitorsStep } from '@/components/onboarding/CompetitorsStep';
 import { IntegrationStep } from '@/components/onboarding/IntegrationStep';
 import { SyncStep } from '@/components/onboarding/SyncStep';
 
-const STEPS = [
-  { id: 0, title: 'Identity', description: 'Tell us about your product', icon: Eye },
-  { id: 1, title: 'North Star', description: 'Define your guiding metric', icon: Sparkles },
-  { id: 2, title: 'Vision Build', description: 'Build your vision pyramid', icon: Target },
-  { id: 3, title: 'Competitors', description: 'Identify competitors', icon: Binoculars },
-  { id: 4, title: 'Integrations', description: 'Connect your tools', icon: Link2 },
-];
-
-// Sub-steps within Integrations (step 4)
+// Sub-steps within the integrations step
 const INTEGRATION_SUB_STEPS = ['jira', 'confluence', 'slack', 'sync'] as const;
 
 interface Credentials {
@@ -41,31 +44,27 @@ interface CompetitorEntry {
 export function OnboardingWizard() {
   const router = useRouter();
   const { update } = useSession();
-  const [currentStep, setCurrentStep] = useState(0);
+
+  const [role, setRole] = useState<OnboardingRole | null>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [integrationSubStep, setIntegrationSubStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Step 1: Identity
+  // Journey data passed between steps
+  const [journeyData, setJourneyData] = useState<Record<string, string>>({});
+
+  // State for reused existing steps (VP journey: company-info, north-star, competitors)
   const [identityData, setIdentityData] = useState({
     companyName: '',
     industry: '',
     website: '',
     description: '',
   });
-
-  // Step 2: North Star
   const [northStar, setNorthStar] = useState('');
   const [mission, setMission] = useState('');
-
-  // Step 3: Vision Build
-  const [businessGoals, setBusinessGoals] = useState<string[]>([]);
-  const [targetGroups, setTargetGroups] = useState<string[]>([]);
-  const [products, setProducts] = useState<string[]>([]);
-
-  // Step 4: Competitors
   const [competitors, setCompetitors] = useState<CompetitorEntry[]>([]);
 
-  // Step 5: Integrations
+  // Integration state
   const [credentials, setCredentials] = useState<Credentials>({
     jira: { url: '', email: '', apiToken: '' },
     confluence: { url: '', email: '', apiToken: '' },
@@ -76,28 +75,25 @@ export function OnboardingWizard() {
     confluence: false,
     slack: false,
   });
-  const [syncResults, setSyncResults] = useState<any>(null);
+
+  const journey = role ? getJourney(role) : null;
+  const currentStepKey = journey ? journey.steps[currentStepIndex] : 'role-selection';
+
+  // ── Lifecycle ──
 
   useEffect(() => {
-    // Restore from localStorage as immediate fallback
-    try {
-      const saved = localStorage.getItem('azmyra-onboarding-step');
-      if (saved) {
-        const step = parseInt(saved, 10);
-        if (step > 0 && step < STEPS.length) setCurrentStep(step);
-      }
-    } catch { /* localStorage unavailable */ }
-
     fetch('/api/onboarding/status')
       .then(res => res.json())
       .then(data => {
         if (data.completed) {
-          localStorage.removeItem('azmyra-onboarding-step');
           router.push('/');
           return;
         }
+        if (data.role && ['solo', 'head', 'vp', 'explore'].includes(data.role)) {
+          setRole(data.role as OnboardingRole);
+        }
         if (data.currentStep > 0) {
-          setCurrentStep(Math.min(data.currentStep, STEPS.length - 1));
+          setCurrentStepIndex(data.currentStep);
         }
         setConnected({
           jira: data.jiraConnected || false,
@@ -105,60 +101,63 @@ export function OnboardingWizard() {
           slack: data.slackConnected || false,
         });
       })
-      .catch(() => {
-        // Server unavailable — still let user start onboarding
-      })
+      .catch(() => {})
       .finally(() => setIsLoading(false));
   }, [router]);
 
-  const saveProgress = async (step: number, extra?: Record<string, any>) => {
-    try {
-      localStorage.setItem('azmyra-onboarding-step', String(step));
-    } catch { /* localStorage unavailable */ }
+  const saveProgress = async (step: number, extra?: Record<string, unknown>) => {
     try {
       await fetch('/api/onboarding/status', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentStep: step, ...extra }),
+        body: JSON.stringify({ currentStep: step, role: role || undefined, ...extra }),
       });
     } catch {
-      // Non-critical — localStorage is the fallback
+      // Non-critical
     }
   };
 
-  const handleNext = () => {
-    // If on integration step, cycle through sub-steps
-    if (currentStep === 4 && integrationSubStep < INTEGRATION_SUB_STEPS.length - 1) {
-      setIntegrationSubStep(integrationSubStep + 1);
+  // ── Navigation ──
+
+  const goNext = () => {
+    if (currentStepKey === 'integrations' && integrationSubStep < INTEGRATION_SUB_STEPS.length - 1) {
+      setIntegrationSubStep(prev => prev + 1);
       return;
     }
-
-    if (currentStep < STEPS.length - 1) {
-      const next = currentStep + 1;
-      setCurrentStep(next);
+    if (journey && currentStepIndex < journey.total - 1) {
+      const next = currentStepIndex + 1;
+      setCurrentStepIndex(next);
       setIntegrationSubStep(0);
       saveProgress(next);
     }
   };
 
-  const handleBack = () => {
-    if (currentStep === 4 && integrationSubStep > 0) {
-      setIntegrationSubStep(integrationSubStep - 1);
+  const goBack = () => {
+    if (currentStepKey === 'integrations' && integrationSubStep > 0) {
+      setIntegrationSubStep(prev => prev - 1);
       return;
     }
-    const prev = Math.max(0, currentStep - 1);
-    setCurrentStep(prev);
-    setIntegrationSubStep(0);
-    saveProgress(prev);
+    if (currentStepIndex > 1) {
+      const prev = currentStepIndex - 1;
+      setCurrentStepIndex(prev);
+      setIntegrationSubStep(0);
+      saveProgress(prev);
+    } else {
+      // Back from first step after role → go back to role selection
+      setRole(null);
+      setCurrentStepIndex(0);
+    }
   };
 
-  const handleSkip = () => {
-    handleNext();
+  const handleRoleSelect = async (selectedRole: OnboardingRole) => {
+    setRole(selectedRole);
+    setCurrentStepIndex(1);
+    await saveProgress(1, { role: selectedRole });
   };
 
   const handleComplete = async () => {
     try {
-      // Save vision data
+      // Save any VP-journey accumulated data
       if (northStar || mission) {
         await fetch('/api/vision/north-star', {
           method: 'POST',
@@ -166,62 +165,22 @@ export function OnboardingWizard() {
           body: JSON.stringify({ northStar, mission }),
         });
       }
-
-      // Save business goals
-      for (const goal of businessGoals) {
-        await fetch('/api/vision/business-goals', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: goal }),
-        });
-      }
-
-      // Save target groups
-      for (const group of targetGroups) {
-        await fetch('/api/vision/target-groups', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: group }),
-        });
-      }
-
-      // Save products
-      for (const product of products) {
-        await fetch('/api/vision/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: product }),
-        });
-      }
-
-      // Save competitors
       for (const comp of competitors) {
         await fetch('/api/competitors', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: comp.name,
-            websiteUrl: comp.websiteUrl,
-            discoverySource: comp.source,
-          }),
+          body: JSON.stringify({ name: comp.name, websiteUrl: comp.websiteUrl, discoverySource: comp.source }),
         });
       }
 
-      // Mark onboarding complete + serialize company brain
-      const completeRes = await fetch('/api/onboarding/complete', {
+      await fetch('/api/onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identityData }),
       });
 
-      if (!completeRes.ok) {
-        // Brain write failed — warn but don't block
-        toast.warning('Company brain setup will retry in background. You can continue.');
-      }
-
       await update();
       toast.success('Your Azmyra is ready! Welcome.');
-      window.location.href = '/vision';
     } catch {
       toast.error('Failed to complete setup. Please try again.');
     }
@@ -229,10 +188,10 @@ export function OnboardingWizard() {
 
   const handleConnectionSuccess = (type: 'jira' | 'confluence' | 'slack') => {
     setConnected(prev => ({ ...prev, [type]: true }));
-    saveProgress(currentStep, { [`${type}Connected`]: true });
+    saveProgress(currentStepIndex, { [`${type}Connected`]: true });
   };
 
-  const progress = (currentStep / (STEPS.length - 1)) * 100;
+  // ── Rendering ──
 
   if (isLoading) {
     return (
@@ -242,194 +201,218 @@ export function OnboardingWizard() {
     );
   }
 
-  const isLastStep = currentStep === STEPS.length - 1 && integrationSubStep === INTEGRATION_SUB_STEPS.length - 1;
+  const renderDots = () => {
+    if (!journey) return null;
+    return (
+      <div className="flex items-center justify-center gap-2 mb-6">
+        {journey.steps.map((step, i) => (
+          <div
+            key={step}
+            className={cn(
+              'h-2 rounded-full transition-all',
+              i < currentStepIndex ? 'w-2 bg-green-500' :
+              i === currentStepIndex ? 'w-6 bg-primary' :
+              'w-2 bg-muted'
+            )}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const renderStep = () => {
+    if (!role) {
+      return <RoleSelectionStep onSelect={handleRoleSelect} />;
+    }
+
+    switch (currentStepKey) {
+      // Solo journey
+      case 'first-product':
+        return (
+          <FirstProductStep onComplete={(data) => {
+            setJourneyData(prev => ({ ...prev, ...data }));
+            goNext();
+          }} />
+        );
+
+      case 'ai-backfill':
+        return (
+          <AIBackfillStep
+            initiativeTitle={journeyData.title || ''}
+            initiativeDescription={journeyData.description || ''}
+            onComplete={goNext}
+          />
+        );
+
+      // Head journey
+      case 'ai-organize':
+        return <AIOrganizeStep onComplete={goNext} />;
+
+      // Explore journey
+      case 'quick-tour':
+        return <QuickTourStep onComplete={goNext} />;
+
+      // VP journey reusing existing steps
+      case 'company-info':
+        return (
+          <IdentityStep
+            data={identityData}
+            onChange={(partial) => setIdentityData(prev => ({ ...prev, ...partial }))}
+          />
+        );
+
+      case 'north-star':
+        return (
+          <NorthStarStep
+            identityData={identityData}
+            northStar={northStar}
+            mission={mission}
+            onNorthStarChange={setNorthStar}
+            onMissionChange={setMission}
+          />
+        );
+
+      case 'personas':
+        return <PersonasStep onComplete={goNext} />;
+
+      case 'verticals':
+        return <VerticalsStep onComplete={goNext} />;
+
+      case 'competitors':
+        return (
+          <CompetitorsStep
+            identityData={identityData}
+            competitors={competitors}
+            onCompetitorsChange={setCompetitors}
+          />
+        );
+
+      // Integrations step (shared by multiple journeys)
+      case 'integrations':
+        if (integrationSubStep === 0) {
+          return (
+            <IntegrationStep
+              type="jira"
+              title="Connect Jira"
+              description="Link your Jira instance to import projects and issues as initiatives."
+              fields={[
+                { key: 'url', label: 'Jira URL', placeholder: 'https://your-domain.atlassian.net', type: 'text' },
+                { key: 'email', label: 'Email', placeholder: 'you@company.com', type: 'email' },
+                { key: 'apiToken', label: 'API Token', placeholder: 'Your Jira API token', type: 'password' },
+              ]}
+              credentials={credentials.jira}
+              onCredentialsChange={(creds) => setCredentials(prev => ({ ...prev, jira: { ...prev.jira, ...creds } }))}
+              isConnected={connected.jira}
+              onConnectionSuccess={() => handleConnectionSuccess('jira')}
+            />
+          );
+        }
+        if (integrationSubStep === 1) {
+          return (
+            <IntegrationStep
+              type="confluence"
+              title="Connect Confluence"
+              description="Link your Confluence wiki to import documentation and pages."
+              fields={[
+                { key: 'url', label: 'Confluence URL', placeholder: 'https://your-domain.atlassian.net', type: 'text' },
+                { key: 'email', label: 'Email', placeholder: 'you@company.com', type: 'email' },
+                { key: 'apiToken', label: 'API Token', placeholder: 'Your Confluence API token', type: 'password' },
+              ]}
+              credentials={credentials.confluence}
+              onCredentialsChange={(creds) => setCredentials(prev => ({ ...prev, confluence: { ...prev.confluence, ...creds } }))}
+              isConnected={connected.confluence}
+              onConnectionSuccess={() => handleConnectionSuccess('confluence')}
+            />
+          );
+        }
+        if (integrationSubStep === 2) {
+          return (
+            <IntegrationStep
+              type="slack"
+              title="Connect Slack"
+              description="Link your Slack workspace to analyze channel discussions."
+              fields={[
+                { key: 'botToken', label: 'Bot Token', placeholder: 'xoxb-your-bot-token', type: 'password' },
+                { key: 'channelId', label: 'Channel ID', placeholder: 'C01ABCDEF', type: 'text' },
+              ]}
+              credentials={credentials.slack}
+              onCredentialsChange={(creds) => setCredentials(prev => ({ ...prev, slack: { ...prev.slack, ...creds } }))}
+              isConnected={connected.slack}
+              onConnectionSuccess={() => handleConnectionSuccess('slack')}
+            />
+          );
+        }
+        if (integrationSubStep === 3) {
+          return (
+            <SyncStep
+              credentials={credentials}
+              connected={connected}
+              onSyncComplete={() => {}}
+            />
+          );
+        }
+        return null;
+
+      // Completion — all journeys end here
+      case 'completion':
+        return <CompletionStep role={role} onComplete={handleComplete} />;
+
+      default:
+        return <div className="text-center text-muted-foreground">Unknown step: {currentStepKey}</div>;
+    }
+  };
+
+  const isCompletion = currentStepKey === 'completion';
+  // Steps with their own onComplete (auto-advance) don't need external Next button
+  const selfAdvancingSteps = ['first-product', 'ai-backfill', 'ai-organize', 'personas', 'verticals', 'quick-tour'];
+  const isSelfAdvancing = selfAdvancingSteps.includes(currentStepKey);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-lg">
         {/* Header */}
-        <div className="flex items-center justify-center gap-3 mb-8">
+        <div className="flex items-center justify-center gap-3 mb-6">
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
             <span className="text-white font-bold text-lg">A</span>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Azmyra 3.0</h1>
+          <h1 className="text-3xl font-bold text-foreground">Azmyra</h1>
         </div>
 
-        {/* Progress bar */}
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Step {currentStep + 1} of {STEPS.length}</span>
-            <span>{STEPS[currentStep].title}</span>
-          </div>
-          <Progress value={progress} className="h-2" />
-        </div>
-
-        {/* Step indicators */}
-        <div className="flex justify-between mb-8">
-          {STEPS.map((step) => {
-            const Icon = step.icon;
-            return (
-              <div
-                key={step.id}
-                className={`flex flex-col items-center ${
-                  step.id === currentStep
-                    ? 'text-blue-600'
-                    : step.id < currentStep
-                    ? 'text-green-600'
-                    : 'text-slate-400'
-                }`}
-              >
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                    step.id === currentStep
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/10'
-                      : step.id < currentStep
-                      ? 'border-green-600 bg-green-50 dark:bg-green-500/10'
-                      : 'border-slate-300 dark:border-border'
-                  }`}
-                >
-                  {step.id < currentStep ? (
-                    <span className="text-sm font-medium">&#10003;</span>
-                  ) : (
-                    <Icon className="h-4 w-4" />
-                  )}
-                </div>
-                <span className="text-xs mt-1 hidden sm:block">{step.title}</span>
-              </div>
-            );
-          })}
-        </div>
+        {/* Progress dots */}
+        {renderDots()}
 
         {/* Step content */}
         <Card className="shadow-lg">
           <CardContent className="p-6">
-            {currentStep === 0 && (
-              <IdentityStep
-                data={identityData}
-                onChange={(partial) => setIdentityData(prev => ({ ...prev, ...partial }))}
-              />
-            )}
-
-            {currentStep === 1 && (
-              <NorthStarStep
-                identityData={identityData}
-                northStar={northStar}
-                mission={mission}
-                onNorthStarChange={setNorthStar}
-                onMissionChange={setMission}
-              />
-            )}
-
-            {currentStep === 2 && (
-              <VisionBuildStep
-                identityData={identityData}
-                northStar={northStar}
-                businessGoals={businessGoals}
-                targetGroups={targetGroups}
-                products={products}
-                onBusinessGoalsChange={setBusinessGoals}
-                onTargetGroupsChange={setTargetGroups}
-                onProductsChange={setProducts}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <CompetitorsStep
-                identityData={identityData}
-                competitors={competitors}
-                onCompetitorsChange={setCompetitors}
-              />
-            )}
-
-            {currentStep === 4 && integrationSubStep === 0 && (
-              <IntegrationStep
-                type="jira"
-                title="Connect Jira"
-                description="Link your Jira instance to import projects and issues as initiatives."
-                fields={[
-                  { key: 'url', label: 'Jira URL', placeholder: 'https://your-domain.atlassian.net', type: 'text' },
-                  { key: 'email', label: 'Email', placeholder: 'you@company.com', type: 'email' },
-                  { key: 'apiToken', label: 'API Token', placeholder: 'Your Jira API token', type: 'password' },
-                ]}
-                credentials={credentials.jira}
-                onCredentialsChange={(creds) => setCredentials(prev => ({ ...prev, jira: { ...prev.jira, ...creds } }))}
-                isConnected={connected.jira}
-                onConnectionSuccess={() => handleConnectionSuccess('jira')}
-              />
-            )}
-
-            {currentStep === 4 && integrationSubStep === 1 && (
-              <IntegrationStep
-                type="confluence"
-                title="Connect Confluence"
-                description="Link your Confluence wiki to import documentation and pages."
-                fields={[
-                  { key: 'url', label: 'Confluence URL', placeholder: 'https://your-domain.atlassian.net', type: 'text' },
-                  { key: 'email', label: 'Email', placeholder: 'you@company.com', type: 'email' },
-                  { key: 'apiToken', label: 'API Token', placeholder: 'Your Confluence API token', type: 'password' },
-                ]}
-                credentials={credentials.confluence}
-                onCredentialsChange={(creds) => setCredentials(prev => ({ ...prev, confluence: { ...prev.confluence, ...creds } }))}
-                isConnected={connected.confluence}
-                onConnectionSuccess={() => handleConnectionSuccess('confluence')}
-              />
-            )}
-
-            {currentStep === 4 && integrationSubStep === 2 && (
-              <IntegrationStep
-                type="slack"
-                title="Connect Slack"
-                description="Link your Slack workspace to analyze channel discussions."
-                fields={[
-                  { key: 'botToken', label: 'Bot Token', placeholder: 'xoxb-your-bot-token', type: 'password' },
-                  { key: 'channelId', label: 'Channel ID', placeholder: 'C01ABCDEF', type: 'text' },
-                ]}
-                credentials={credentials.slack}
-                onCredentialsChange={(creds) => setCredentials(prev => ({ ...prev, slack: { ...prev.slack, ...creds } }))}
-                isConnected={connected.slack}
-                onConnectionSuccess={() => handleConnectionSuccess('slack')}
-              />
-            )}
-
-            {currentStep === 4 && integrationSubStep === 3 && (
-              <SyncStep
-                credentials={credentials}
-                connected={connected}
-                onSyncComplete={(results) => setSyncResults(results)}
-              />
-            )}
+            {renderStep()}
           </CardContent>
         </Card>
 
-        {/* Navigation buttons */}
-        <div className="flex justify-between mt-6">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 0 && integrationSubStep === 0}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back
-          </Button>
-
-          <div className="flex gap-2">
-            {currentStep >= 1 && (
-              <Button variant="ghost" onClick={handleSkip} className="gap-2">
+        {/* Navigation — hidden for role selection, completion, and self-advancing steps */}
+        {role && !isCompletion && !isSelfAdvancing && currentStepKey !== 'role-selection' && (
+          <div className="flex justify-between mt-6">
+            <Button variant="outline" onClick={goBack} className="gap-2">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={goNext} className="gap-2">
                 Skip <SkipForward className="h-4 w-4" />
               </Button>
-            )}
-
-            {isLastStep ? (
-              <Button onClick={handleComplete} className="gap-2 bg-green-600 hover:bg-green-700">
-                Complete Setup <ArrowRight className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button onClick={handleNext} className="gap-2 bg-blue-600 hover:bg-blue-700">
+              <Button onClick={goNext} className="gap-2">
                 Next <ArrowRight className="h-4 w-4" />
               </Button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Step label */}
+        {role && !isCompletion && (
+          <div className="text-center mt-4">
+            <span className="text-xs text-muted-foreground">
+              {getStepLabel(currentStepKey)} &middot; Step {currentStepIndex + 1} of {journey?.total || 0}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

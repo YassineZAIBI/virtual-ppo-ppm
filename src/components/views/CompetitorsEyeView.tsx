@@ -12,8 +12,9 @@ import { CompetitorAddDialog } from '@/components/competitors/CompetitorAddDialo
 import { Eye, Plus, Radar, Loader2, Users, Sparkles, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/lib/store';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 
-export function CompetitorsEyeView() {
+export function CompetitorsEyeView({ embedded = false }: { embedded?: boolean }) {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -132,38 +133,31 @@ export function CompetitorsEyeView() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <Eye className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Competitors Eye</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleScanAll}
-            disabled={scanning || competitors.length === 0}
-          >
-            {scanning ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                Scanning...
-              </>
-            ) : (
-              <>
-                <Radar className="h-3.5 w-3.5 mr-1.5" />
-                Scan All
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSuggestCompetitors}
-            disabled={suggesting}
+  const actionButtons = (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleScanAll}
+        disabled={scanning || competitors.length === 0}
+      >
+        {scanning ? (
+          <>
+            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            Scanning...
+          </>
+        ) : (
+          <>
+            <Radar className="h-3.5 w-3.5 mr-1.5" />
+            Scan All
+          </>
+        )}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleSuggestCompetitors}
+        disabled={suggesting}
           >
             {suggesting ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Suggesting...</>
@@ -171,12 +165,17 @@ export function CompetitorsEyeView() {
               <><Sparkles className="h-3.5 w-3.5 mr-1.5" />Suggest Competitors</>
             )}
           </Button>
-          <Button size="sm" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Add Competitor
-          </Button>
-        </div>
-      </div>
+      <Button size="sm" onClick={() => setShowAddDialog(true)}>
+        <Plus className="h-3.5 w-3.5 mr-1.5" />
+        Add Competitor
+      </Button>
+    </>
+  );
+
+  const content = (
+    <>
+      {/* Action buttons when embedded */}
+      {embedded && <div className="flex items-center gap-2 mb-4">{actionButtons}</div>}
 
       {/* Tabs */}
       <Tabs defaultValue="competitors" className="space-y-4">
@@ -282,6 +281,19 @@ export function CompetitorsEyeView() {
         onOpenChange={setShowAddDialog}
         onAdded={fetchCompetitors}
       />
-    </div>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <ViewShell
+      title="Competitors Eye"
+      description="Track and analyze your competitive landscape"
+      loading={loading}
+      actions={actionButtons}
+    >
+      {content}
+    </ViewShell>
   );
 }

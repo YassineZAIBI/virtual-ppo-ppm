@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  LayoutDashboard, MessageSquare, Calendar, Map, Lightbulb, Search,
+  LayoutDashboard, MessageSquare, Calendar, Map,
   Settings, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  Zap, LogOut, Eye, Binoculars, Users, Gauge, Hammer, ShieldAlert,
-  UserCog, Puzzle, Boxes,
+  Zap, LogOut, Eye, Binoculars, ClipboardCheck,
+  UserCog, Puzzle, Brain, Briefcase, Users, Gauge,
 } from 'lucide-react';
 import { useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
@@ -29,49 +29,56 @@ interface NavSection {
 
 const PILLAR_SECTIONS: NavSection[] = [
   {
-    title: 'VISION (WHY)',
-    color: 'text-amber-500 dark:text-amber-400',
-    borderColor: 'border-amber-500',
+    title: 'INTELLIGENCE',
+    color: 'text-blue-500 dark:text-blue-400',
+    borderColor: 'border-blue-500',
     items: [
-      { path: '/vision', label: 'Vision Board', icon: Eye },
-      { path: '/vision/competitors', label: 'Competitors Eye', icon: Binoculars },
-      { path: '/vision/audiences', label: 'Target Groups', icon: Users },
+      { path: '/brain', label: 'Brain', icon: Brain },
+      { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/chat', label: 'AI Chat', icon: MessageSquare },
     ],
   },
   {
-    title: 'STRATEGY (WHAT)',
-    color: 'text-teal-500 dark:text-teal-400',
-    borderColor: 'border-teal-500',
-    items: [
-      { path: '/verticals', label: 'Product Verticals', icon: Boxes },
-      { path: '/strategy', label: 'Portfolio', icon: Lightbulb },
-      { path: '/strategy/roadmap', label: 'Roadmap', icon: Map },
-      { path: '/strategy/discovery', label: 'Discovery', icon: Search },
-      { path: '/strategy/evaluator', label: 'AI Evaluator', icon: Gauge },
-      { path: '/strategy/risks', label: 'Risk Center', icon: ShieldAlert },
-    ],
-  },
-  {
-    title: 'TACTICS (HOW)',
+    title: 'VISION',
     color: 'text-purple-500 dark:text-purple-400',
     borderColor: 'border-purple-500',
     items: [
-      { path: '/tactics', label: 'Coming Soon...', icon: Hammer },
+      { path: '/vision', label: 'North Star', icon: Eye },
+      { path: '/vision/audiences', label: 'Audiences', icon: Users },
+      { path: '/landscape', label: 'Landscape', icon: Binoculars },
+    ],
+  },
+  {
+    title: 'STRATEGY',
+    color: 'text-amber-500 dark:text-amber-400',
+    borderColor: 'border-amber-500',
+    items: [
+      { path: '/portfolio', label: 'Portfolio', icon: Briefcase },
+      { path: '/roadmap', label: 'Roadmap', icon: Map },
+      { path: '/assessment', label: 'Assessment', icon: ClipboardCheck },
+    ],
+  },
+  {
+    title: 'TACTICS',
+    color: 'text-teal-500 dark:text-teal-400',
+    borderColor: 'border-teal-500',
+    items: [
+      { path: '/tactics', label: 'Execution', icon: Gauge },
+      { path: '/meetings', label: 'Meetings', icon: Calendar },
+      { path: '/value-meter', label: 'Value', icon: LayoutDashboard },
     ],
   },
 ];
 
-const PLATFORM_ITEMS: NavItem[] = [
-  { path: '/chat', label: 'AI Assistant', icon: MessageSquare },
-  { path: '/meetings', label: 'Meetings', icon: Calendar },
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+const SETTINGS_ITEMS: NavItem[] = [
   { path: '/integrations', label: 'Integrations', icon: Puzzle },
   { path: '/settings', label: 'Settings', icon: Settings },
+  { path: '/profile', label: 'Profile', icon: UserCog },
 ];
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({ SETTINGS: true });
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
@@ -90,7 +97,8 @@ export function Sidebar() {
 
   const isActive = (path: string) => {
     if (path === '/dashboard') return pathname === '/' || pathname === '/dashboard';
-    return pathname === path || pathname.startsWith(path + '/');
+    // Exact match only — /vision must NOT match /vision/audiences
+    return pathname === path;
   };
 
   const renderNavItem = (item: NavItem, borderColor: string) => {
@@ -166,21 +174,25 @@ export function Sidebar() {
         {/* Separator */}
         <div className="border-t border-sidebar-border my-2" />
 
-        {/* Platform Section */}
-        {!collapsed && (
-          <div className="px-3 py-1.5">
-            <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">PLATFORM</span>
-          </div>
-        )}
-        <div className="space-y-0.5">
-          {PLATFORM_ITEMS.map(item => renderNavItem(item, 'border-blue-500'))}
+        {/* Settings Section — collapsed by default */}
+        <div className="mb-2">
+          {!collapsed && (
+            <button
+              onClick={() => toggleSection('SETTINGS')}
+              className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold tracking-wider uppercase"
+            >
+              <span className="text-muted-foreground">SETTINGS</span>
+              {collapsedSections['SETTINGS']
+                ? <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                : <ChevronUp className="h-3 w-3 text-muted-foreground" />}
+            </button>
+          )}
+          {(!collapsedSections['SETTINGS'] || collapsed) && (
+            <div className="space-y-0.5">
+              {SETTINGS_ITEMS.map(item => renderNavItem(item, 'border-slate-500'))}
+            </div>
+          )}
         </div>
-
-        {/* Separator */}
-        <div className="border-t border-sidebar-border my-2" />
-
-        {/* Profile */}
-        {renderNavItem({ path: '/profile', label: 'Profile & Security', icon: UserCog }, 'border-slate-500')}
       </nav>
 
       {/* Footer */}
@@ -214,7 +226,7 @@ export function Sidebar() {
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-red-400 hover:bg-sidebar-accent flex-shrink-0 h-8 w-8"
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={() => { localStorage.removeItem('vppo-user-id'); localStorage.removeItem('vppo-storage'); signOut({ callbackUrl: '/' }); }}
                 title="Sign out"
               >
                 <LogOut className="h-4 w-4" />

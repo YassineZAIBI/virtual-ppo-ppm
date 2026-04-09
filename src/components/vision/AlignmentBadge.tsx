@@ -4,11 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface AlignmentBadgeProps {
   score: number | null | undefined;
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
+  href?: string;
   className?: string;
 }
 
@@ -26,7 +28,7 @@ function getScoreLabel(score: number): string {
   return 'Low Alignment';
 }
 
-export function AlignmentBadge({ score, size = 'sm', showLabel = false, className }: AlignmentBadgeProps) {
+export function AlignmentBadge({ score, size = 'sm', showLabel = false, href, className }: AlignmentBadgeProps) {
   if (score == null) {
     return (
       <Badge variant="outline" className={cn('text-muted-foreground text-[10px]', className)}>
@@ -46,19 +48,24 @@ export function AlignmentBadge({ score, size = 'sm', showLabel = false, classNam
     lg: 'text-sm px-3 py-1',
   };
 
+  const badge = (
+    <Badge variant="outline" className={cn(colorClass, sizeClasses[size], href && 'cursor-pointer', className)}>
+      <Target className={cn('mr-1', size === 'lg' ? 'h-4 w-4' : 'h-3 w-3')} />
+      {rounded}
+      {showLabel && <span className="ml-1">{label}</span>}
+    </Badge>
+  );
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="outline" className={cn(colorClass, sizeClasses[size], className)}>
-            <Target className={cn('mr-1', size === 'lg' ? 'h-4 w-4' : 'h-3 w-3')} />
-            {rounded}
-            {showLabel && <span className="ml-1">{label}</span>}
-          </Badge>
+          {href ? <Link href={href}>{badge}</Link> : badge}
         </TooltipTrigger>
         <TooltipContent>
           <p className="font-medium">Vision Alignment Score: {rounded}/100</p>
           <p className="text-xs text-muted-foreground">{label}</p>
+          {href && <p className="text-xs text-primary">Click to view vision</p>}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

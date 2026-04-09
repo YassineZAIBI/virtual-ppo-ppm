@@ -3,6 +3,21 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 
+function parseJsonField(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+  }
+  return [];
+}
+
+function normalizeRisk(risk: Record<string, unknown>) {
+  return {
+    ...risk,
+    relatedItems: parseJsonField(risk.relatedItems),
+  };
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -15,7 +30,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json(risks);
+    return NextResponse.json(risks.map(r => normalizeRisk(r as unknown as Record<string, unknown>)));
   } catch (error) {
     console.error('[RISKS_GET]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

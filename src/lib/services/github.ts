@@ -1,3 +1,4 @@
+// AUDIT: Unused service — no importers found [2026-04-08]
 const GITHUB_API = 'https://api.github.com';
 
 interface GitHubRepo {

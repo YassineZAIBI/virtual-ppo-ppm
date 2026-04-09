@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,9 @@ export function ChatInterface() {
     pendingChatPrompt, setPendingChatPrompt,
     chatSessions, setChatSessions,
   } = useAppStore();
+
+  const searchParams = useSearchParams();
+  const brainDomain = searchParams.get('domain');
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -142,6 +146,7 @@ export function ChatInterface() {
           settings,
           storeData: { initiatives, risks, roadmapItems, meetings, jiraProjectSchema },
           agentId: selectedAgent,
+          brainDomain: brainDomain || undefined,
         }),
       });
 
@@ -373,7 +378,14 @@ export function ChatInterface() {
             </div>
             <div>
               <h2 className="font-semibold text-foreground">AI Product Assistant</h2>
-              <p className="text-sm text-slate-500">6 specialized agents at your service</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-slate-500">6 specialized agents at your service</p>
+                {brainDomain && (
+                  <Badge variant="outline" className="text-[10px] gap-1">
+                    <Brain className="h-3 w-3" /> {brainDomain} domain
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">

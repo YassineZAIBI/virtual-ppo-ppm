@@ -5,6 +5,24 @@ import { db } from '@/lib/db';
 import { LLMService } from '@/lib/services/llm';
 import { LLMConfig } from '@/lib/types';
 
+function parseJsonField(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+  }
+  return [];
+}
+
+function normalizeMeeting(meeting: Record<string, unknown>) {
+  return {
+    ...meeting,
+    participants: parseJsonField(meeting.participants),
+    actionItems: parseJsonField(meeting.actionItems),
+    decisions: parseJsonField(meeting.decisions),
+    challenges: parseJsonField(meeting.challenges),
+  };
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +35,7 @@ export async function GET() {
       orderBy: { date: 'desc' },
     });
 
-    return NextResponse.json(meetings);
+    return NextResponse.json(meetings.map(m => normalizeMeeting(m as unknown as Record<string, unknown>)));
   } catch (error) {
     console.error('[MEETINGS_GET]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

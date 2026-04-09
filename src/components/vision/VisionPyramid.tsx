@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -53,6 +53,13 @@ export function VisionPyramid({
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [verticals, setVerticals] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    fetch('/api/verticals').then(r => r.ok ? r.json() : []).then(d => {
+      if (Array.isArray(d)) setVerticals(d.map((v: { id: string; name: string }) => ({ id: v.id, name: v.name })));
+    }).catch(() => {});
+  }, []);
   const [pyramidPreview, setPyramidPreview] = useState<Record<string, unknown> | null>(null);
   const { settings } = useAppStore();
 
@@ -349,7 +356,7 @@ export function VisionPyramid({
               </div>
             )}
             {needs.map((need) => (
-              <NeedCard key={need.id} need={need} onUpdate={() => onRefresh()} onDelete={() => onRefresh()} />
+              <NeedCard key={need.id} need={need} verticals={verticals} onUpdate={() => onRefresh()} onDelete={() => onRefresh()} />
             ))}
             {needs.length === 0 && !addingNeed && (
               <p className="text-xs text-muted-foreground text-center py-3">

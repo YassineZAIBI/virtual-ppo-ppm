@@ -91,7 +91,7 @@ export function ProfileView() {
       });
       if (response.ok) {
         toast.success('Account deleted successfully');
-        signOut({ callbackUrl: '/auth/signin' });
+        localStorage.removeItem('vppo-user-id'); localStorage.removeItem('vppo-storage'); signOut({ callbackUrl: '/auth/signin' });
       } else {
         const data = await response.json();
         toast.error(data.error || 'Failed to delete account');

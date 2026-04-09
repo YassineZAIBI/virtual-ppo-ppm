@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import { Initiative } from '@/lib/types';
 import { ShareButton } from '@/components/share/ShareButton';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 
 interface ValueAssessment {
   initiativeId: string;
@@ -215,35 +216,21 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
     ? Math.round(activeInitiatives.reduce((sum, i) => sum + (assessments[i.id]?.overallScore || 0), 0) / assessedCount)
     : 0;
 
-  if (vmLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Gauge className="h-7 w-7 text-blue-600" />
-            Value Meter
-          </h1>
-          <p className="text-slate-500">AI challenges each initiative and estimates its true value proposition</p>
-        </div>
-        <div className="flex gap-2">
+    <ViewShell
+      title="Value Meter"
+      description="AI challenges each initiative and estimates its true value proposition"
+      loading={vmLoading}
+      actions={
+        <>
           <ShareButton resourceType="value-meter" />
           <Button variant="outline" onClick={assessAll} disabled={loadingIds.size > 0 || activeInitiatives.length === 0}>
             <Sparkles className="h-4 w-4 mr-2" />
             Assess All
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -509,7 +496,7 @@ Be critical. Don't give inflated scores. A 50 is average. Only truly exceptional
           })}
         </div>
       )}
-    </div>
+    </ViewShell>
   );
 }
 

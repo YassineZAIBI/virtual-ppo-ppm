@@ -33,7 +33,7 @@ const DISCOVERY_TABS = [
   { id: 'impact', label: 'Impact Analysis', icon: TrendingUp },
 ];
 
-export function DiscoveryView() {
+export function DiscoveryView({ embedded = false }: { embedded?: boolean }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { initiatives, updateInitiative, settings, setInitiatives } = useAppStore();
@@ -339,7 +339,7 @@ Structure with these sections:
       <div className="w-72 border-r bg-background flex flex-col">
         <div className="p-4 border-b">
           <div className="flex items-center gap-2 mb-3">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push('/strategy')}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push('/portfolio')}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex-1">

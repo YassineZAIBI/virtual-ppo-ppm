@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Pencil, Trash2, Target, Save, X, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { Pencil, Trash2, Target, Save, X, Users, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import type { BusinessGoalData, TargetGroupData } from '@/lib/types';
 
@@ -153,6 +154,9 @@ export function BusinessGoalCard({ goal, targetGroups, onUpdate, onDelete, onSel
             )}
           </div>
         )}
+        <Link href="/portfolio" className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-0.5 mt-2">
+          View initiatives <ArrowRight className="h-3 w-3" />
+        </Link>
       </CardContent>
     </Card>
   );

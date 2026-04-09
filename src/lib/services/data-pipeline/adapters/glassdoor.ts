@@ -19,6 +19,9 @@ const glassdoor: DataAdapter = {
     requiresConfig: false,
   },
 
+  disabled: true,
+  disabledReason: 'Scrapes anti-bot protected site — will fail in production',
+
   async fetch(query: string, options?: FetchOptions): Promise<DataResult[]> {
     const maxResults = options?.maxResults ?? 10;
     if (!(await isScraperAvailable())) {

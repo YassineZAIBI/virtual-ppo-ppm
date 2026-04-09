@@ -5,6 +5,8 @@ import { z } from 'zod';
 export interface DataAdapter {
   key: string;
   metadata: AdapterMetadata;
+  disabled?: boolean;
+  disabledReason?: string;
   fetch(query: string, options?: FetchOptions): Promise<DataResult[]>;
   testConnection?(config?: Record<string, any>): Promise<{ ok: boolean; error?: string }>;
 }

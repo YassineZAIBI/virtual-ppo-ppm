@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +50,7 @@ function scoreTextColor(score: number): string {
 
 // ── component ───────────────────────────────────────────────────────────
 
-export function RiskCenterView() {
+export function RiskCenterView({ embedded = false }: { embedded?: boolean }) {
   const { risks, setRisks, addRisk, updateRisk, removeRisk, settings } = useAppStore();
   const [riskLoading, setRiskLoading] = useState(true);
   const [showNewRisk, setShowNewRisk] = useState(false);
@@ -262,30 +263,15 @@ export function RiskCenterView() {
 
   // ── render ──────────────────────────────────────────────────────────
 
-  if (riskLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
-      </div>
-    );
-  }
+  const riskActionButtons = (
+    <Button onClick={() => setShowNewRisk(true)}>
+      <Plus className="h-4 w-4 mr-2" /> Add Risk
+    </Button>
+  );
 
-  return (
-    <div className="p-6 space-y-6">
+  const riskContent = (
+    <>
       <VisionGateBanner />
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <ShieldAlert className="h-6 w-6 text-teal-500" />
-            Risk Center
-          </h1>
-          <p className="text-muted-foreground">Track and mitigate product risks across your portfolio.</p>
-        </div>
-        <Button onClick={() => setShowNewRisk(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Add Risk
-        </Button>
-      </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -676,6 +662,26 @@ export function RiskCenterView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">{riskActionButtons}</div>
+        {riskContent}
+      </div>
+    );
+  }
+
+  return (
+    <ViewShell
+      title="Risk Center"
+      description="Track and mitigate product risks across your portfolio."
+      loading={riskLoading}
+      actions={riskActionButtons}
+    >
+      {riskContent}
+    </ViewShell>
   );
 }

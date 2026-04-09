@@ -1,10 +1,5 @@
-import { InitiativesPipeline } from '@/components/views/InitiativesPipeline';
-import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
+import { redirect } from 'next/navigation';
 
-export default function InitiativesPage() {
-  return (
-    <ErrorBoundary>
-      <InitiativesPipeline />
-    </ErrorBoundary>
-  );
+export default function InitiativesRedirect() {
+  redirect('/portfolio');
 }

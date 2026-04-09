@@ -13,9 +13,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Trash2, Info, Link2, X, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton';
 import { isSampleData } from '@/lib/sample-data';
 import { ExampleBadge } from '@/components/ui/example-badge';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 
 export function UserJourneyView() {
   const { personas, addPersona, updatePersona, deletePersona, initiatives, updateInitiative, setPersonas, setInitiatives } = useAppStore();
@@ -120,23 +120,13 @@ export function UserJourneyView() {
     'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-300',
   ];
 
-  if (journeyLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">User Personas</h1>
-            <p className="text-muted-foreground">Define target users and link them to initiatives</p>
-          </div>
+    <ViewShell
+      title="User Personas"
+      description="Define target users and link them to initiatives"
+      loading={journeyLoading}
+      actions={
+        <>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-500">
@@ -158,11 +148,12 @@ export function UserJourneyView() {
               </div>
             </PopoverContent>
           </Popover>
-        </div>
-        <Button onClick={() => setShowAddPersona(true)}>
-          <Plus className="h-4 w-4 mr-2" />Add Persona
-        </Button>
-      </div>
+          <Button onClick={() => setShowAddPersona(true)}>
+            <Plus className="h-4 w-4 mr-2" />Add Persona
+          </Button>
+        </>
+      }
+    >
 
       {/* Empty state */}
       {personas.length === 0 && (
@@ -328,6 +319,6 @@ export function UserJourneyView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </ViewShell>
   );
 }

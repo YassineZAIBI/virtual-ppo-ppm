@@ -1,5 +1,13 @@
 // Azmyra Types
 
+export type OnboardingRole = 'solo' | 'head' | 'vp' | 'explore';
+
+export interface OnboardingJourney {
+  role: OnboardingRole;
+  steps: string[];
+  totalSteps: number;
+}
+
 export type LLMProvider = 'openai' | 'anthropic' | 'azure' | 'ollama' | 'z-ai' | 'gemini' | 'groq';
 
 export interface LLMConfig {
@@ -101,11 +109,15 @@ export interface Initiative {
   status: 'idea' | 'discovery' | 'validation' | 'definition' | 'approved';
   businessValue: 'high' | 'medium' | 'low';
   effort: 'high' | 'medium' | 'low';
+  /** DB: JSON string — API normalizes to array. Use parseJSON() if accessing raw DB data */
   stakeholders: string[];
   createdAt: Date;
   updatedAt: Date;
+  /** DB: JSON string — API normalizes to array */
   tags: string[];
+  /** DB: JSON string — API normalizes to array */
   risks: string[];
+  /** DB: JSON string — API normalizes to array */
   dependencies: string[];
   jiraKey?: string;
   jiraIssueType?: string;
@@ -114,9 +126,9 @@ export interface Initiative {
   whatIfNot?: string;
   expectedValue?: string;
   expectedTimeToMarket?: string;
-  // Discovery data
+  /** DB: JSON string — API normalizes to object. Use parseJSON() if accessing raw DB data */
   discovery?: DiscoveryData;
-  // Linked personas
+  /** DB: JSON string — API normalizes to array */
   personaIds?: string[];
   // Azmyra 3.0 Strategy extensions
   level?: 'solution' | 'epic' | 'idea';
@@ -158,12 +170,16 @@ export interface Meeting {
   title: string;
   date: Date;
   duration: number; // minutes
+  /** DB: JSON string — API normalizes to array */
   participants: string[];
   status: 'scheduled' | 'completed' | 'processing' | 'summarized' | 'recording';
   transcript?: string;
   summary?: string;
+  /** DB: JSON string — API normalizes to array */
   actionItems: ActionItem[];
+  /** DB: JSON string — API normalizes to array */
   decisions: string[];
+  /** DB: JSON string — API normalizes to array */
   challenges: string[];
   followUpEmail?: string;
   platform?: 'zoom' | 'teams' | 'manual';
@@ -821,6 +837,29 @@ export type BrainNodeSource =
 export type BrainRelationType =
   | 'supports' | 'contradicts' | 'depends_on' | 'created_by' | 'related_to';
 
+export type BrainDomain = 'vision' | 'product' | 'market' | 'risk' | 'operations' | 'general';
+
+export type BrainClusterHealth = 'healthy' | 'stale' | 'sparse';
+
+export interface BrainCluster {
+  domain: BrainDomain;
+  nodeCount: number;
+  lastUpdated: Date | null;
+  topNodes: BrainNodeSummary[];
+  insights: number;
+  health: BrainClusterHealth;
+}
+
+export interface BrainNodeSummary {
+  id: string;
+  title: string;
+  type: string;
+  domain: BrainDomain;
+  importance: number;
+  source: string;
+  createdAt: Date;
+}
+
 export interface BrainNodeData {
   id: string;
   userId: string;
@@ -835,6 +874,10 @@ export interface BrainNodeData {
   metadata: string;  // JSON string — extra structured data
   agentType: string;
   confidence: number;
+  domain: BrainDomain;
+  importance: number;
+  stale: boolean;
+  parentId: string | null;
   createdAt: Date;
   updatedAt: Date;
   relations?: BrainRelationData[];
@@ -848,6 +891,59 @@ export interface BrainRelationData {
   relationType: BrainRelationType;
   strength: number;
   createdAt: Date;
+}
+
+// Sprint Brain V2 — Strategy Canvas
+
+export type BrainViewMode = 'story' | 'value';
+
+export interface InitiativeSummary {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  businessValue: string;
+  verticalId: string | null;
+  updatedAt: Date;
+}
+
+export interface VerticalWithInitiatives {
+  id: string;
+  name: string;
+  description: string;
+  initiatives: Array<InitiativeSummary & { alignmentScore: number | null }>;
+  initiativeCount: number;
+}
+
+export interface BrainStats {
+  totalNodes: number;
+  totalRelations: number;
+  totalInitiatives: number;
+  totalRisks: number;
+  totalVerticals: number;
+  portfolioAlignment: number | null;
+}
+
+export interface BrainOverviewData {
+  northStar: { id: string; statement: string; updatedAt: string } | null;
+  goals: Array<{ id: string; title: string; description: string | null; metric: string | null; target: string | null }>;
+  verticals: VerticalWithInitiatives[];
+  orphanInitiatives: Array<InitiativeSummary & { alignmentScore: number | null }>;
+  personas: Array<{ id: string; name: string; description: string | null }>;
+  risks: Array<{ id: string; title: string; description: string; severity: string; probability: string }>;
+  competitors: Array<{ id: string; name: string; website: string | null; description: string | null }>;
+  insights: Array<{ id: string; title: string; summary: string; agentType: string; priority: string; createdAt: string }>;
+  value: { portfolioAlignment: number | null; risksAtRisk: number };
+  stats: BrainStats;
+}
+
+export interface BrainConnection {
+  type: 'vision' | 'vertical' | 'risk' | 'persona' | 'goal' | 'competitor';
+  label: string;
+  value: string;
+  description: string;
+  targetSection: string;
+  targetIndex: number;
 }
 
 // Sprint 4 — Agent Collaboration Protocol

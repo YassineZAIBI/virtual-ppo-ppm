@@ -15,6 +15,7 @@ import {
   ArrowRight, Check, X, Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 import type { ProductVerticalData } from '@/lib/types';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -156,31 +157,13 @@ export function ProductVerticalsView() {
     setForm({ name: v.name, description: v.description, strategy: v.strategy, color: v.color });
   };
 
-  if (loading) {
-    return (
-      <div className="p-6 space-y-6 max-w-5xl mx-auto">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-40" />)}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Boxes className="h-6 w-6 text-indigo-500" />
-            Product Verticals
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Strategic groupings for your product portfolio
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <ViewShell
+      title="Product Verticals"
+      description="Strategic groupings for your product portfolio"
+      loading={loading}
+      actions={
+        <>
           <Button variant="outline" size="sm" onClick={handleSuggest} disabled={suggesting}>
             {suggesting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
             AI Suggest
@@ -188,8 +171,10 @@ export function ProductVerticalsView() {
           <Button size="sm" onClick={() => { setForm({ name: '', description: '', strategy: '', color: '#6366F1' }); setShowCreate(true); }}>
             <Plus className="h-4 w-4 mr-1" /> Create Vertical
           </Button>
-        </div>
-      </div>
+        </>
+      }
+      className="max-w-5xl mx-auto"
+    >
 
       {/* AI Suggestions */}
       {suggestions && suggestions.length > 0 && (
@@ -289,7 +274,7 @@ export function ProductVerticalsView() {
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs"
-                    onClick={() => router.push(`/initiatives?vertical=${v.id}`)}
+                    onClick={() => router.push(`/portfolio?verticalId=${v.id}`)}
                   >
                     View <ArrowRight className="h-3 w-3 ml-1" />
                   </Button>
@@ -361,6 +346,6 @@ export function ProductVerticalsView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </ViewShell>
   );
 }

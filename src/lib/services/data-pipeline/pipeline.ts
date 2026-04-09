@@ -15,11 +15,25 @@ export interface PipelineOptions extends FetchOptions {
   onProgress?: (completed: number, total: number) => void;
 }
 
+// Configure rate limiter from adapter metadata (runs once)
+let rateLimiterConfigured = false;
+function ensureRateLimiterConfigured() {
+  if (rateLimiterConfigured) return;
+  for (const adapter of registry.list()) {
+    const rl = adapter.metadata.rateLimit;
+    if (rl?.requests && rl?.windowMs) {
+      rateLimiter.configure(adapter.key, rl.requests, rl.windowMs);
+    }
+  }
+  rateLimiterConfigured = true;
+}
+
 export async function fetchFromSources(
   query: string,
   adapterKeys: string[],
   options: PipelineOptions = {}
 ): Promise<DataResult[]> {
+  ensureRateLimiterConfigured();
   const { useCache = true, cacheTtlMs, rawQuery = false, relevanceThreshold = 0.12, onAdapterComplete, onProgress } = options;
   const allResults: DataResult[] = [];
   let completed = 0;
@@ -31,6 +45,10 @@ export async function fetchFromSources(
     const adapter = registry.get(key);
     if (!adapter) {
       console.warn(`Adapter "${key}" not found in registry, skipping.`);
+      return;
+    }
+    if (adapter.disabled) {
+      console.warn(`[Pipeline] Adapter "${key}" is disabled: ${adapter.disabledReason || 'no reason given'}`);
       return;
     }
 

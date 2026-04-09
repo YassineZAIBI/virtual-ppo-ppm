@@ -17,17 +17,20 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.cert
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-dev-error.log
-dev-output.log
+*.log
 
 # local env files
-.env*.local
 .env
+.env.local
+.env.*.local
+# Keep .env.example tracked as a template
 
 # vercel
 .vercel
@@ -46,8 +49,7 @@ prisma/migrations/
 .idea/
 
 # Python
-python-agents/__pycache__/
-python-agents/**/__pycache__/
+__pycache__/
 *.pyc
 *.pyo
 python-agents/venv/
@@ -56,7 +58,20 @@ python-agents/.venv/
 # Docker
 docker-compose.override.yml
 
-# Dev logs
-dev-error.log
-dev-output.log
-*.log
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Project docs (internal only — not for public repo)
+PROJECT_HIERARCHY.md
+docs/ARCHITECTURE.md
+docs/sprints/SPRINT_*.md
+docs/AUDIT_REPORT.md
+docs/SANITY_CHECK*.md
+
+# GCP / Terraform / Secrets
+gcp-credentials.json
+service-account*.json
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars

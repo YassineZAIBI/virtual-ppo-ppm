@@ -1,12 +1,5 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
-import { RiskCenterView } from '@/components/views/RiskCenterView';
-
-export default function StrategyRisksPage() {
-  return (
-    <ErrorBoundary>
-      <RiskCenterView />
-    </ErrorBoundary>
-  );
+export default function StrategyRisksRedirect() {
+  redirect('/assessment');
 }

@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { targetGroupId, title, description, severity, frequency } = body;
+    const { targetGroupId, title, description, severity, frequency, verticalId } = body;
 
     if (!targetGroupId || !title) {
       return NextResponse.json({ error: 'targetGroupId and title are required' }, { status: 400 });
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
         description: description ?? null,
         severity: severity ?? 5,
         frequency: frequency ?? null,
+        verticalId: verticalId ?? null,
       },
     });
 

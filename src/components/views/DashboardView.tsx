@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Briefcase, Clock, AlertTriangle, Calendar, Plus, FileText, Users,
   Target, Workflow, ArrowRight, BookOpen, X, Eye, Binoculars,
-  ShieldAlert, Lightbulb, Gauge, Bell,
+  ShieldAlert, Lightbulb, Gauge, Bell, Brain,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShareButton } from '@/components/share/ShareButton';
@@ -42,7 +43,14 @@ export function DashboardView() {
   });
   const [newInitiative, setNewInitiative] = useState({ title: '', description: '', businessValue: 'medium' as const, effort: 'medium' as const });
   const [alertCount, setAlertCount] = useState(0);
+  const [recentAlerts, setRecentAlerts] = useState<{ id: string; type: string; title: string; significance: string; competitorName?: string; createdAt: string }[]>([]);
   const [vasAvg, setVasAvg] = useState<number | null>(null);
+  const [brainPulse, setBrainPulse] = useState<{
+    totalNodes: number;
+    totalRelations: number;
+    alignment: number | null;
+    latestInsight: string | null;
+  } | null>(null);
   const [dashLoading, setDashLoading] = useState(true);
 
   useEffect(() => {
@@ -51,9 +59,20 @@ export function DashboardView() {
       fetch('/api/meetings').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setMeetings(d); }),
       fetch('/api/risks').then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setRisks(d); }),
       fetch('/api/vision').then(r => r.ok ? r.json() : null).then(d => setVisionData(d)),
-      fetch('/api/competitors/feed?limit=1').then(r => r.ok ? r.json() : { pagination: { total: 0 } }).then(d => setAlertCount(d.pagination?.total || 0)),
+      fetch('/api/competitors/feed?limit=3').then(r => r.ok ? r.json() : { pagination: { total: 0 }, alerts: [] }).then(d => {
+        setAlertCount(d.pagination?.total || 0);
+        setRecentAlerts((d.alerts ?? d.items ?? []).slice(0, 3));
+      }),
       fetch('/api/strategy/portfolio').then(r => r.ok ? r.json() : null).then(d => {
         if (d?.summary?.avgAlignment != null) setVasAvg(d.summary.avgAlignment);
+      }),
+      fetch('/api/brain').then(r => r.ok ? r.json() : null).then(d => {
+        if (d?.stats) setBrainPulse({
+          totalNodes: d.stats.totalNodes,
+          totalRelations: d.stats.totalRelations,
+          alignment: d.stats.portfolioAlignment ?? null,
+          latestInsight: d.insights?.[0]?.title ?? null,
+        });
       }),
     ]).catch(() => {}).finally(() => setDashLoading(false));
   }, []);
@@ -121,40 +140,22 @@ export function DashboardView() {
     router.push('/chat');
   };
 
-  if (dashLoading) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div><Skeleton className="h-8 w-48 mb-2" /><Skeleton className="h-4 w-64" /></div>
-          <Skeleton className="h-10 w-36" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
-        </div>
-        <Skeleton className="h-40 w-full rounded-lg" />
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 space-y-6">
-      <InsightsPanel />
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Welcome back!</h1>
-          <p className="text-muted-foreground">Your three-pillar product overview</p>
-        </div>
-        <div className="flex items-center gap-2">
+    <ViewShell
+      title="Welcome back!"
+      description="Your three-pillar product overview"
+      loading={dashLoading}
+      actions={
+        <>
           <ShareButton resourceType="dashboard" />
           <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowNewInitiative(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Initiative
           </Button>
-        </div>
-      </div>
+        </>
+      }
+    >
+      <InsightsPanel />
 
       {/* Getting Started Banner */}
       {!guideDismissed && (
@@ -209,7 +210,7 @@ export function DashboardView() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/strategy/evaluator')}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/assessment')}>
             <CardContent className="pt-5 pb-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -227,7 +228,7 @@ export function DashboardView() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/vision/competitors')}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/landscape')}>
             <CardContent className="pt-5 pb-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -241,7 +242,53 @@ export function DashboardView() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Recent Competitive Intelligence */}
+        {recentAlerts.length > 0 && (
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Binoculars className="h-3.5 w-3.5" /> Recent Intelligence
+              </p>
+              <div className="space-y-2">
+                {recentAlerts.map(a => (
+                  <div key={a.id} className="flex items-center gap-2 text-sm">
+                    <Badge variant={a.significance === 'high' ? 'destructive' : 'secondary'} className="text-[10px] px-1.5 flex-shrink-0">
+                      {a.significance || 'info'}
+                    </Badge>
+                    <span className="truncate text-foreground">{a.title || a.type}</span>
+                    {a.competitorName && <span className="text-xs text-muted-foreground flex-shrink-0">({a.competitorName})</span>}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* ── BRAIN PULSE ── */}
+      {brainPulse && brainPulse.totalNodes > 0 && (
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/brain')}>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-blue-500" />
+                <span className="font-semibold text-sm">Brain Pulse</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span>{brainPulse.totalNodes} nodes</span>
+                <span>{brainPulse.totalRelations} relations</span>
+                {brainPulse.alignment != null && <span>{brainPulse.alignment}% aligned</span>}
+              </div>
+            </div>
+            {brainPulse.latestInsight && (
+              <p className="text-xs text-muted-foreground truncate">
+                Latest: {brainPulse.latestInsight}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── STRATEGY (WHAT) Section ── */}
       <div>
@@ -249,7 +296,7 @@ export function DashboardView() {
           <Lightbulb className="h-4 w-4" /> Strategy (What)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/strategy')}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/portfolio')}>
             <CardContent className="pt-5 pb-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -263,7 +310,7 @@ export function DashboardView() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/strategy')}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/portfolio')}>
             <CardContent className="pt-5 pb-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -277,7 +324,7 @@ export function DashboardView() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/strategy/risks')}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push('/assessment')}>
             <CardContent className="pt-5 pb-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -355,7 +402,7 @@ export function DashboardView() {
                   .filter(i => i.businessValue === 'high')
                   .slice(0, 4)
                   .map((initiative) => (
-                    <div key={initiative.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer" onClick={() => router.push('/strategy')}>
+                    <div key={initiative.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer" onClick={() => router.push('/portfolio')}>
                       <div className="flex items-center gap-3">
                         <div className="h-2 w-2 rounded-full bg-green-500" />
                         <div>
@@ -419,7 +466,7 @@ export function DashboardView() {
                         <span className="font-medium text-sm">{item.title}</span>
                         {isSampleData(item.id) && <ExampleBadge />}
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => router.push(type === 'risk' ? '/strategy/risks' : type === 'meeting' ? '/meetings' : '/strategy')}>
+                      <Button size="sm" variant="outline" onClick={() => router.push(type === 'risk' ? '/assessment' : type === 'meeting' ? '/meetings' : '/portfolio')}>
                         View <ArrowRight className="h-3 w-3 ml-1" />
                       </Button>
                     </div>
@@ -462,7 +509,7 @@ export function DashboardView() {
             ) : (
               <div className="space-y-2">
                 {risks.slice(0, 4).map((risk) => (
-                  <div key={risk.id} className="flex items-start gap-3 p-2 bg-red-50 dark:bg-red-500/8 rounded-lg cursor-pointer" onClick={() => router.push('/strategy/risks')}>
+                  <div key={risk.id} className="flex items-start gap-3 p-2 bg-red-50 dark:bg-red-500/8 rounded-lg cursor-pointer" onClick={() => router.push('/assessment')}>
                     <Badge className={cn('shrink-0 text-xs', risk.severity === 'high' || risk.severity === 'critical' ? 'bg-red-500' : risk.severity === 'medium' ? 'bg-amber-500' : 'bg-slate-500')}>
                       {risk.severity.toUpperCase()}
                     </Badge>
@@ -512,6 +559,6 @@ export function DashboardView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </ViewShell>
   );
 }

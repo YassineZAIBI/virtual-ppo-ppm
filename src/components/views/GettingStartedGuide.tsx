@@ -14,6 +14,7 @@ import {
   LayoutDashboard, Lightbulb, Calendar, MessageSquare,
   Map, Settings, ArrowRight, FlaskConical, Info,
 } from 'lucide-react';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 
 const guideSteps = [
   {
@@ -119,14 +120,11 @@ export function GettingStartedGuide() {
   const router = useRouter();
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Getting Started with Azmyra</h1>
-        <p className="text-muted-foreground mt-1">
-          Learn how to use each feature and get the most out of your AI product manager.
-        </p>
-      </div>
-
+    <ViewShell
+      title="Getting Started with Azmyra"
+      description="Learn how to use each feature and get the most out of your AI product manager."
+      className="max-w-4xl mx-auto"
+    >
       {/* Example Data Info */}
       <Card className="border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-800">
         <CardContent className="pt-4 pb-4">
@@ -193,6 +191,6 @@ export function GettingStartedGuide() {
           );
         })}
       </Accordion>
-    </div>
+    </ViewShell>
   );
 }

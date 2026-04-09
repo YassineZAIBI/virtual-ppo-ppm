@@ -58,6 +58,7 @@ export async function PATCH(
         ...(body.description !== undefined && { description: body.description }),
         ...(body.severity !== undefined && { severity: body.severity }),
         ...(body.frequency !== undefined && { frequency: body.frequency }),
+        ...(body.verticalId !== undefined && { verticalId: body.verticalId || null }),
       },
     });
 

@@ -17,6 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 
 const tacticsFeatures = [
   {
@@ -65,24 +66,17 @@ export function TacticsView() {
   };
 
   return (
-    <div className="space-y-8 p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="text-center space-y-4 pt-8">
+    <ViewShell
+      title="Tactics Pillar"
+      description="The third pillar of Azmyra's three-pillar framework. Transform your strategies into tactical execution — closing the loop from vision to delivery."
+      className="max-w-5xl mx-auto"
+      actions={
         <div className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm text-muted-foreground">
           <Lock className="h-3.5 w-3.5" />
           Coming Soon
         </div>
-        <h1 className="text-4xl font-bold tracking-tight">
-          Tactics Pillar
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          The third pillar of Azmyra&apos;s three-pillar framework. Transform your{' '}
-          <span className="font-semibold text-foreground">strategies</span> into{' '}
-          <span className="font-semibold text-foreground">tactical execution</span>{' '}
-          — closing the loop from vision to delivery.
-        </p>
-      </div>
-
+      }
+    >
       {/* Strategy → Tactics flow indicator */}
       <div className="flex items-center justify-center gap-3 py-4">
         <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 px-3 py-1">
@@ -174,6 +168,6 @@ export function TacticsView() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </ViewShell>
   );
 }

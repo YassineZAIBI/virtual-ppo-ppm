@@ -1,10 +1,5 @@
-import { RoadmapView } from '@/components/views/RoadmapView';
-import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
+import { redirect } from 'next/navigation';
 
-export default function StrategyRoadmapPage() {
-  return (
-    <ErrorBoundary>
-      <RoadmapView />
-    </ErrorBoundary>
-  );
+export default function StrategyRoadmapRedirect() {
+  redirect('/roadmap');
 }

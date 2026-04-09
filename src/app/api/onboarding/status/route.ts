@@ -22,6 +22,7 @@ export async function GET() {
     }
 
     return NextResponse.json({
+      role: onboarding.role || '',
       currentStep: onboarding.currentStep,
       completed: onboarding.completed,
       jiraConnected: onboarding.jiraConnected,
@@ -50,6 +51,7 @@ export async function PUT(request: NextRequest) {
     const onboarding = await db.onboardingProgress.upsert({
       where: { userId },
       update: {
+        role: body.role ?? undefined,
         currentStep: body.currentStep ?? undefined,
         jiraConnected: body.jiraConnected ?? undefined,
         confluenceConnected: body.confluenceConnected ?? undefined,
@@ -65,6 +67,7 @@ export async function PUT(request: NextRequest) {
     });
 
     return NextResponse.json({
+      role: onboarding.role || '',
       currentStep: onboarding.currentStep,
       completed: onboarding.completed,
       jiraConnected: onboarding.jiraConnected,

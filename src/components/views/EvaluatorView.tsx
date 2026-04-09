@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Gauge, Loader2, Sparkles, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Gauge, Loader2, Sparkles, ArrowRight, CheckCircle2, AlertTriangle, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { VisionGateBanner } from '@/components/layout/VisionGateBanner';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface EvaluationResult {
   initiativeId: string;
@@ -25,16 +27,28 @@ interface EvaluationResult {
   concerns: string[];
 }
 
-export function EvaluatorView() {
+export function EvaluatorView({ embedded = false }: { embedded?: boolean }) {
   const { initiatives, setInitiatives, settings } = useAppStore();
   const [evaluating, setEvaluating] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, EvaluationResult>>({});
   const [loadingScores, setLoadingScores] = useState(true);
+  const [competitors, setCompetitors] = useState<{ id: string; name: string; threatLevel: string; website?: string }[]>([]);
+  const [competitorAlerts, setCompetitorAlerts] = useState<{ id: string; type: string; title: string; significance: string; competitorName?: string; createdAt: string }[]>([]);
+  const [compOpen, setCompOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/initiatives')
       .then(r => r.ok ? r.json() : [])
       .then(d => { if (Array.isArray(d)) setInitiatives(d); })
+      .catch(() => {});
+    // Fetch top competitors for competitive landscape
+    fetch('/api/competitors?limit=5')
+      .then(r => r.ok ? r.json() : { competitors: [] })
+      .then(d => setCompetitors((d.competitors ?? d ?? []).slice(0, 5)))
+      .catch(() => {});
+    fetch('/api/competitors/feed?limit=3')
+      .then(r => r.ok ? r.json() : { alerts: [] })
+      .then(d => setCompetitorAlerts((d.alerts ?? d.items ?? []).slice(0, 3)))
       .catch(() => {});
   }, [setInitiatives]);
 
@@ -116,17 +130,58 @@ export function EvaluatorView() {
     return '[&>div]:bg-red-500';
   };
 
-  return (
-    <div className="p-6 space-y-6">
+  const evaluatorContent = (
+    <>
       <VisionGateBanner />
 
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Gauge className="h-6 w-6 text-teal-500" />
-          AI Evaluator
-        </h1>
-        <p className="text-muted-foreground">Evaluate initiatives against your vision, market fit, and feasibility.</p>
-      </div>
+      {/* Competitive Landscape (collapsible) */}
+      {(competitors.length > 0 || competitorAlerts.length > 0) && (
+        <Collapsible open={compOpen} onOpenChange={setCompOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer py-3 px-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-primary" />
+                    Competitive Landscape
+                    <Badge variant="outline" className="text-xs">{competitors.length} tracked</Badge>
+                  </CardTitle>
+                  {compOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 pb-4 px-4 space-y-3">
+                {competitors.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {competitors.map(c => (
+                      <Badge key={c.id} variant={c.threatLevel === 'high' ? 'destructive' : 'secondary'} className="text-xs">
+                        {c.name}
+                        {c.threatLevel && <span className="ml-1 opacity-70">({c.threatLevel})</span>}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {competitorAlerts.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Recent Alerts</p>
+                    {competitorAlerts.map(a => (
+                      <div key={a.id} className="text-xs text-muted-foreground flex items-center gap-2">
+                        <AlertTriangle className="h-3 w-3 flex-shrink-0 text-amber-500" />
+                        <span className="truncate">{a.title || a.type}</span>
+                        {a.competitorName && <Badge variant="outline" className="text-[10px] px-1">{a.competitorName}</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Button variant="link" size="sm" className="px-0 h-auto text-xs" onClick={() => window.location.href = '/landscape'}>
+                  View full competitive analysis <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
 
       {initiatives.length === 0 ? (
         <Card>
@@ -236,6 +291,17 @@ export function EvaluatorView() {
           })}
         </div>
       )}
-    </div>
+    </>
+  );
+
+  if (embedded) return evaluatorContent;
+
+  return (
+    <ViewShell
+      title="AI Evaluator"
+      description="Evaluate initiatives against your vision, market fit, and feasibility."
+    >
+      {evaluatorContent}
+    </ViewShell>
   );
 }

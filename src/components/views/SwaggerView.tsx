@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, TestTube, Download, Loader2, FileCode } from 'lucide-react';
 import { toast } from 'sonner';
+import { ViewShell } from '@/components/views/shared/ViewShell';
 
 export function SwaggerView() {
   const { settings } = useAppStore();
@@ -109,13 +110,11 @@ export function SwaggerView() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Swagger/API Management</h1>
-          <p className="text-slate-500">Upload API specs and generate AI-powered test cases</p>
-        </div>
-        <div className="flex gap-2">
+    <ViewShell
+      title="Swagger/API Management"
+      description="Upload API specs and generate AI-powered test cases"
+      actions={
+        <>
           <Button variant="outline" onClick={() => setSwaggerContent(sampleSwagger)}>
             <Upload className="h-4 w-4 mr-2" />Load Sample
           </Button>
@@ -126,9 +125,9 @@ export function SwaggerView() {
               <><TestTube className="h-4 w-4 mr-2" />Generate Tests</>
             )}
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -189,6 +188,6 @@ export function SwaggerView() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </ViewShell>
   );
 }
