@@ -3,7 +3,7 @@
 import { useState, useMemo, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, Check, X as XIcon } from 'lucide-react';
+import { Loader2, Check, X as XIcon, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -85,6 +85,10 @@ function SignInForm() {
     searchParams.get('register') === 'true'
   );
   const [name, setName] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const router = useRouter();
 
@@ -95,20 +99,25 @@ function SignInForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors([]);
+
+    if (isRegistering) {
+      const errors: string[] = [];
+      if (!name.trim()) errors.push('Name is required');
+      if (!email.trim() || !email.includes('@')) errors.push('Valid email is required');
+      if (!passwordValid) errors.push('Password does not meet all requirements');
+      if (password !== confirmPassword) errors.push('Passwords do not match');
+      if (TURNSTILE_SITE_KEY && !captchaToken) errors.push('Please complete the security check');
+      if (errors.length > 0) {
+        setFormErrors(errors);
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
       if (isRegistering) {
-        if (!passwordValid) {
-          toast.error('Password does not meet all requirements');
-          setIsLoading(false);
-          return;
-        }
-        if (TURNSTILE_SITE_KEY && !captchaToken) {
-          toast.error('Please complete the security check');
-          setIsLoading(false);
-          return;
-        }
 
         const res = await fetch('/api/auth/register', {
           method: 'POST',
@@ -220,9 +229,49 @@ function SignInForm() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={8} />
+              <div className="relative">
+                <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={8} className="pr-10" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {isRegistering && <PasswordStrength password={password} />}
             </div>
+
+            {isRegistering && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm password</Label>
+                <div className="relative">
+                  <Input id="confirmPassword" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" required className="pr-10" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-xs text-destructive">Passwords do not match</p>
+                )}
+              </div>
+            )}
+
+            {formErrors.length > 0 && (
+              <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 space-y-1">
+                {formErrors.map((err) => (
+                  <p key={err} className="text-xs text-destructive flex items-center gap-1.5">
+                    <XIcon className="h-3 w-3 flex-shrink-0" /> {err}
+                  </p>
+                ))}
+              </div>
+            )}
 
             {/* Turnstile CAPTCHA — only on register, only if site key is configured */}
             {isRegistering && TURNSTILE_SITE_KEY && (
@@ -239,12 +288,12 @@ function SignInForm() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || (isRegistering && !passwordValid) || (isRegistering && !!TURNSTILE_SITE_KEY && !captchaToken)}
+              disabled={isLoading}
             >
               {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isRegistering ? 'Create Account' : 'Sign In'}
             </Button>
-            <Button type="button" variant="ghost" className="w-full" onClick={() => { setIsRegistering(!isRegistering); setCaptchaToken(null); }}>
+            <Button type="button" variant="ghost" className="w-full" onClick={() => { setIsRegistering(!isRegistering); setCaptchaToken(null); setConfirmPassword(''); setFormErrors([]); }}>
               {isRegistering ? 'Already have an account? Sign in' : "Don't have an account? Register"}
             </Button>
           </form>
