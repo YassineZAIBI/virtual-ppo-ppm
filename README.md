@@ -1,258 +1,199 @@
-# Virtual PPO/PPM - AI-Powered Product Management Assistant
+# Azmyra — AI-Powered Product Management Platform
 
-An autonomous AI-powered Proxy Product Owner/Manager designed for Data & AI products.
+An intelligent product management SaaS that connects strategy to execution. Define your vision, organize your portfolio, assess risks, monitor competitors, and let AI agents handle the heavy lifting.
 
-## 🚀 Features
-
-### Core Capabilities
-
-1. **🤖 AI-Powered Chat Assistant**
-   - Natural language interface for product knowledge queries
-   - Context-aware responses about your products
-   - Actionable recommendations
-
-2. **📅 Meeting Management**
-   - Upload and analyze meeting transcripts
-   - Automatic extraction of action items, decisions, and challenges
-   - AI-generated summaries
-
-3. **🗺️ Roadmap Tracking**
-   - Visual timeline of initiatives
-   - Progress monitoring
-   - Risk highlighting
-
-4. **💡 Initiatives Pipeline**
-   - Kanban-style management from idea to approval
-   - Business value and effort assessment
-   - Stakeholder tracking
-
-5. **⚙️ Configurable LLM Provider**
-   - Choose your preferred AI provider:
-     - **Z-AI** (default, no configuration needed)
-     - **OpenAI** (GPT-4, GPT-3.5)
-     - **Anthropic** (Claude)
-     - **Azure OpenAI**
-     - **Ollama** (local LLM)
-
-6. **🔗 Integrations**
-   - Jira (story management)
-   - Slack (notifications)
-   - Confluence (documentation)
-   - Email (SMTP)
-
-## 🖥️ Desktop Access: Taking Full Control
-
-### The Question: Can This Access My Desktop Directly?
-
-**Yes, but it requires a desktop application wrapper.** Here are your options:
-
-### Option 1: Electron Desktop App (Recommended)
-
-Transform this web app into a full desktop application with complete system access:
-
-```bash
-# Install Electron
-npm install electron electron-builder
-
-# The app can then:
-# ✓ Access local files and folders
-# ✓ Control browser automation (Puppeteer/Playwright)
-# ✓ Read internal documents (Word, PDF, etc.)
-# ✓ Access clipboard, notifications
-# ✓ Auto-start on boot
-# ✓ Work offline (with local LLM)
-```
-
-**Benefits:**
-- Full file system access
-- Native OS integration
-- Can automate browsers to navigate internal tools
-- Secure credential storage
-- Background operation
-
-### Option 2: Tauri Desktop App (Lighter Alternative)
-
-A lighter-weight option using Rust instead of Chromium:
-
-```bash
-# Install Tauri CLI
-npm install @tauri-apps/cli
-
-# Benefits:
-# ✓ Smaller bundle size (~10MB vs ~150MB for Electron)
-# ✓ Better performance
-# ✓ Same system access capabilities
-# ✓ Built-in security
-```
-
-### Option 3: Local Agent Service
-
-Run a companion service on your machine that the web app communicates with:
-
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────┐
-│  Web Dashboard  │ ←→  │  Local Agent     │ ←→  │  Your Files │
-│  (this app)     │     │  (Node service)  │     │  & Browser  │
-└─────────────────┘     └──────────────────┘     └─────────────┘
-```
-
-**The local agent can:**
-- Watch folders for new documents
-- Automate browser sessions
-- Access internal company resources
-- Run scheduled tasks
-- Sync with cloud services
-
-### Option 4: Browser Extension
-
-A Chrome/Edge extension can access:
-- Web pages you visit
-- Your downloads folder
-- Clipboard content
-- Selected text
-
-## 📋 Getting Started
-
-### Quick Start
-
-1. **Configure Your LLM Provider** (Settings → LLM Provider)
-   - Select your preferred AI provider
-   - Enter your API key (if required)
-   - Z-AI is pre-configured and works out of the box
-
-2. **Set Up Integrations** (Settings → Integrations)
-   - Enable Jira for story management
-   - Enable Slack for notifications
-   - Configure email for automated follow-ups
-
-3. **Choose Your Autonomy Level** (Settings → Preferences)
-   - **Full**: AI acts independently
-   - **Oversight**: AI proposes, you review
-   - **Advisory**: AI suggests, you decide
-   - **Manual**: AI only assists on request
-
-### Using the AI Assistant
-
-The chat interface understands natural language queries:
-
-- "What are the current risks?"
-- "Summarize recent meetings"
-- "Generate a PRD outline for the AI Dashboard initiative"
-- "What should I prioritize this sprint?"
-- "Break down the Customer Portal feature into stories"
-
-### Processing Meetings
-
-1. Go to the **Meetings** tab
-2. Click **Add Meeting**
-3. Paste your meeting transcript or notes
-4. Click **Analyze with AI**
-5. Review the generated summary, action items, and decisions
-
-### Managing Initiatives
-
-1. Go to the **Initiatives** tab
-2. Click **New Idea** to add a new initiative
-3. Move initiatives through the pipeline:
-   - **Ideas** → Initial concepts
-   - **Discovery** → Research phase
-   - **Validation** → Proving value
-   - **Definition** → Detailed planning
-   - **Approved** → Ready for development
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Frontend (Next.js)                       │
-│  ┌──────────┬──────────┬──────────┬──────────┬──────────┐  │
-│  │Dashboard │   Chat   │ Meetings │ Roadmap  │Initiatives│  │
-│  └──────────┴──────────┴──────────┴──────────┴──────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Backend API Routes                        │
-│  ┌──────────────┬──────────────┬───────────────────────┐   │
-│  │  /api/chat   │/api/meetings │   /api/settings       │   │
-│  └──────────────┴──────────────┴───────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    AI Layer (Z-AI SDK)                       │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  LLM Providers: Z-AI | OpenAI | Anthropic | Local    │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 🔐 Security
-
-### Credential Storage
-
-- **Current Implementation**: Credentials stored in browser's localStorage (encrypted with base64)
-- **Recommended for Production**: Use server-side encryption with proper key management
-
-### Best Practices
-
-1. Use environment variables for sensitive data
-2. Enable HTTPS in production
-3. Implement proper authentication
-4. Use API tokens with limited scopes
-5. Rotate credentials regularly
-
-## 🔮 Future Roadmap
-
-### Phase 1 (Current) ✅
-- [x] Core UI and navigation
-- [x] Chat interface with AI
-- [x] Meeting transcript analysis
-- [x] Basic roadmap view
-- [x] Initiative pipeline
-- [x] LLM provider configuration
-
-### Phase 2 (Next)
-- [ ] Jira integration (create/update stories)
-- [ ] Slack notifications
-- [ ] Email automation
-- [ ] Document upload and analysis
-- [ ] User journey mapping
-
-### Phase 3 (Future)
-- [ ] Desktop application (Electron)
-- [ ] Browser automation for web research
-- [ ] Calendar integration
-- [ ] Voice meeting transcription
-- [ ] Advanced analytics dashboard
-
-## 🛠️ Development
-
-### Tech Stack
-
-- **Frontend**: Next.js 15, React 19, TypeScript
-- **UI Components**: shadcn/ui, Tailwind CSS
-- **State Management**: Zustand
-- **AI**: z-ai-web-dev-sdk (OpenAI compatible)
-- **Database**: Prisma (ready for persistence)
-
-### Local Development
-
-```bash
-# Install dependencies
-bun install
-
-# Run development server
-bun run dev
-
-# Run linter
-bun run lint
-```
-
-## 📝 License
-
-MIT License - See LICENSE file for details.
+**Live:** [ai.theproductowner.org](https://ai.theproductowner.org)
 
 ---
 
-Built with ❤️ for Product Managers who want to focus on what matters most.
+## Features
+
+### Company Brain
+Interactive strategy canvas that visualizes your entire product organization — vision, verticals, initiatives, risks, and competitors — as a connected knowledge graph.
+
+### Vision & Strategy
+- **North Star** — Define your guiding vision statement
+- **Business Goals** — Set measurable objectives with progress tracking
+- **Target Personas** — Build detailed audience profiles with needs mapping
+- **Product Mapping** — Map features to personas and business goals
+
+### Portfolio Management
+- **Product Verticals** — Organize initiatives into logical product lines
+- **Initiative Pipeline** — Kanban workflow from idea through discovery, validation, definition, to approved
+- **Alignment Scoring** — AI-powered scoring of how well initiatives align with your vision
+- **Vertical Selector** — Filter and manage work across verticals
+
+### Assessment & Discovery
+- **Risk Center** — Track, categorize, and AI-assess risks across your portfolio
+- **Strategy Evaluator** — AI evaluation of strategic fit and market readiness
+- **Market Discovery** — Research market opportunities with 30+ data adapters
+- **Competitor Intelligence** — Website monitoring, news tracking, and AI-synthesized insights
+
+### Landscape & Market Intelligence
+- **Competitor Monitoring** — Automated website change detection and freshness scoring
+- **News Feed** — Aggregated competitor and market news
+- **Data Pipeline** — 30+ adapters (Google Trends, G2, Capterra, Glassdoor, LinkedIn Jobs, Product Hunt, Hacker News, Reddit, and more)
+
+### AI Assistant
+- **6 Specialized Agents** — Strategy, risk, discovery, vision guard, market pulse, and portfolio review
+- **Auto-routing** — Questions automatically directed to the right agent
+- **Autonomy Levels** — Full, oversight, advisory, or manual control
+- **Pending Actions** — Review and approve AI-proposed changes before they take effect
+
+### Meeting Intelligence
+- **Transcript Analysis** — Upload or paste meeting notes for AI extraction
+- **Meeting Bot** — Headless browser bot joins Teams, Zoom, Meet, and Webex via link
+- **Action Items** — Automatic extraction of decisions, action items, and follow-ups
+
+### Execution
+- **Sprint Boards** — Track delivery with boards synced to Jira/Linear
+- **Roadmap Timeline** — Visual timeline of initiatives and milestones
+
+### Integrations
+- **Jira** — Import projects and sync issues as initiatives
+- **Confluence** — Import documentation and product specs
+- **Slack** — Channel analysis and notifications
+- **Linear** — GraphQL-based issue sync
+- **GitHub** — Repository and issue tracking via PAT
+- **Notion** — Page and database import
+- **Email** — SMTP-based automated notifications
+- **Zoom & Teams** — Meeting scheduling and bot join
+
+### Onboarding
+Role-based setup that gets each user type to value fast:
+- **Solo PM / Startup** (~3 min) — Describe product, AI generates vision
+- **Head of Product** (~10 min) — Connect tools, AI organizes backlog
+- **VP / Director** (~15 min) — Full top-down strategic setup
+- **Just Exploring** (~1 min) — Quick feature tour
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16, React 19, TypeScript 5 |
+| Styling | Tailwind CSS 4, shadcn/ui (50+ Radix components) |
+| State | Zustand (localStorage persist) |
+| Auth | NextAuth.js (Credentials, Google, Azure AD) |
+| Database | PostgreSQL + Prisma 6 (43 models) |
+| AI Backend | Python FastAPI — 6 specialized agents |
+| Validation | Zod |
+| Charts | Recharts |
+| Testing | Vitest + React Testing Library |
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 20+
+- PostgreSQL 16+
+- Python 3.11+ (for AI agents)
+
+### Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your DATABASE_URL, NEXTAUTH_SECRET, etc.
+
+# Initialize database
+npx prisma db push
+npx prisma generate
+
+# (Optional) Seed demo data
+npm run db:seed
+
+# Start dev server
+npm run dev
+```
+
+### Configure AI
+
+1. Go to **Settings > LLM Provider**
+2. Select your provider (Groq, OpenAI, Anthropic, Azure OpenAI, Ollama)
+3. Enter your API key
+4. Test connection
+
+### LLM Providers Supported
+- **Groq** — Fast inference with Llama models
+- **OpenAI** — GPT-4o, GPT-4, GPT-3.5
+- **Anthropic** — Claude Sonnet, Opus, Haiku
+- **Azure OpenAI** — Enterprise GPT deployments
+- **Ollama** — Self-hosted local models (Qwen, Llama, Mistral)
+
+---
+
+## Deployment
+
+Deployed on **Google Cloud Run** with Cloud SQL (PostgreSQL).
+
+```bash
+# Build and push image
+gcloud builds submit --config cloudbuild.yaml
+
+# Deploy to Cloud Run
+gcloud run deploy azmyra-app \
+  --image gcr.io/PROJECT_ID/azmyra-app \
+  --region us-central1 \
+  --allow-unauthenticated
+```
+
+The Docker image uses a multi-stage build with standalone Next.js output. `start.sh` runs `prisma db push` before starting the server to apply any schema changes.
+
+---
+
+## Security
+
+- **AES-256-GCM encryption** for all integration credentials stored in the database
+- **LLM API keys** stored client-side only (Zustand/localStorage) — never in the database
+- **Session isolation** — Zustand store cleared on user switch to prevent data leaks
+- **Auth guards** on every API route via `getServerSession`
+- **Zod validation** on all POST request bodies
+- **Turnstile CAPTCHA** on registration (configurable)
+- **Password strength** enforcement (uppercase, lowercase, digit, special char, 8+ chars)
+
+---
+
+## Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router pages + API routes (114 routes)
+│   ├── api/               # REST API endpoints
+│   ├── brain/             # Company Brain canvas
+│   ├── portfolio/         # Portfolio management
+│   ├── assessment/        # Risk & strategy assessment
+│   ├── landscape/         # Market intelligence
+│   └── vision/            # Vision & strategy
+├── components/
+│   ├── brain/             # Brain canvas components
+│   ├── layout/            # Sidebar, ErrorBoundary
+│   ├── onboarding/        # Role-based onboarding steps
+│   ├── portfolio/         # Portfolio-specific components
+│   ├── ui/                # shadcn/ui primitives (50+)
+│   ├── views/             # Page-level view components (19)
+│   └── vision/            # Vision pyramid, goal cards
+├── lib/
+│   ├── services/          # Business logic (21 services)
+│   │   └── data-pipeline/ # Market data adapters (30+)
+│   ├── store.ts           # Zustand state management
+│   ├── types.ts           # TypeScript types (960+ lines)
+│   ├── auth.ts            # NextAuth configuration
+│   └── db.ts              # Prisma client + encryption middleware
+├── hooks/                 # Custom React hooks
+└── python-agents/         # FastAPI AI agent service
+    ├── agents/            # 6 specialized agents
+    ├── scheduler/         # Cron job runner
+    └── knowledge/         # RAG + document ingestion
+```
+
+---
+
+## License
+
+MIT License — See [LICENSE](LICENSE) for details.
