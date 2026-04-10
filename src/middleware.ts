@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public paths that don't require authentication
-  const publicPaths = ['/auth/signin', '/api/auth', '/api', '/share', '/onboarding'];
+  const publicPaths = ['/auth/signin', '/api/auth', '/api', '/share', '/onboarding', '/privacy', '/terms'];
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
 
   // Allow public assets and Next.js internals
